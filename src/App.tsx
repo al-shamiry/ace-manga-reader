@@ -1,49 +1,60 @@
-import { createSignal } from "solid-js";
-import logo from "./assets/logo.svg";
+import { createSignal, Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
+import { DirectoryPicker } from "./components/DirectoryPicker";
 import "./App.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = createSignal("");
-  const [name, setName] = createSignal("");
+interface Comic {
+  id: string;
+  title: string;
+  path: string;
+  cover_path: string;
+  page_count: number;
+  file_type: string;
+}
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name: name() }));
+type Status = "idle" | "loading" | "error";
+
+function App() {
+  const [comics, setComics] = createSignal<Comic[]>([]);
+  const [status, setStatus] = createSignal<Status>("idle");
+  const [error, setError] = createSignal("");
+  const [currentDir, setCurrentDir] = createSignal("");
+
+  async function loadDirectory(path: string) {
+    setStatus("loading");
+    setError("");
+    setCurrentDir(path);
+
+    try {
+      const result = await invoke<Comic[]>("scan_directory", { path });
+      setComics(result);
+      setStatus("idle");
+    } catch (e) {
+      setError(String(e));
+      setStatus("error");
+    }
   }
 
   return (
-    <main class="container">
-      <h1>Welcome to Tauri + Solid</h1>
+    <main class="app">
+      <DirectoryPicker onSelect={loadDirectory} />
 
-      <div class="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://solidjs.com" target="_blank">
-          <img src={logo} class="logo solid" alt="Solid logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and Solid logos to learn more.</p>
+      <Show when={status() === "loading"}>
+        <p class="status">Scanning...</p>
+      </Show>
 
-      <form
-        class="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg()}</p>
+      <Show when={status() === "error"}>
+        <p class="status error">{error()}</p>
+      </Show>
+
+      <Show when={status() === "idle" && currentDir() && comics().length === 0}>
+        <p class="status">No comics found in this folder.</p>
+      </Show>
+
+      <Show when={comics().length > 0}>
+        <p class="status">{comics().length} comics in {currentDir()}</p>
+        <pre>{JSON.stringify(comics(), null, 2)}</pre>
+      </Show>
     </main>
   );
 }
