@@ -194,9 +194,29 @@ fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
     comics
 }
 
+fn scan_cache_path(app_data_dir: &Path, scan_path: &Path) -> PathBuf {
+    let id = path_id(scan_path);
+    app_data_dir.join("scan_cache").join(format!("{}.json", id))
+}
+
+fn load_scan_cache(cache_file: &Path) -> Option<Vec<Comic>> {
+    let bytes = fs::read(cache_file).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+fn save_scan_cache(cache_file: &Path, comics: &[Comic]) {
+    if let Some(parent) = cache_file.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_vec_pretty(comics) {
+        let _ = fs::write(cache_file, json);
+    }
+}
+
 #[tauri::command]
 pub fn scan_directory(
     path: String,
+    force_refresh: bool,
     app_handle: tauri::AppHandle,
 ) -> Result<Vec<Comic>, String> {
     let dir = Path::new(&path);
@@ -204,15 +224,27 @@ pub fn scan_directory(
         return Err(format!("'{}' is not a directory", path));
     }
 
-    let cache_dir = app_handle
+    let app_data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e: tauri::Error| e.to_string())?
-        .join("covers");
-    fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
+        .map_err(|e: tauri::Error| e.to_string())?;
 
-    let mut comics = collect_comics(dir, 1, &cache_dir);
+    let cache_file = scan_cache_path(&app_data_dir, dir);
+
+    // Return cached result if available and refresh not requested
+    if !force_refresh {
+        if let Some(cached) = load_scan_cache(&cache_file) {
+            return Ok(cached);
+        }
+    }
+
+    let covers_dir = app_data_dir.join("covers");
+    fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
+
+    let mut comics = collect_comics(dir, 1, &covers_dir);
     comics.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+
+    save_scan_cache(&cache_file, &comics);
 
     Ok(comics)
 }

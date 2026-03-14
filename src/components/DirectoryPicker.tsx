@@ -3,6 +3,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 interface Props {
   onSelect: (path: string) => void;
+  onRefresh: () => void;
+  hasLibrary: boolean;
 }
 
 export function DirectoryPicker(props: Props) {
@@ -33,6 +35,11 @@ export function DirectoryPicker(props: Props) {
         />
         <button type="submit">Go</button>
       </form>
+      {props.hasLibrary && (
+        <button class="btn-refresh" onClick={props.onRefresh} title="Re-scan folder">
+          ↻
+        </button>
+      )}
     </div>
   );
 }

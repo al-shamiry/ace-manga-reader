@@ -13,13 +13,13 @@ function App() {
   const [error, setError] = createSignal("");
   const [currentDir, setCurrentDir] = createSignal("");
 
-  async function loadDirectory(path: string) {
+  async function loadDirectory(path: string, forceRefresh = false) {
     setStatus("loading");
     setError("");
     setCurrentDir(path);
 
     try {
-      const result = await invoke<Comic[]>("scan_directory", { path });
+      const result = await invoke<Comic[]>("scan_directory", { path, forceRefresh });
       setComics(result);
       setStatus("idle");
     } catch (e) {
@@ -28,9 +28,18 @@ function App() {
     }
   }
 
+  function refresh() {
+    const dir = currentDir();
+    if (dir) loadDirectory(dir, true);
+  }
+
   return (
     <main class="app">
-      <DirectoryPicker onSelect={loadDirectory} />
+      <DirectoryPicker
+        onSelect={(path) => loadDirectory(path)}
+        onRefresh={refresh}
+        hasLibrary={comics().length > 0}
+      />
 
       <Show when={status() === "loading"}>
         <p class="status">Scanning...</p>
