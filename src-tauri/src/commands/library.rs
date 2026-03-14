@@ -108,7 +108,7 @@ fn scan_manga_dir(path: &Path) -> Result<Comic, String> {
         path: normalize(path),
         cover_path,
         page_count,
-        file_type: "manga".to_string(),
+        file_type: "dir".to_string(),
     })
 }
 

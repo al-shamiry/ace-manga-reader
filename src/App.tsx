@@ -1,16 +1,9 @@
 import { createSignal, Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { DirectoryPicker } from "./components/DirectoryPicker";
+import { ComicGrid } from "./components/ComicGrid";
+import type { Comic } from "./types";
 import "./App.css";
-
-interface Comic {
-  id: string;
-  title: string;
-  path: string;
-  cover_path: string;
-  page_count: number;
-  file_type: string;
-}
 
 type Status = "idle" | "loading" | "error";
 
@@ -52,8 +45,7 @@ function App() {
       </Show>
 
       <Show when={comics().length > 0}>
-        <p class="status">{comics().length} comics in {currentDir()}</p>
-        <pre>{JSON.stringify(comics(), null, 2)}</pre>
+        <ComicGrid comics={comics()} />
       </Show>
     </main>
   );
