@@ -1,0 +1,85 @@
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use sha2::{Digest, Sha256};
+
+const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif", "avif"];
+
+pub(crate) fn is_image(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| IMAGE_EXTENSIONS.contains(&e.to_lowercase().as_str()))
+        .unwrap_or(false)
+}
+
+pub(crate) fn path_id(path: &Path) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(path.to_string_lossy().as_bytes());
+    hex::encode(&hasher.finalize()[..8])
+}
+
+pub(crate) fn title_from_path(path: &Path) -> String {
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("Unknown");
+
+    // Strip download-tool hash suffixes like "_299d43" or "_1a2b3c4d"
+    if let Some(idx) = stem.rfind('_') {
+        let suffix = &stem[idx + 1..];
+        if (4..=16).contains(&suffix.len()) && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
+            return stem[..idx].to_string();
+        }
+    }
+
+    stem.to_string()
+}
+
+pub(crate) fn normalize(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
+
+/// Returns sorted subdirectories of a path.
+pub(crate) fn subdirs(path: &Path) -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = fs::read_dir(path)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .collect();
+    dirs.sort();
+    dirs
+}
+
+/// Returns sorted image files directly inside a directory.
+pub(crate) fn images_in(path: &Path) -> Vec<PathBuf> {
+    let mut imgs: Vec<PathBuf> = fs::read_dir(path)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_file() && is_image(p))
+        .collect();
+    imgs.sort();
+    imgs
+}
+
+/// Returns sorted CBZ files directly inside a directory.
+pub(crate) fn cbz_files_in(path: &Path) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = fs::read_dir(path)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| {
+            p.is_file()
+                && p.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.eq_ignore_ascii_case("cbz"))
+                    .unwrap_or(false)
+        })
+        .collect();
+    files.sort();
+    files
+}

@@ -2,12 +2,11 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use sha2::{Digest, Sha256};
+use tauri::Manager;
 use zip::ZipArchive;
 
-use tauri::Manager;
-
 use crate::models::comic::Comic;
+use crate::utils::{cbz_files_in, images_in, is_image, normalize, path_id, subdirs, title_from_path};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Source {
@@ -15,86 +14,6 @@ pub struct Source {
     name: String,
     path: String,
     manga_count: usize,
-}
-
-const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif", "avif"];
-
-pub(crate) fn is_image(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .map(|e| IMAGE_EXTENSIONS.contains(&e.to_lowercase().as_str()))
-        .unwrap_or(false)
-}
-
-pub(crate) fn path_id(path: &Path) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(path.to_string_lossy().as_bytes());
-    hex::encode(&hasher.finalize()[..8])
-}
-
-pub(crate) fn title_from_path(path: &Path) -> String {
-    let stem = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("Unknown");
-
-    // Strip download-tool hash suffixes like "_299d43" or "_1a2b3c4d"
-    if let Some(idx) = stem.rfind('_') {
-        let suffix = &stem[idx + 1..];
-        if (4..=16).contains(&suffix.len()) && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
-            return stem[..idx].to_string();
-        }
-    }
-
-    stem.to_string()
-}
-
-pub(crate) fn normalize(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
-}
-
-/// Returns sorted subdirectories of a path.
-pub(crate) fn subdirs(path: &Path) -> Vec<PathBuf> {
-    let mut dirs: Vec<PathBuf> = fs::read_dir(path)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| p.is_dir())
-        .collect();
-    dirs.sort();
-    dirs
-}
-
-/// Returns sorted image files directly inside a directory.
-pub(crate) fn images_in(path: &Path) -> Vec<PathBuf> {
-    let mut imgs: Vec<PathBuf> = fs::read_dir(path)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| p.is_file() && is_image(p))
-        .collect();
-    imgs.sort();
-    imgs
-}
-
-pub(crate) fn cbz_files_in(path: &Path) -> Vec<PathBuf> {
-    let mut files: Vec<PathBuf> = fs::read_dir(path)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| {
-            p.is_file()
-                && p.extension()
-                    .and_then(|e| e.to_str())
-                    .map(|e| e.eq_ignore_ascii_case("cbz"))
-                    .unwrap_or(false)
-        })
-        .collect();
-    files.sort();
-    files
 }
 
 /// A manga folder = a folder whose children are image-containing subdirs OR CBZ files.
@@ -140,7 +59,6 @@ fn scan_cbz_manga(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
         return Err("No CBZ files found".to_string());
     }
 
-    // Cover from first CBZ
     let first_cbz = &cbz_files[0];
     let file = fs::File::open(first_cbz).map_err(|e| e.to_string())?;
     let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
@@ -190,7 +108,7 @@ fn scan_manga_dir(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
     }
 }
 
-/// Scan a CBZ file: count image entries and extract the cover to cache_dir.
+/// Scan a standalone CBZ file.
 fn scan_cbz(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
     let file = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
@@ -203,7 +121,6 @@ fn scan_cbz(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
             })
         })
         .collect();
-
     image_names.sort();
 
     if image_names.is_empty() {
@@ -236,8 +153,6 @@ fn scan_cbz(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
 }
 
 /// Collect all manga/CBZ comics found within `dir`, searching up to `depth` levels deep.
-/// depth=0: look at direct children of dir
-/// depth=1: also look inside subdirs of dir (handles source → manga nesting)
 fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
     let mut comics = Vec::new();
 
@@ -263,7 +178,6 @@ fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
                     Err(e) => eprintln!("Skipping manga {:?}: {}", entry, e),
                 }
             } else if depth > 0 {
-                // Could be a source folder — recurse one level
                 comics.extend(collect_comics(&entry, depth - 1, cache_dir));
             }
         }
@@ -367,7 +281,6 @@ pub fn scan_directory(
 
     let cache_file = scan_cache_path(&app_data_dir, dir);
 
-    // Return cached result if available and refresh not requested
     if !force_refresh {
         if let Some(cached) = load_scan_cache(&cache_file) {
             return Ok(cached);
@@ -385,4 +298,3 @@ pub fn scan_directory(
 
     Ok(comics)
 }
-

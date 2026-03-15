@@ -5,9 +5,7 @@ use std::path::Path;
 use tauri::Manager;
 use zip::ZipArchive;
 
-use crate::commands::library::{
-    cbz_files_in, images_in, is_image, normalize, path_id, subdirs, title_from_path,
-};
+use crate::utils::{cbz_files_in, images_in, is_image, normalize, path_id, subdirs, title_from_path};
 use crate::models::chapter::{Chapter, ChapterStatus};
 
 // ── Progress helpers ──────────────────────────────────────────────────────────
