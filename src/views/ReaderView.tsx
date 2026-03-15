@@ -91,6 +91,7 @@ export function ReaderView() {
           next();
           break;
         case "Backspace":
+        case "Escape":
           navigate(-1);
           break;
       }
