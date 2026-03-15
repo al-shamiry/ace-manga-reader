@@ -270,6 +270,18 @@ fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
     comics
 }
 
+fn last_dir_path(app_data_dir: &Path) -> PathBuf {
+    app_data_dir.join("last_directory.txt")
+}
+
+#[tauri::command]
+pub fn get_last_directory(app_handle: tauri::AppHandle) -> Option<String> {
+    let app_data_dir = app_handle.path().app_data_dir().ok()?;
+    let content = fs::read_to_string(last_dir_path(&app_data_dir)).ok()?;
+    let path = content.trim().to_string();
+    if path.is_empty() { None } else { Some(path) }
+}
+
 fn scan_cache_path(app_data_dir: &Path, scan_path: &Path) -> PathBuf {
     let id = path_id(scan_path);
     app_data_dir.join("scan_cache").join(format!("{}.json", id))
@@ -321,6 +333,7 @@ pub fn scan_directory(
     comics.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
 
     save_scan_cache(&cache_file, &comics);
+    let _ = fs::write(last_dir_path(&app_data_dir), path.as_bytes());
 
     Ok(comics)
 }

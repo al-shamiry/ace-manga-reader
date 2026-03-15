@@ -1,5 +1,6 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal, Show, onMount } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { DirectoryPicker } from "./components/DirectoryPicker";
 import { ComicGrid } from "./components/ComicGrid";
 import type { Comic } from "./types";
@@ -13,10 +14,18 @@ function App() {
   const [error, setError] = createSignal("");
   const [currentDir, setCurrentDir] = createSignal("");
 
+  onMount(async () => {
+    const last = await invoke<string | null>("get_last_directory");
+    if (last) loadDirectory(last);
+  });
+
   async function loadDirectory(path: string, forceRefresh = false) {
     setStatus("loading");
     setError("");
     setCurrentDir(path);
+
+    const dirName = path.replace(/\\/g, "/").split("/").filter(Boolean).pop() ?? path;
+    getCurrentWindow().setTitle(`Ace Manga Reader — ${dirName}`);
 
     try {
       const result = await invoke<Comic[]>("scan_directory", { path, forceRefresh });
