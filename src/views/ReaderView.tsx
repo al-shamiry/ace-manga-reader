@@ -1,7 +1,8 @@
-import { createSignal, onMount, onCleanup, Show } from "solid-js";
+import { createSignal, createEffect, onMount, onCleanup, Show } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-solid";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
 import type { Chapter, Comic } from "../types";
 
@@ -19,6 +20,23 @@ export function ReaderView() {
   const [pageIndex, setPageIndex] = createSignal(0);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal("");
+
+  createEffect(() => {
+    const total = pages().length;
+    if (!state || total === 0) return;
+    const idx = pageIndex();
+    const { chapter, comic } = state;
+
+    getCurrentWindow().setTitle(
+      `${comic.title} — ${chapter.title} — Page ${idx + 1} / ${total}`
+    );
+
+    invoke("set_chapter_progress", {
+      chapterId: chapter.id,
+      page: idx,
+      totalPages: total,
+    }).catch(console.error);
+  });
 
   onMount(async () => {
     if (!state) return;
