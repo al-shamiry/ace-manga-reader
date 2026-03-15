@@ -67,7 +67,9 @@ function App() {
   }
 
   return (
-    <main class="app">
+    <main class="flex flex-col h-screen overflow-hidden bg-zinc-950 text-zinc-100">
+
+      {/* Root view */}
       <Show when={view() === "root"}>
         <DirectoryPicker
           onSelect={loadRoot}
@@ -75,42 +77,53 @@ function App() {
           hasLibrary={sources().length > 0}
         />
         <Show when={status() === "loading"}>
-          <p class="status">Loading...</p>
+          <p class="px-6 py-4 text-sm text-zinc-500">Loading...</p>
         </Show>
         <Show when={status() === "error"}>
-          <p class="status error">{error()}</p>
+          <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
         </Show>
         <Show when={status() === "idle" && sources().length === 0}>
-          <p class="status">No sources found. Select a library folder above.</p>
+          <p class="px-6 py-4 text-sm text-zinc-500">No sources found. Select a library folder above.</p>
         </Show>
         <Show when={sources().length > 0}>
           <SourceGrid sources={sources()} onSelect={openSource} />
         </Show>
       </Show>
 
+      {/* Source view */}
       <Show when={view() === "source"}>
-        <div class="toolbar">
-          <button class="btn-back" onClick={goBack}>← Back</button>
-          <span class="toolbar__title">{currentSource()?.name}</span>
+        <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
           <button
-            class="btn-refresh"
+            class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 rounded-md text-sm font-medium transition-colors cursor-pointer shrink-0"
+            onClick={goBack}
+          >
+            ← Back
+          </button>
+          <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
+            {currentSource()?.name}
+          </span>
+          <button
+            class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 rounded-md text-sm transition-colors cursor-pointer shrink-0"
             onClick={() => { const s = currentSource(); if (s) openSource(s, true); }}
             title="Re-scan folder"
-          >↻</button>
+          >
+            ↻
+          </button>
         </div>
         <Show when={status() === "loading"}>
-          <p class="status">Scanning...</p>
+          <p class="px-6 py-4 text-sm text-zinc-500">Scanning...</p>
         </Show>
         <Show when={status() === "error"}>
-          <p class="status error">{error()}</p>
+          <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
         </Show>
         <Show when={status() === "idle" && comics().length === 0}>
-          <p class="status">No comics found in this source.</p>
+          <p class="px-6 py-4 text-sm text-zinc-500">No comics found in this source.</p>
         </Show>
         <Show when={comics().length > 0}>
           <ComicGrid comics={comics()} />
         </Show>
       </Show>
+
     </main>
   );
 }

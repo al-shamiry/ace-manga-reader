@@ -1,299 +1,43 @@
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@import "tailwindcss";
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+    background-color: theme(--color-zinc-950);
+    color: theme(--color-zinc-100);
+    font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
-html, body, #root {
-  height: 100%;
-  overflow: hidden;
-}
-
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #e8e8e8;
-  background-color: #141414;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ── App shell ─────────────────────────────────────────── */
-
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* ── Directory picker ───────────────────────────────────── */
-
-.directory-picker {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #1e1e1e;
-  border-bottom: 1px solid #2e2e2e;
-  flex-shrink: 0;
-}
-
-.directory-picker form {
-  display: flex;
+/*
+  Fixed-size grid layouts — grid-template-columns with auto-fill + fixed px
+  and grid-auto-rows are not expressible as single utility classes, so they
+  live here. Everything else is handled by Tailwind utilities.
+*/
+.comic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 160px);
+  grid-auto-rows: 280px;
+  justify-content: space-evenly;
+  gap: 1rem;
+  padding: 1rem;
   flex: 1;
-  gap: 6px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
-
-.directory-picker input {
-  flex: 1;
-  padding: 6px 10px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  color: #e8e8e8;
-  font-size: 0.875rem;
-  outline: none;
-}
-
-.directory-picker input:focus {
-  border-color: #5865f2;
-}
-
-.directory-picker button {
-  padding: 6px 14px;
-  background: #5865f2;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.directory-picker button:hover {
-  background: #4752c4;
-}
-
-.btn-refresh {
-  background: #2a2a2a !important;
-  color: #aaa !important;
-  font-size: 1.1rem !important;
-  padding: 6px 10px !important;
-  flex-shrink: 0;
-}
-
-.btn-refresh:hover {
-  background: #3a3a3a !important;
-  color: #fff !important;
-}
-
-/* ── Status messages ────────────────────────────────────── */
-
-.status {
-  padding: 24px;
-  color: #888;
-  font-size: 0.875rem;
-}
-
-.status.error {
-  color: #f04747;
-}
-
-/* ── Toolbar (source view header) ───────────────────────── */
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: #1e1e1e;
-  border-bottom: 1px solid #2e2e2e;
-  flex-shrink: 0;
-}
-
-.toolbar__title {
-  flex: 1;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #e8e8e8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.btn-back {
-  padding: 6px 12px;
-  background: #2a2a2a;
-  color: #aaa;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.btn-back:hover {
-  background: #3a3a3a;
-  color: #fff;
-}
-
-/* ── Source grid ─────────────────────────────────────────── */
 
 .source-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 160px);
-  justify-content: space-evenly;
   grid-auto-rows: 130px;
-  gap: 16px;
-  padding: 16px;
-  overflow-y: auto;
-  flex: 1;
-  -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
-}
-
-/* ── Source card ─────────────────────────────────────────── */
-
-.source-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border-radius: 8px;
-  background: #1e1e1e;
-  cursor: pointer;
-  padding: 16px 12px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  will-change: transform;
-}
-
-.source-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-.source-card__icon {
-  color: #5865f2;
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-}
-
-.source-card__icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.source-card__info {
-  text-align: center;
-}
-
-.source-card__name {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #e8e8e8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 136px;
-}
-
-.source-card__count {
-  font-size: 0.7rem;
-  color: #666;
-  margin-top: 2px;
-}
-
-/* ── Comic grid ─────────────────────────────────────────── */
-
-.comic-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 160px);
   justify-content: space-evenly;
-  grid-auto-rows: 280px;
-  gap: 16px;
-  padding: 16px;
+  gap: 1rem;
+  padding: 1rem;
+  flex: 1;
   overflow-y: auto;
-  flex: 1;
   -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
-}
-
-/* ── Comic card ─────────────────────────────────────────── */
-
-.comic-card {
-  display: flex;
-  flex-direction: column;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #1e1e1e;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  will-change: transform;
-}
-
-.comic-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-.comic-card__cover {
-  position: relative;
-  flex: 1;
-  background: #2a2a2a;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.comic-card__cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.comic-card__no-cover {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #555;
-  font-size: 0.75rem;
-}
-
-.comic-card__badge {
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
-  background: rgba(0, 0, 0, 0.7);
-  color: #aaa;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.comic-card__info {
-  padding: 8px 10px;
-}
-
-.comic-card__title {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #e8e8e8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.comic-card__pages {
-  font-size: 0.7rem;
-  color: #666;
-  margin-top: 2px;
 }

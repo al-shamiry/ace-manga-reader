@@ -11,22 +11,27 @@ export function ComicCard(props: Props) {
   const coverSrc = () => convertFileSrc(props.comic.cover_path);
 
   return (
-    <div class="comic-card">
-      <div class="comic-card__cover">
+    <div class="flex flex-col bg-zinc-900 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform">
+      <div class="relative flex-1 bg-zinc-800 overflow-hidden min-h-0">
         {imgError() ? (
-          <div class="comic-card__no-cover">No Cover</div>
+          <div class="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
+            No Cover
+          </div>
         ) : (
           <img
             src={coverSrc()}
             alt={props.comic.title}
             onError={() => setImgError(true)}
+            class="w-full h-full object-cover block"
           />
         )}
-        <span class="comic-card__badge">{props.comic.file_type.toUpperCase()}</span>
+        <span class="absolute bottom-1.5 right-1.5 bg-black/70 text-zinc-400 text-[0.65rem] font-semibold tracking-wide px-1.5 py-0.5 rounded">
+          {props.comic.file_type.toUpperCase()}
+        </span>
       </div>
-      <div class="comic-card__info">
-        <p class="comic-card__title">{props.comic.title}</p>
-        <p class="comic-card__pages">{props.comic.page_count} pages</p>
+      <div class="px-2.5 py-2 shrink-0">
+        <p class="text-[0.8rem] font-medium text-zinc-100 truncate">{props.comic.title}</p>
+        <p class="text-[0.7rem] text-zinc-500 mt-0.5">{props.comic.page_count} pages</p>
       </div>
     </div>
   );
