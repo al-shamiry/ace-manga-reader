@@ -1,4 +1,5 @@
 import { createSignal } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Comic } from "../types";
 
@@ -7,11 +8,15 @@ interface Props {
 }
 
 export function ComicCard(props: Props) {
+  const navigate = useNavigate();
   const [imgError, setImgError] = createSignal(false);
   const coverSrc = () => convertFileSrc(props.comic.cover_path);
 
   return (
-    <div class="flex flex-col bg-zinc-900 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform">
+    <div
+      class="flex flex-col bg-zinc-900 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
+      onClick={() => navigate("/manga/" + props.comic.id, { state: props.comic })}
+    >
       <div class="relative flex-1 bg-zinc-800 overflow-hidden min-h-0">
         {imgError() ? (
           <div class="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
