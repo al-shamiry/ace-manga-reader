@@ -12,6 +12,10 @@ pub fn run() {
             commands::library::get_root_directory,
             commands::library::set_root_directory,
             commands::library::list_sources,
+            commands::reader::get_chapters,
+            commands::reader::open_chapter,
+            commands::reader::set_chapter_progress,
+            commands::reader::mark_chapter_read,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

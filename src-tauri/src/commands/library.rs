@@ -19,32 +19,32 @@ pub struct Source {
 
 const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif", "avif"];
 
-fn is_image(path: &Path) -> bool {
+pub(crate) fn is_image(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .map(|e| IMAGE_EXTENSIONS.contains(&e.to_lowercase().as_str()))
         .unwrap_or(false)
 }
 
-fn path_id(path: &Path) -> String {
+pub(crate) fn path_id(path: &Path) -> String {
     let mut hasher = Sha256::new();
     hasher.update(path.to_string_lossy().as_bytes());
     hex::encode(&hasher.finalize()[..8])
 }
 
-fn title_from_path(path: &Path) -> String {
+pub(crate) fn title_from_path(path: &Path) -> String {
     path.file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("Unknown")
         .to_string()
 }
 
-fn normalize(path: &Path) -> String {
+pub(crate) fn normalize(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
 /// Returns sorted subdirectories of a path.
-fn subdirs(path: &Path) -> Vec<PathBuf> {
+pub(crate) fn subdirs(path: &Path) -> Vec<PathBuf> {
     let mut dirs: Vec<PathBuf> = fs::read_dir(path)
         .into_iter()
         .flatten()
@@ -57,7 +57,7 @@ fn subdirs(path: &Path) -> Vec<PathBuf> {
 }
 
 /// Returns sorted image files directly inside a directory.
-fn images_in(path: &Path) -> Vec<PathBuf> {
+pub(crate) fn images_in(path: &Path) -> Vec<PathBuf> {
     let mut imgs: Vec<PathBuf> = fs::read_dir(path)
         .into_iter()
         .flatten()
@@ -69,7 +69,7 @@ fn images_in(path: &Path) -> Vec<PathBuf> {
     imgs
 }
 
-fn cbz_files_in(path: &Path) -> Vec<PathBuf> {
+pub(crate) fn cbz_files_in(path: &Path) -> Vec<PathBuf> {
     let mut files: Vec<PathBuf> = fs::read_dir(path)
         .into_iter()
         .flatten()
@@ -391,3 +391,4 @@ pub fn scan_directory(
 
     Ok(comics)
 }
+
