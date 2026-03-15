@@ -1,11 +1,8 @@
 import { createSignal, Show, onMount } from "solid-js";
-import { ArrowLeft, RefreshCw, Library, BookOpen } from "lucide-solid";
-import { Button } from "./components/Button";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { DirectoryPicker } from "./components/DirectoryPicker";
-import { SourceGrid } from "./components/SourceGrid";
-import { ComicGrid } from "./components/ComicGrid";
+import { RootView } from "./views/RootView";
+import { SourceView } from "./views/SourceView";
 import type { Comic, Source } from "./types";
 import "./App.css";
 
@@ -70,72 +67,25 @@ function App() {
 
   return (
     <main class="flex flex-col h-screen overflow-hidden bg-zinc-950 text-zinc-100">
-
-      {/* Root view */}
       <Show when={view() === "root"}>
-        <DirectoryPicker
+        <RootView
+          sources={sources()}
+          status={status()}
+          error={error()}
           onSelect={loadRoot}
-          onRefresh={() => {}}
-          hasLibrary={sources().length > 0}
+          onSourceOpen={openSource}
         />
-        <Show when={status() === "loading"}>
-          <p class="px-6 py-4 text-sm text-zinc-500">Loading...</p>
-        </Show>
-        <Show when={status() === "error"}>
-          <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
-        </Show>
-        <Show when={status() === "idle" && sources().length === 0}>
-          <div class="flex flex-col items-center justify-center flex-1 gap-4 text-center px-8">
-            <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
-              <Library size={48} stroke-width={1} />
-            </div>
-            <div>
-              <p class="text-zinc-300 font-medium">No library selected</p>
-              <p class="text-zinc-600 text-sm mt-1">Pick a folder above to get started</p>
-            </div>
-          </div>
-        </Show>
-        <Show when={sources().length > 0}>
-          <SourceGrid sources={sources()} onSelect={openSource} />
-        </Show>
       </Show>
-
-      {/* Source view */}
-      <Show when={view() === "source"}>
-        <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
-          <Button variant="ghost" onClick={goBack}>
-            <ArrowLeft size={14} />
-            Back
-          </Button>
-          <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
-            {currentSource()?.name}
-          </span>
-          <Button variant="ghost" iconOnly onClick={() => { const s = currentSource(); if (s) openSource(s, true); }} title="Re-scan folder">
-            <RefreshCw size={14} />
-          </Button>
-        </div>
-        <Show when={status() === "loading"}>
-          <p class="px-6 py-4 text-sm text-zinc-500">Scanning...</p>
-        </Show>
-        <Show when={status() === "error"}>
-          <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
-        </Show>
-        <Show when={status() === "idle" && comics().length === 0}>
-          <div class="flex flex-col items-center justify-center flex-1 gap-4 text-center px-8">
-            <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
-              <BookOpen size={48} stroke-width={1} />
-            </div>
-            <div>
-              <p class="text-zinc-300 font-medium">No comics found</p>
-              <p class="text-zinc-600 text-sm mt-1">This source doesn't contain any recognised comics</p>
-            </div>
-          </div>
-        </Show>
-        <Show when={comics().length > 0}>
-          <ComicGrid comics={comics()} />
-        </Show>
+      <Show when={view() === "source" && currentSource() !== null}>
+        <SourceView
+          source={currentSource()!}
+          comics={comics()}
+          status={status()}
+          error={error()}
+          onBack={goBack}
+          onRefresh={() => openSource(currentSource()!, true)}
+        />
       </Show>
-
     </main>
   );
 }
