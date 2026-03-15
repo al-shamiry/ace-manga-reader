@@ -17,6 +17,13 @@ function StatusBadge(props: { status: ChapterStatus }) {
         </span>
       );
     case "ongoing":
+      if (props.status.page === 0) {
+        return (
+          <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-100">
+            New
+          </span>
+        );
+      }
       return (
         <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-indigo-900/50 text-indigo-400">
           Page {props.status.page + 1}

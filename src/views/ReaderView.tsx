@@ -67,11 +67,13 @@ export function ReaderView() {
       `${s.comic.title} — ${s.chapter.title} — Page ${idx + 1} / ${total}`
     );
 
-    invoke("set_chapter_progress", {
-      chapterId: s.chapter.id,
-      page: idx,
-      totalPages: total,
-    }).catch(console.error);
+    if (s.chapter.status.type !== "read") {
+      invoke("set_chapter_progress", {
+        chapterId: s.chapter.id,
+        page: idx,
+        totalPages: total,
+      }).catch(console.error);
+    }
   });
 
   // Keyboard listeners — synchronous so onCleanup registers correctly
