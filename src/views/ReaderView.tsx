@@ -1,4 +1,4 @@
-import { createSignal, onMount, Show } from "solid-js";
+import { createSignal, onMount, onCleanup, Show } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-solid";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
@@ -40,6 +40,27 @@ export function ReaderView() {
     } finally {
       setLoading(false);
     }
+
+    function onKeyDown(e: KeyboardEvent) {
+      switch (e.key) {
+        case "ArrowLeft":
+        case "ArrowUp":
+          e.preventDefault();
+          prev();
+          break;
+        case "ArrowRight":
+        case "ArrowDown":
+          e.preventDefault();
+          next();
+          break;
+        case "Backspace":
+          navigate(-1);
+          break;
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    onCleanup(() => window.removeEventListener("keydown", onKeyDown));
   });
 
   function prev() {
@@ -91,6 +112,12 @@ export function ReaderView() {
             class="max-h-full max-w-full object-contain select-none"
             draggable={false}
           />
+          {/* Tap zones */}
+          <div class="absolute inset-0 flex pointer-events-none">
+            <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={prev} />
+            <div class="w-1/3 h-full" />
+            <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={next} />
+          </div>
         </Show>
       </div>
 
