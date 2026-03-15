@@ -112,16 +112,13 @@ fn find_folder_manga_cover(manga_path: &Path) -> Option<String> {
 fn scan_folder_manga(path: &Path) -> Result<Comic, String> {
     let cover_path = find_folder_manga_cover(path)
         .ok_or_else(|| "No cover or images found".to_string())?;
-    let page_count: usize = subdirs(path).iter().map(|issue| images_in(issue).len()).sum();
-    if page_count == 0 {
-        return Err("No pages found".to_string());
-    }
+    let chapter_count = subdirs(path).len();
     Ok(Comic {
         id: path_id(path),
         title: title_from_path(path),
         path: normalize(path),
         cover_path,
-        page_count,
+        chapter_count,
         file_type: "dir".to_string(),
     })
 }
@@ -164,25 +161,12 @@ fn scan_cbz_manga(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
         fs::write(&cover_path, &bytes).map_err(|e| e.to_string())?;
     }
 
-    // Sum pages across all CBZ files
-    let page_count: usize = cbz_files.iter().map(|cbz| {
-        fs::File::open(cbz)
-            .ok()
-            .and_then(|f| ZipArchive::new(f).ok())
-            .map(|mut a| {
-                (0..a.len())
-                    .filter(|&i| a.by_index(i).map(|e| is_image(Path::new(e.name()))).unwrap_or(false))
-                    .count()
-            })
-            .unwrap_or(0)
-    }).sum();
-
     Ok(Comic {
         id,
         title: title_from_path(path),
         path: normalize(path),
         cover_path: normalize(&cover_path),
-        page_count,
+        chapter_count: cbz_files.len(),
         file_type: "cbz".to_string(),
     })
 }
@@ -236,7 +220,7 @@ fn scan_cbz(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
         title: title_from_path(path),
         path: normalize(path),
         cover_path: normalize(&cover_path),
-        page_count: image_names.len(),
+        chapter_count: 1,
         file_type: "cbz".to_string(),
     })
 }

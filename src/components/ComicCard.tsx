@@ -36,7 +36,7 @@ export function ComicCard(props: Props) {
       </div>
       <div class="px-2.5 py-2 shrink-0">
         <p class="text-[0.8rem] font-medium text-zinc-100 truncate">{props.comic.title}</p>
-        <p class="text-[0.7rem] text-zinc-500 mt-0.5">{props.comic.page_count} pages</p>
+        <p class="text-[0.7rem] text-zinc-500 mt-0.5">{props.comic.chapter_count} {props.comic.chapter_count === 1 ? "chapter" : "chapters"}</p>
       </div>
     </div>
   );

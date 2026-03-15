@@ -113,7 +113,7 @@ export function MangaDetailView() {
             {comic.title}
           </h1>
           <p class="text-xs text-zinc-500">
-            {comic.file_type.toUpperCase()} · {comic.page_count} pages
+            {comic.file_type.toUpperCase()} · {comic.chapter_count} {comic.chapter_count === 1 ? "chapter" : "chapters"}
           </p>
           <Show when={primaryLabel()}>
             <Button

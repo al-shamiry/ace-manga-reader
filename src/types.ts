@@ -3,7 +3,7 @@ export interface Comic {
   title: string;
   path: string;
   cover_path: string;
-  page_count: number;
+  chapter_count: number;
   file_type: "dir" | "cbz";
 }
 
