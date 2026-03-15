@@ -75,7 +75,15 @@ export function MangaDetailView() {
   };
 
   function openChapter(chapter: Chapter) {
-    navigate("/reader/" + chapter.id, { state: { chapter, comic } });
+    const idx = chapters().findIndex((c) => c.id === chapter.id);
+    navigate("/reader/" + chapter.id, {
+      state: {
+        chapter,
+        comic,
+        prevChapter: chapters()[idx - 1],
+        nextChapter: chapters()[idx + 1],
+      },
+    });
   }
 
   if (!comic) {
