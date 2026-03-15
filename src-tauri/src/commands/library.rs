@@ -33,10 +33,20 @@ pub(crate) fn path_id(path: &Path) -> String {
 }
 
 pub(crate) fn title_from_path(path: &Path) -> String {
-    path.file_stem()
+    let stem = path
+        .file_stem()
         .and_then(|s| s.to_str())
-        .unwrap_or("Unknown")
-        .to_string()
+        .unwrap_or("Unknown");
+
+    // Strip download-tool hash suffixes like "_299d43" or "_1a2b3c4d"
+    if let Some(idx) = stem.rfind('_') {
+        let suffix = &stem[idx + 1..];
+        if (4..=16).contains(&suffix.len()) && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
+            return stem[..idx].to_string();
+        }
+    }
+
+    stem.to_string()
 }
 
 pub(crate) fn normalize(path: &Path) -> String {
