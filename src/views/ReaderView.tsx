@@ -20,6 +20,8 @@ export function ReaderView() {
   const [pageIndex, setPageIndex] = createSignal(0);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal("");
+  const [jumping, setJumping] = createSignal(false);
+  const [jumpInput, setJumpInput] = createSignal("");
 
   createEffect(() => {
     const total = pages().length;
@@ -144,9 +146,39 @@ export function ReaderView() {
         <Button variant="ghost" iconOnly onClick={prev} disabled={pageIndex() === 0}>
           <ChevronLeft size={16} />
         </Button>
-        <span class="text-sm text-zinc-400 tabular-nums">
-          {pageIndex() + 1} / {pages().length}
-        </span>
+        <Show
+          when={jumping()}
+          fallback={
+            <button
+              class="text-sm text-zinc-400 tabular-nums hover:text-zinc-100 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-zinc-800"
+              onClick={() => { setJumpInput(String(pageIndex() + 1)); setJumping(true); }}
+            >
+              {pageIndex() + 1} / {pages().length}
+            </button>
+          }
+        >
+          <form
+            class="flex items-center gap-1.5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = parseInt(jumpInput(), 10);
+              if (!isNaN(n)) setPageIndex(Math.max(0, Math.min(pages().length - 1, n - 1)));
+              setJumping(false);
+            }}
+          >
+            <input
+              type="number"
+              min={1}
+              max={pages().length}
+              value={jumpInput()}
+              onInput={(e) => setJumpInput(e.currentTarget.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") setJumping(false); e.stopPropagation(); }}
+              ref={(el) => setTimeout(() => { el.focus(); el.select(); }, 0)}
+              class="w-14 text-center text-sm bg-zinc-800 text-zinc-100 rounded px-1.5 py-0.5 outline-none border border-zinc-600 focus:border-indigo-500 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <span class="text-sm text-zinc-500">/ {pages().length}</span>
+          </form>
+        </Show>
         <Button variant="ghost" iconOnly onClick={next} disabled={pageIndex() === pages().length - 1}>
           <ChevronRight size={16} />
         </Button>
