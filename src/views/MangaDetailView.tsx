@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
+import { ChapterListSkeleton } from "../components/Skeleton";
 import type { Comic, Chapter, ChapterStatus } from "../types";
 
 function StatusBadge(props: { status: ChapterStatus }) {
@@ -132,13 +133,17 @@ export function MangaDetailView() {
 
       {/* Chapter count */}
       <div class="px-4 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 shrink-0">
-        <Show when={!loading()} fallback="Loading chapters…">
+        <Show when={!loading()} fallback="…">
           {chapters().length} {chapters().length === 1 ? "chapter" : "chapters"}
         </Show>
       </div>
 
       {/* Chapter list */}
       <div class="overflow-y-auto flex-1">
+        <Show when={loading()}>
+          <ChapterListSkeleton />
+        </Show>
+
         <Show when={error()}>
           <p class="px-4 py-3 text-sm text-red-400">{error()}</p>
         </Show>

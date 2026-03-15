@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
 import { ComicGrid } from "../components/ComicGrid";
+import { ComicGridSkeleton } from "../components/Skeleton";
 import { useLibrary } from "../context/LibraryContext";
 import type { Comic } from "../types";
 
@@ -55,7 +56,7 @@ export function SourceView() {
         </Button>
       </div>
       <Show when={status() === "loading"}>
-        <p class="px-6 py-4 text-sm text-zinc-500">Scanning...</p>
+        <ComicGridSkeleton />
       </Show>
       <Show when={status() === "error"}>
         <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
@@ -71,7 +72,7 @@ export function SourceView() {
           </div>
         </div>
       </Show>
-      <Show when={comics().length > 0}>
+      <Show when={comics().length > 0 && status() !== "loading"}>
         <ComicGrid comics={comics()} />
       </Show>
     </>
