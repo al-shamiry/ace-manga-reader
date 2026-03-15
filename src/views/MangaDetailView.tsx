@@ -12,8 +12,8 @@ function StatusBadge(props: { status: ChapterStatus }) {
   switch (props.status.type) {
     case "read":
       return (
-        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-green-900/50 text-green-400">
-          Read
+        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500">
+          Done
         </span>
       );
     case "ongoing":
@@ -24,7 +24,7 @@ function StatusBadge(props: { status: ChapterStatus }) {
       );
     default:
       return (
-        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500">
+        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-100">
           New
         </span>
       );
