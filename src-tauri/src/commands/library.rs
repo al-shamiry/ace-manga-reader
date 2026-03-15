@@ -11,6 +11,7 @@ use crate::models::comic::Comic;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Source {
+    id: String,
     name: String,
     path: String,
     manga_count: usize,
@@ -324,6 +325,7 @@ pub fn list_sources(path: String) -> Result<Vec<Source>, String> {
                 .map(|rd| rd.filter_map(|e| e.ok()).filter(|e| e.path().is_dir()).count())
                 .unwrap_or(0);
             Source {
+                id: path_id(&p),
                 name: p.file_name().unwrap_or_default().to_string_lossy().to_string(),
                 path: normalize(&p),
                 manga_count,

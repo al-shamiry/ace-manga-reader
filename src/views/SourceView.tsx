@@ -1,40 +1,66 @@
-import { Show } from "solid-js";
+import { Show, createSignal, onMount } from "solid-js";
+import { useParams, useNavigate } from "@solidjs/router";
 import { ArrowLeft, RefreshCw, BookOpen } from "lucide-solid";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
 import { ComicGrid } from "../components/ComicGrid";
-import type { Comic, Source } from "../types";
+import { useLibrary } from "../context/LibraryContext";
+import type { Comic } from "../types";
 
-interface Props {
-  source: Source;
-  comics: Comic[];
-  status: "idle" | "loading" | "error";
-  error: string;
-  onBack: () => void;
-  onRefresh: () => void;
-}
+type Status = "idle" | "loading" | "error";
 
-export function SourceView(props: Props) {
+export function SourceView() {
+  const params = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { getSource } = useLibrary();
+
+  const source = () => getSource(params.id);
+
+  const [comics, setComics] = createSignal<Comic[]>([]);
+  const [status, setStatus] = createSignal<Status>("idle");
+  const [error, setError] = createSignal("");
+
+  onMount(() => {
+    const s = source();
+    if (s) loadComics(s.path);
+  });
+
+  async function loadComics(path: string, forceRefresh = false) {
+    setStatus("loading");
+    setError("");
+    try {
+      const result = await invoke<Comic[]>("scan_directory", { path, forceRefresh });
+      setComics(result);
+      setStatus("idle");
+      getCurrentWindow().setTitle(`Ace Manga Reader — ${source()?.name}`);
+    } catch (e) {
+      setError(String(e));
+      setStatus("error");
+    }
+  }
+
   return (
     <>
       <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
-        <Button variant="ghost" onClick={props.onBack}>
+        <Button variant="ghost" onClick={() => navigate(-1)}>
           <ArrowLeft size={14} />
           Back
         </Button>
         <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
-          {props.source.name}
+          {source()?.name}
         </span>
-        <Button variant="ghost" iconOnly onClick={props.onRefresh} title="Re-scan folder">
+        <Button variant="ghost" iconOnly onClick={() => { const s = source(); if (s) loadComics(s.path, true); }} title="Re-scan folder">
           <RefreshCw size={14} />
         </Button>
       </div>
-      <Show when={props.status === "loading"}>
+      <Show when={status() === "loading"}>
         <p class="px-6 py-4 text-sm text-zinc-500">Scanning...</p>
       </Show>
-      <Show when={props.status === "error"}>
-        <p class="px-6 py-4 text-sm text-red-400">{props.error}</p>
+      <Show when={status() === "error"}>
+        <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
       </Show>
-      <Show when={props.status === "idle" && props.comics.length === 0}>
+      <Show when={status() === "idle" && comics().length === 0}>
         <div class="flex flex-col items-center justify-center flex-1 gap-4 text-center px-8">
           <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
             <BookOpen size={48} stroke-width={1} />
@@ -45,8 +71,8 @@ export function SourceView(props: Props) {
           </div>
         </div>
       </Show>
-      <Show when={props.comics.length > 0}>
-        <ComicGrid comics={props.comics} />
+      <Show when={comics().length > 0}>
+        <ComicGrid comics={comics()} />
       </Show>
     </>
   );

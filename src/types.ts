@@ -8,6 +8,7 @@ export interface Comic {
 }
 
 export interface Source {
+  id: string;
   name: string;
   path: string;
   manga_count: number;

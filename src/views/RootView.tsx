@@ -1,32 +1,33 @@
 import { Show } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import { Library } from "lucide-solid";
 import { DirectoryPicker } from "../components/DirectoryPicker";
 import { SourceGrid } from "../components/SourceGrid";
+import { useLibrary } from "../context/LibraryContext";
 import type { Source } from "../types";
 
-interface Props {
-  sources: Source[];
-  status: "idle" | "loading" | "error";
-  error: string;
-  onSelect: (path: string) => void;
-  onSourceOpen: (source: Source) => void;
-}
+export function RootView() {
+  const { sources, status, error, loadRoot } = useLibrary();
+  const navigate = useNavigate();
 
-export function RootView(props: Props) {
+  function openSource(source: Source) {
+    navigate(`/source/${source.id}`);
+  }
+
   return (
     <>
       <DirectoryPicker
-        onSelect={props.onSelect}
+        onSelect={loadRoot}
         onRefresh={() => {}}
-        hasLibrary={props.sources.length > 0}
+        hasLibrary={sources().length > 0}
       />
-      <Show when={props.status === "loading"}>
+      <Show when={status() === "loading"}>
         <p class="px-6 py-4 text-sm text-zinc-500">Loading...</p>
       </Show>
-      <Show when={props.status === "error"}>
-        <p class="px-6 py-4 text-sm text-red-400">{props.error}</p>
+      <Show when={status() === "error"}>
+        <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
       </Show>
-      <Show when={props.status === "idle" && props.sources.length === 0}>
+      <Show when={status() === "idle" && sources().length === 0}>
         <div class="flex flex-col items-center justify-center flex-1 gap-4 text-center px-8">
           <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
             <Library size={48} stroke-width={1} />
@@ -37,8 +38,8 @@ export function RootView(props: Props) {
           </div>
         </div>
       </Show>
-      <Show when={props.sources.length > 0}>
-        <SourceGrid sources={props.sources} onSelect={props.onSourceOpen} />
+      <Show when={sources().length > 0}>
+        <SourceGrid sources={sources()} onSelect={openSource} />
       </Show>
     </>
   );
