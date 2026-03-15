@@ -64,6 +64,32 @@ pub(crate) fn images_in(path: &Path) -> Vec<PathBuf> {
     imgs
 }
 
+/// Natural sort comparison — numbers within strings are compared numerically.
+/// e.g. "Issue#2" < "Issue#10"
+pub(crate) fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    let mut ai = a.chars().peekable();
+    let mut bi = b.chars().peekable();
+    loop {
+        match (ai.peek(), bi.peek()) {
+            (None, None) => return std::cmp::Ordering::Equal,
+            (None, _) => return std::cmp::Ordering::Less,
+            (_, None) => return std::cmp::Ordering::Greater,
+            (Some(ac), Some(bc)) if ac.is_ascii_digit() && bc.is_ascii_digit() => {
+                let na: u64 = ai.by_ref().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
+                let nb: u64 = bi.by_ref().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
+                let ord = na.cmp(&nb);
+                if ord != std::cmp::Ordering::Equal { return ord; }
+            }
+            _ => {
+                let ac = ai.next().unwrap().to_lowercase().next().unwrap();
+                let bc = bi.next().unwrap().to_lowercase().next().unwrap();
+                let ord = ac.cmp(&bc);
+                if ord != std::cmp::Ordering::Equal { return ord; }
+            }
+        }
+    }
+}
+
 /// Returns sorted CBZ files directly inside a directory.
 pub(crate) fn cbz_files_in(path: &Path) -> Vec<PathBuf> {
     let mut files: Vec<PathBuf> = fs::read_dir(path)

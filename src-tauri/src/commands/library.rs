@@ -240,7 +240,7 @@ pub fn list_sources(path: String) -> Result<Vec<Source>, String> {
             }
         })
         .collect();
-    sources.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    sources.sort_by(|a, b| crate::utils::natural_cmp(&a.name, &b.name));
     Ok(sources)
 }
 
@@ -291,7 +291,7 @@ pub fn scan_directory(
     fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
 
     let mut comics = collect_comics(dir, 1, &covers_dir);
-    comics.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+    comics.sort_by(|a, b| crate::utils::natural_cmp(&a.title, &b.title));
 
     save_scan_cache(&cache_file, &comics);
     let _ = fs::write(last_dir_path(&app_data_dir), path.as_bytes());

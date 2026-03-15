@@ -96,7 +96,7 @@ pub fn get_chapters(
         _ => return Err(format!("Unknown file_type: {}", file_type)),
     };
 
-    chapters.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+    chapters.sort_by(|a, b| crate::utils::natural_cmp(&a.title, &b.title));
     Ok(chapters)
 }
 
