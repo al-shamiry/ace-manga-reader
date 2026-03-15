@@ -31,8 +31,7 @@ pub(crate) fn title_from_path(path: &Path) -> String {
             return stem[..idx].to_string();
         }
     }
-
-    stem.to_string()
+    stem.replace("_ ", ": ")
 }
 
 pub(crate) fn normalize(path: &Path) -> String {
