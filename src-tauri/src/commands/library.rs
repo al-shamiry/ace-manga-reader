@@ -61,44 +61,50 @@ fn images_in(path: &Path) -> Vec<PathBuf> {
     imgs
 }
 
-/// A manga folder = a folder whose subdirectories contain image files (i.e. it has issues).
-fn is_manga_dir(path: &Path) -> bool {
-    subdirs(path)
-        .iter()
-        .any(|sub| !images_in(sub).is_empty())
+fn cbz_files_in(path: &Path) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = fs::read_dir(path)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| {
+            p.is_file()
+                && p.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.eq_ignore_ascii_case("cbz"))
+                    .unwrap_or(false)
+        })
+        .collect();
+    files.sort();
+    files
 }
 
-/// Find the cover for a manga folder:
+/// A manga folder = a folder whose children are image-containing subdirs OR CBZ files.
+fn is_manga_dir(path: &Path) -> bool {
+    !cbz_files_in(path).is_empty()
+        || subdirs(path).iter().any(|sub| !images_in(sub).is_empty())
+}
+
+/// Find the cover for a folder-based manga:
 ///   1. cover.png / cover.jpg / cover.webp directly in the manga folder
 ///   2. First image of the first issue (alphabetically)
-fn find_manga_cover(manga_path: &Path) -> Option<String> {
-    // 1. Explicit cover file
+fn find_folder_manga_cover(manga_path: &Path) -> Option<String> {
     for name in &["cover.png", "cover.jpg", "cover.jpeg", "cover.webp"] {
         let candidate = manga_path.join(name);
         if candidate.is_file() {
             return Some(normalize(&candidate));
         }
     }
-
-    // 2. First image from first issue
     let first_issue = subdirs(manga_path).into_iter().next()?;
     let first_image = images_in(&first_issue).into_iter().next()?;
     Some(normalize(&first_image))
 }
 
-/// Count total pages across all issue subfolders of a manga.
-fn count_manga_pages(manga_path: &Path) -> usize {
-    subdirs(manga_path)
-        .iter()
-        .map(|issue| images_in(issue).len())
-        .sum()
-}
-
-/// Scan a manga folder and return a Comic.
-fn scan_manga_dir(path: &Path) -> Result<Comic, String> {
-    let cover_path = find_manga_cover(path)
+/// Scan a folder-based manga (issues are subdirs of images).
+fn scan_folder_manga(path: &Path) -> Result<Comic, String> {
+    let cover_path = find_folder_manga_cover(path)
         .ok_or_else(|| "No cover or images found".to_string())?;
-    let page_count = count_manga_pages(path);
+    let page_count: usize = subdirs(path).iter().map(|issue| images_in(issue).len()).sum();
     if page_count == 0 {
         return Err("No pages found".to_string());
     }
@@ -110,6 +116,76 @@ fn scan_manga_dir(path: &Path) -> Result<Comic, String> {
         page_count,
         file_type: "dir".to_string(),
     })
+}
+
+/// Scan a CBZ-based manga (issues are CBZ files inside the folder).
+fn scan_cbz_manga(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
+    let cbz_files = cbz_files_in(path);
+    if cbz_files.is_empty() {
+        return Err("No CBZ files found".to_string());
+    }
+
+    // Cover from first CBZ
+    let first_cbz = &cbz_files[0];
+    let file = fs::File::open(first_cbz).map_err(|e| e.to_string())?;
+    let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
+
+    let mut image_names: Vec<String> = (0..archive.len())
+        .filter_map(|i| {
+            archive.by_index(i).ok().and_then(|entry| {
+                let name = entry.name().to_string();
+                if is_image(Path::new(&name)) { Some(name) } else { None }
+            })
+        })
+        .collect();
+    image_names.sort();
+
+    if image_names.is_empty() {
+        return Err("No images in first CBZ".to_string());
+    }
+
+    let cover_name = &image_names[0];
+    let id = path_id(path);
+    let ext = Path::new(cover_name).extension().and_then(|e| e.to_str()).unwrap_or("jpg");
+    let cover_path = cache_dir.join(format!("{}.{}", id, ext));
+
+    if !cover_path.exists() {
+        let mut entry = archive.by_name(cover_name).map_err(|e| e.to_string())?;
+        let mut bytes = Vec::new();
+        entry.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+        fs::write(&cover_path, &bytes).map_err(|e| e.to_string())?;
+    }
+
+    // Sum pages across all CBZ files
+    let page_count: usize = cbz_files.iter().map(|cbz| {
+        fs::File::open(cbz)
+            .ok()
+            .and_then(|f| ZipArchive::new(f).ok())
+            .map(|mut a| {
+                (0..a.len())
+                    .filter(|&i| a.by_index(i).map(|e| is_image(Path::new(e.name()))).unwrap_or(false))
+                    .count()
+            })
+            .unwrap_or(0)
+    }).sum();
+
+    Ok(Comic {
+        id,
+        title: title_from_path(path),
+        path: normalize(path),
+        cover_path: normalize(&cover_path),
+        page_count,
+        file_type: "cbz".to_string(),
+    })
+}
+
+/// Scan a manga folder — dispatches to folder or CBZ variant.
+fn scan_manga_dir(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
+    if !cbz_files_in(path).is_empty() {
+        scan_cbz_manga(path, cache_dir)
+    } else {
+        scan_folder_manga(path)
+    }
 }
 
 /// Scan a CBZ file: count image entries and extract the cover to cache_dir.
@@ -180,7 +256,7 @@ fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
             }
         } else if entry.is_dir() {
             if is_manga_dir(&entry) {
-                match scan_manga_dir(&entry) {
+                match scan_manga_dir(&entry, cache_dir) {
                     Ok(comic) => comics.push(comic),
                     Err(e) => eprintln!("Skipping manga {:?}: {}", entry, e),
                 }
