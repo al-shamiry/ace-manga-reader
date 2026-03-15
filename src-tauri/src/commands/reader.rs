@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::Path;
@@ -10,18 +11,21 @@ use crate::models::chapter::{Chapter, ChapterStatus};
 
 // ── Progress helpers ──────────────────────────────────────────────────────────
 
-fn progress_path(app_data_dir: &std::path::Path, chapter_id: &str) -> std::path::PathBuf {
-    app_data_dir
-        .join("progress")
-        .join(format!("{}.json", chapter_id))
+fn progress_file(app_data_dir: &std::path::Path) -> std::path::PathBuf {
+    app_data_dir.join("progress.json")
+}
+
+fn load_progress_map(app_data_dir: &std::path::Path) -> HashMap<String, ChapterStatus> {
+    fs::read(progress_file(app_data_dir))
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_default()
 }
 
 fn load_status(app_data_dir: &std::path::Path, chapter_id: &str) -> ChapterStatus {
-    let bytes = match fs::read(progress_path(app_data_dir, chapter_id)) {
-        Ok(b) => b,
-        Err(_) => return ChapterStatus::Unread,
-    };
-    serde_json::from_slice(&bytes).unwrap_or(ChapterStatus::Unread)
+    load_progress_map(app_data_dir)
+        .remove(chapter_id)
+        .unwrap_or(ChapterStatus::Unread)
 }
 
 fn save_status(
@@ -29,10 +33,10 @@ fn save_status(
     chapter_id: &str,
     status: &ChapterStatus,
 ) -> Result<(), String> {
-    let path = progress_path(app_data_dir, chapter_id);
-    fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
-    let json = serde_json::to_vec(status).map_err(|e| e.to_string())?;
-    fs::write(&path, json).map_err(|e| e.to_string())
+    let mut map = load_progress_map(app_data_dir);
+    map.insert(chapter_id.to_string(), status.clone());
+    let json = serde_json::to_vec(&map).map_err(|e| e.to_string())?;
+    fs::write(progress_file(app_data_dir), json).map_err(|e| e.to_string())
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
