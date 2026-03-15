@@ -1,5 +1,6 @@
 import { createSignal, Show, onMount } from "solid-js";
 import { ArrowLeft, RefreshCw } from "lucide-solid";
+import { Button } from "./components/Button";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { DirectoryPicker } from "./components/DirectoryPicker";
@@ -94,23 +95,16 @@ function App() {
       {/* Source view */}
       <Show when={view() === "source"}>
         <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
-          <button
-            class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 rounded-md text-sm font-medium transition-colors cursor-pointer shrink-0"
-            onClick={goBack}
-          >
+          <Button variant="ghost" onClick={goBack}>
             <ArrowLeft size={14} />
             Back
-          </button>
+          </Button>
           <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
             {currentSource()?.name}
           </span>
-          <button
-            class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 rounded-md transition-colors cursor-pointer shrink-0"
-            onClick={() => { const s = currentSource(); if (s) openSource(s, true); }}
-            title="Re-scan folder"
-          >
+          <Button variant="ghost" iconOnly onClick={() => { const s = currentSource(); if (s) openSource(s, true); }} title="Re-scan folder">
             <RefreshCw size={14} />
-          </button>
+          </Button>
         </div>
         <Show when={status() === "loading"}>
           <p class="px-6 py-4 text-sm text-zinc-500">Scanning...</p>

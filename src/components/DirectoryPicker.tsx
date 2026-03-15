@@ -1,5 +1,7 @@
 import { createSignal } from "solid-js";
 import { open } from "@tauri-apps/plugin-dialog";
+import { RefreshCw } from "lucide-solid";
+import { Button } from "./Button";
 
 interface Props {
   onSelect: (path: string) => void;
@@ -25,35 +27,25 @@ export function DirectoryPicker(props: Props) {
 
   return (
     <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
-      <button
-        onClick={pickFolder}
-        class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer shrink-0"
-      >
+      <Button variant="primary" onClick={pickFolder}>
         Select Folder
-      </button>
-      <form onSubmit={submitManual} class="flex flex-1 gap-2 min-w-0">
+      </Button>
+      <form onSubmit={submitManual} class="flex items-center flex-1 gap-2 min-w-0">
         <input
           type="text"
           placeholder="Or paste a path..."
           value={manualPath()}
           onInput={(e) => setManualPath(e.currentTarget.value)}
-          class="flex-1 min-w-0 px-3 py-1.5 bg-zinc-800 border border-zinc-700 focus:border-indigo-500 text-zinc-100 placeholder:text-zinc-500 rounded-md text-sm outline-none transition-colors"
+          class="flex-1 min-w-0 h-8 px-3 bg-zinc-800 border border-zinc-700 focus:border-indigo-500 text-zinc-100 placeholder:text-zinc-500 rounded-md text-sm outline-none transition-colors"
         />
-        <button
-          type="submit"
-          class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors cursor-pointer shrink-0"
-        >
+        <Button variant="primary" type="submit">
           Go
-        </button>
+        </Button>
       </form>
       {props.hasLibrary && (
-        <button
-          onClick={props.onRefresh}
-          title="Re-scan folder"
-          class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 rounded-md text-sm transition-colors cursor-pointer shrink-0"
-        >
-          ↻
-        </button>
+        <Button variant="ghost" iconOnly onClick={props.onRefresh} title="Re-scan folder">
+          <RefreshCw size={14} />
+        </Button>
       )}
     </div>
   );
