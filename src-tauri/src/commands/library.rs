@@ -9,6 +9,13 @@ use tauri::Manager;
 
 use crate::models::comic::Comic;
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct Source {
+    name: String,
+    path: String,
+    manga_count: usize,
+}
+
 const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif", "avif"];
 
 fn is_image(path: &Path) -> bool {
@@ -274,12 +281,57 @@ fn last_dir_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("last_directory.txt")
 }
 
+fn root_dir_path(app_data_dir: &Path) -> PathBuf {
+    app_data_dir.join("root_directory.txt")
+}
+
 #[tauri::command]
 pub fn get_last_directory(app_handle: tauri::AppHandle) -> Option<String> {
     let app_data_dir = app_handle.path().app_data_dir().ok()?;
     let content = fs::read_to_string(last_dir_path(&app_data_dir)).ok()?;
     let path = content.trim().to_string();
     if path.is_empty() { None } else { Some(path) }
+}
+
+#[tauri::command]
+pub fn get_root_directory(app_handle: tauri::AppHandle) -> Option<String> {
+    let app_data_dir = app_handle.path().app_data_dir().ok()?;
+    let content = fs::read_to_string(root_dir_path(&app_data_dir)).ok()?;
+    let path = content.trim().to_string();
+    if path.is_empty() { None } else { Some(path) }
+}
+
+#[tauri::command]
+pub fn set_root_directory(path: String, app_handle: tauri::AppHandle) -> Result<(), String> {
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+    fs::write(root_dir_path(&app_data_dir), path.as_bytes()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_sources(path: String) -> Result<Vec<Source>, String> {
+    let dir = Path::new(&path);
+    if !dir.is_dir() {
+        return Err(format!("'{}' is not a directory", path));
+    }
+    let mut sources: Vec<Source> = fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .map(|p| {
+            let manga_count = fs::read_dir(&p)
+                .map(|rd| rd.filter_map(|e| e.ok()).filter(|e| e.path().is_dir()).count())
+                .unwrap_or(0);
+            Source {
+                name: p.file_name().unwrap_or_default().to_string_lossy().to_string(),
+                path: normalize(&p),
+                manga_count,
+            }
+        })
+        .collect();
+    sources.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    Ok(sources)
 }
 
 fn scan_cache_path(app_data_dir: &Path, scan_path: &Path) -> PathBuf {

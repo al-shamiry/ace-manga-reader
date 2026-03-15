@@ -9,6 +9,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::library::scan_directory,
             commands::library::get_last_directory,
+            commands::library::get_root_directory,
+            commands::library::set_root_directory,
+            commands::library::list_sources,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

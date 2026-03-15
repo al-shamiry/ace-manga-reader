@@ -6,3 +6,9 @@ export interface Comic {
   page_count: number;
   file_type: "dir" | "cbz";
 }
+
+export interface Source {
+  name: string;
+  path: string;
+  manga_count: number;
+}
