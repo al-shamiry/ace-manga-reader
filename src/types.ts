@@ -4,7 +4,6 @@ export interface Comic {
   path: string;
   cover_path: string;
   chapter_count: number;
-  file_type: "dir" | "cbz";
 }
 
 export type ChapterStatus =

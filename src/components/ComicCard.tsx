@@ -30,9 +30,6 @@ export function ComicCard(props: Props) {
             class="w-full h-full object-cover block"
           />
         )}
-        <span class="absolute bottom-1.5 right-1.5 bg-black/70 text-zinc-400 text-[0.65rem] font-semibold tracking-wide px-1.5 py-0.5 rounded">
-          {props.comic.file_type.toUpperCase()}
-        </span>
       </div>
       <div class="px-2.5 py-2 shrink-0">
         <p class="text-[0.8rem] font-medium text-zinc-100 truncate">{props.comic.title}</p>

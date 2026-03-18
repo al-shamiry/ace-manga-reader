@@ -7,5 +7,4 @@ pub struct Comic {
     pub path: String,
     pub cover_path: String,
     pub chapter_count: usize,
-    pub file_type: String,
 }

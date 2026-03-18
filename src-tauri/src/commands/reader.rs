@@ -44,61 +44,57 @@ fn save_status(
 #[tauri::command]
 pub fn get_chapters(
     manga_path: String,
-    file_type: String,
     app_handle: tauri::AppHandle,
 ) -> Result<Vec<Chapter>, String> {
     let dir = Path::new(&manga_path);
     let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
 
-    let mut chapters: Vec<Chapter> = match file_type.as_str() {
-        "dir" => subdirs(dir)
-            .into_iter()
-            .map(|p| {
-                let id = path_id(&p);
-                let status = load_status(&app_data_dir, &id);
-                let page_count = images_in(&p).len();
-                Chapter {
-                    id,
-                    title: title_from_path(&p),
-                    path: normalize(&p),
-                    file_type: "dir".to_string(),
-                    page_count,
-                    status,
-                }
-            })
-            .collect(),
+    let mut chapters: Vec<Chapter> = Vec::new();
 
-        "cbz" => cbz_files_in(dir)
-            .into_iter()
-            .map(|p| {
-                let id = path_id(&p);
-                let status = load_status(&app_data_dir, &id);
-                let page_count = fs::File::open(&p)
-                    .ok()
-                    .and_then(|f| ZipArchive::new(f).ok())
-                    .map(|mut a| {
-                        (0..a.len())
-                            .filter(|&i| {
-                                a.by_index(i)
-                                    .map(|e| is_image(Path::new(e.name())))
-                                    .unwrap_or(false)
-                            })
-                            .count()
+    // Collect directory-based chapters
+    for p in subdirs(dir) {
+        if images_in(&p).is_empty() {
+            continue;
+        }
+        let id = path_id(&p);
+        let status = load_status(&app_data_dir, &id);
+        let page_count = images_in(&p).len();
+        chapters.push(Chapter {
+            id,
+            title: title_from_path(&p),
+            path: normalize(&p),
+            file_type: "dir".to_string(),
+            page_count,
+            status,
+        });
+    }
+
+    // Collect CBZ-based chapters
+    for p in cbz_files_in(dir) {
+        let id = path_id(&p);
+        let status = load_status(&app_data_dir, &id);
+        let page_count = fs::File::open(&p)
+            .ok()
+            .and_then(|f| ZipArchive::new(f).ok())
+            .map(|mut a| {
+                (0..a.len())
+                    .filter(|&i| {
+                        a.by_index(i)
+                            .map(|e| is_image(Path::new(e.name())))
+                            .unwrap_or(false)
                     })
-                    .unwrap_or(0);
-                Chapter {
-                    id,
-                    title: title_from_path(&p),
-                    path: normalize(&p),
-                    file_type: "cbz".to_string(),
-                    page_count,
-                    status,
-                }
+                    .count()
             })
-            .collect(),
-
-        _ => return Err(format!("Unknown file_type: {}", file_type)),
-    };
+            .unwrap_or(0);
+        chapters.push(Chapter {
+            id,
+            title: title_from_path(&p),
+            path: normalize(&p),
+            file_type: "cbz".to_string(),
+            page_count,
+            status,
+        });
+    }
 
     chapters.sort_by(|a, b| crate::utils::natural_cmp(&a.title, &b.title));
     Ok(chapters)

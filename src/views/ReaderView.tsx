@@ -111,7 +111,6 @@ export function ReaderView() {
 
     const allChapters = await invoke<Chapter[]>("get_chapters", {
       mangaPath: comic.path,
-      fileType: comic.file_type,
     }).catch(() => [] as Chapter[]);
     const idx = allChapters.findIndex((c) => c.id === prevChapter.id);
 
@@ -138,7 +137,6 @@ export function ReaderView() {
 
     const allChapters = await invoke<Chapter[]>("get_chapters", {
       mangaPath: comic.path,
-      fileType: comic.file_type,
     }).catch(() => [] as Chapter[]);
     const idx = allChapters.findIndex((c) => c.id === nextChapter.id);
 

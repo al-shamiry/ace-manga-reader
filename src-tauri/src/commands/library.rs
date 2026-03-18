@@ -16,16 +16,8 @@ pub struct Source {
     manga_count: usize,
 }
 
-/// A manga folder = a folder whose children are image-containing subdirs OR CBZ files.
-fn is_manga_dir(path: &Path) -> bool {
-    !cbz_files_in(path).is_empty()
-        || subdirs(path).iter().any(|sub| !images_in(sub).is_empty())
-}
-
-/// Find the cover for a folder-based manga:
-///   1. cover.png / cover.jpg / cover.webp directly in the manga folder
-///   2. First image of the first issue (alphabetically)
-fn find_folder_manga_cover(manga_path: &Path) -> Option<String> {
+/// Find the cover from explicit cover files or first issue's first image.
+fn find_folder_cover(manga_path: &Path) -> Option<String> {
     for name in &["cover.png", "cover.jpg", "cover.jpeg", "cover.webp"] {
         let candidate = manga_path.join(name);
         if candidate.is_file() {
@@ -35,21 +27,6 @@ fn find_folder_manga_cover(manga_path: &Path) -> Option<String> {
     let first_issue = subdirs(manga_path).into_iter().next()?;
     let first_image = images_in(&first_issue).into_iter().next()?;
     Some(normalize(&first_image))
-}
-
-/// Scan a folder-based manga (issues are subdirs of images).
-fn scan_folder_manga(path: &Path) -> Result<Comic, String> {
-    let cover_path = find_folder_manga_cover(path)
-        .ok_or_else(|| "No cover or images found".to_string())?;
-    let chapter_count = subdirs(path).len();
-    Ok(Comic {
-        id: path_id(path),
-        title: title_from_path(path),
-        path: normalize(path),
-        cover_path,
-        chapter_count,
-        file_type: "dir".to_string(),
-    })
 }
 
 /// Extract the cover image from a CBZ file into `cache_dir`, returning the cached path.
@@ -85,33 +62,40 @@ fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Resul
     Ok(normalize(&cover_path))
 }
 
-/// Scan a CBZ-based manga (issues are CBZ files inside the folder).
-fn scan_cbz_manga(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
+/// Scan a manga folder that may contain CBZ files, image subdirs, or both.
+/// Returns `None` if the folder has no chapters.
+fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Comic, String>> {
     let cbz_files = cbz_files_in(path);
-    if cbz_files.is_empty() {
-        return Err("No CBZ files found".to_string());
+    let image_dirs: Vec<PathBuf> = subdirs(path)
+        .into_iter()
+        .filter(|sub| !images_in(sub).is_empty())
+        .collect();
+    let chapter_count = cbz_files.len() + image_dirs.len();
+
+    if chapter_count == 0 {
+        return None;
     }
 
     let id = path_id(path);
-    let cover_path = extract_cbz_cover(&cbz_files[0], &id, cache_dir)?;
 
-    Ok(Comic {
+    // Cover priority: explicit cover file > first image subdir > first CBZ
+    let cover_result = find_folder_cover(path)
+        .map(Ok)
+        .or_else(|| cbz_files.first().map(|cbz| extract_cbz_cover(cbz, &id, cache_dir)));
+
+    let cover_path = match cover_result {
+        Some(Ok(p)) => p,
+        Some(Err(e)) => return Some(Err(e)),
+        None => return Some(Err("No cover found".to_string())),
+    };
+
+    Some(Ok(Comic {
         id,
         title: title_from_path(path),
         path: normalize(path),
         cover_path,
-        chapter_count: cbz_files.len(),
-        file_type: "cbz".to_string(),
-    })
-}
-
-/// Scan a manga folder — dispatches to folder or CBZ variant.
-fn scan_manga_dir(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
-    if !cbz_files_in(path).is_empty() {
-        scan_cbz_manga(path, cache_dir)
-    } else {
-        scan_folder_manga(path)
-    }
+        chapter_count,
+    }))
 }
 
 /// Collect all manga comics found within `dir`, searching up to `depth` levels deep.
@@ -127,13 +111,11 @@ fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
     };
 
     for entry in entries {
-        if is_manga_dir(&entry) {
-            match scan_manga_dir(&entry, cache_dir) {
-                Ok(comic) => comics.push(comic),
-                Err(e) => eprintln!("Skipping manga {:?}: {}", entry, e),
-            }
-        } else if depth > 0 {
-            comics.extend(collect_comics(&entry, depth - 1, cache_dir));
+        match scan_manga(&entry, cache_dir) {
+            Some(Ok(comic)) => comics.push(comic),
+            Some(Err(e)) => eprintln!("Skipping manga {:?}: {}", entry, e),
+            None if depth > 0 => comics.extend(collect_comics(&entry, depth - 1, cache_dir)),
+            None => {}
         }
     }
 

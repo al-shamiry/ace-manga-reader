@@ -53,7 +53,6 @@ export function MangaDetailView() {
     try {
       const result = await invoke<Chapter[]>("get_chapters", {
         mangaPath: comic.path,
-        fileType: comic.file_type,
       });
       setChapters(result);
     } catch (e) {
@@ -129,7 +128,7 @@ export function MangaDetailView() {
             {comic.title}
           </h1>
           <p class="text-xs text-zinc-500">
-            {comic.file_type.toUpperCase()} · {comic.chapter_count} {comic.chapter_count === 1 ? "chapter" : "chapters"}
+            {comic.chapter_count} {comic.chapter_count === 1 ? "chapter" : "chapters"}
           </p>
           <Show when={primaryLabel()}>
             <Button
