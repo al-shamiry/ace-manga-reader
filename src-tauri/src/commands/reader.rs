@@ -3,6 +3,7 @@ use std::fs;
 use std::io::Read;
 use std::path::Path;
 
+use rayon::prelude::*;
 use tauri::Manager;
 use zip::ZipArchive;
 
@@ -51,31 +52,28 @@ pub fn get_chapters(
     let manga_id = path_id(dir);
     let progress = load_progress_map(&app_data_dir, &manga_id);
     let (sub_dirs, cbz_files) = subdirs_and_cbz(dir);
-    let mut chapters: Vec<Chapter> = Vec::new();
 
-    // Collect directory-based chapters
-    for p in sub_dirs {
-        let page_count = images_in(&p).len();
+    let dir_chapters = sub_dirs.par_iter().filter_map(|p| {
+        let page_count = images_in(p).len();
         if page_count == 0 {
-            continue;
+            return None;
         }
-        let id = path_id(&p);
+        let id = path_id(p);
         let status = progress.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
-        chapters.push(Chapter {
+        Some(Chapter {
             id,
-            title: title_from_path(&p),
-            path: normalize(&p),
+            title: title_from_path(p),
+            path: normalize(p),
             file_type: "dir".to_string(),
             page_count,
             status,
-        });
-    }
+        })
+    });
 
-    // Collect CBZ-based chapters
-    for p in cbz_files {
-        let id = path_id(&p);
+    let cbz_chapters = cbz_files.par_iter().filter_map(|p| {
+        let id = path_id(p);
         let status = progress.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
-        let page_count = fs::File::open(&p)
+        let page_count = fs::File::open(p)
             .ok()
             .and_then(|f| ZipArchive::new(f).ok())
             .map(|mut a| {
@@ -88,16 +86,17 @@ pub fn get_chapters(
                     .count()
             })
             .unwrap_or(0);
-        chapters.push(Chapter {
+        Some(Chapter {
             id,
-            title: title_from_path(&p),
-            path: normalize(&p),
+            title: title_from_path(p),
+            path: normalize(p),
             file_type: "cbz".to_string(),
             page_count,
             status,
-        });
-    }
+        })
+    });
 
+    let mut chapters: Vec<Chapter> = dir_chapters.chain(cbz_chapters).collect();
     chapters.sort_by(|a, b| crate::utils::natural_cmp(&a.title, &b.title));
     Ok(chapters)
 }

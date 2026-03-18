@@ -2,6 +2,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+use rayon::prelude::*;
 use tauri::Manager;
 use zip::ZipArchive;
 
@@ -96,26 +97,26 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Comic, String>> {
 
 /// Collect all manga comics found within `dir`, searching up to `depth` levels deep.
 fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
-    let mut comics = Vec::new();
-
     let entries: Vec<PathBuf> = match fs::read_dir(dir) {
         Ok(rd) => rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect(),
         Err(e) => {
             eprintln!("Cannot read {:?}: {}", dir, e);
-            return comics;
+            return Vec::new();
         }
     };
 
-    for entry in entries {
-        match scan_manga(&entry, cache_dir) {
-            Some(Ok(comic)) => comics.push(comic),
-            Some(Err(e)) => eprintln!("Skipping manga {:?}: {}", entry, e),
-            None if depth > 0 => comics.extend(collect_comics(&entry, depth - 1, cache_dir)),
-            None => {}
-        }
-    }
-
-    comics
+    entries
+        .par_iter()
+        .flat_map(|entry| match scan_manga(entry, cache_dir) {
+            Some(Ok(comic)) => vec![comic],
+            Some(Err(e)) => {
+                eprintln!("Skipping manga {:?}: {}", entry, e);
+                vec![]
+            }
+            None if depth > 0 => collect_comics(entry, depth - 1, cache_dir),
+            None => vec![],
+        })
+        .collect()
 }
 
 fn last_dir_path(app_data_dir: &Path) -> PathBuf {
