@@ -6,7 +6,7 @@ use tauri::Manager;
 use zip::ZipArchive;
 
 use crate::models::comic::Comic;
-use crate::utils::{cbz_files_in, images_in, is_image, normalize, path_id, subdirs, title_from_path};
+use crate::utils::{cbz_files_in, images_in, is_image, natural_cmp, normalize, path_id, subdirs, title_from_path};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Source {
@@ -52,15 +52,9 @@ fn scan_folder_manga(path: &Path) -> Result<Comic, String> {
     })
 }
 
-/// Scan a CBZ-based manga (issues are CBZ files inside the folder).
-fn scan_cbz_manga(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
-    let cbz_files = cbz_files_in(path);
-    if cbz_files.is_empty() {
-        return Err("No CBZ files found".to_string());
-    }
-
-    let first_cbz = &cbz_files[0];
-    let file = fs::File::open(first_cbz).map_err(|e| e.to_string())?;
+/// Extract the cover image from a CBZ file into `cache_dir`, returning the cached path.
+fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Result<String, String> {
+    let file = fs::File::open(cbz_path).map_err(|e| e.to_string())?;
     let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
 
     let mut image_names: Vec<String> = (0..archive.len())
@@ -74,13 +68,12 @@ fn scan_cbz_manga(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
     image_names.sort();
 
     if image_names.is_empty() {
-        return Err("No images in first CBZ".to_string());
+        return Err("No images in CBZ".to_string());
     }
 
     let cover_name = &image_names[0];
-    let id = path_id(path);
     let ext = Path::new(cover_name).extension().and_then(|e| e.to_str()).unwrap_or("jpg");
-    let cover_path = cache_dir.join(format!("{}.{}", id, ext));
+    let cover_path = cache_dir.join(format!("{}.{}", cover_id, ext));
 
     if !cover_path.exists() {
         let mut entry = archive.by_name(cover_name).map_err(|e| e.to_string())?;
@@ -89,11 +82,24 @@ fn scan_cbz_manga(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
         fs::write(&cover_path, &bytes).map_err(|e| e.to_string())?;
     }
 
+    Ok(normalize(&cover_path))
+}
+
+/// Scan a CBZ-based manga (issues are CBZ files inside the folder).
+fn scan_cbz_manga(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
+    let cbz_files = cbz_files_in(path);
+    if cbz_files.is_empty() {
+        return Err("No CBZ files found".to_string());
+    }
+
+    let id = path_id(path);
+    let cover_path = extract_cbz_cover(&cbz_files[0], &id, cache_dir)?;
+
     Ok(Comic {
         id,
         title: title_from_path(path),
         path: normalize(path),
-        cover_path: normalize(&cover_path),
+        cover_path,
         chapter_count: cbz_files.len(),
         file_type: "cbz".to_string(),
     })
@@ -108,78 +114,26 @@ fn scan_manga_dir(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
     }
 }
 
-/// Scan a standalone CBZ file.
-fn scan_cbz(path: &Path, cache_dir: &Path) -> Result<Comic, String> {
-    let file = fs::File::open(path).map_err(|e| e.to_string())?;
-    let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
-
-    let mut image_names: Vec<String> = (0..archive.len())
-        .filter_map(|i| {
-            archive.by_index(i).ok().and_then(|entry| {
-                let name = entry.name().to_string();
-                if is_image(Path::new(&name)) { Some(name) } else { None }
-            })
-        })
-        .collect();
-    image_names.sort();
-
-    if image_names.is_empty() {
-        return Err("No images found in CBZ".to_string());
-    }
-
-    let cover_name = &image_names[0];
-    let id = path_id(path);
-    let ext = Path::new(cover_name)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("jpg");
-    let cover_path = cache_dir.join(format!("{}.{}", id, ext));
-
-    if !cover_path.exists() {
-        let mut entry = archive.by_name(cover_name).map_err(|e| e.to_string())?;
-        let mut bytes = Vec::new();
-        entry.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
-        fs::write(&cover_path, &bytes).map_err(|e| e.to_string())?;
-    }
-
-    Ok(Comic {
-        id,
-        title: title_from_path(path),
-        path: normalize(path),
-        cover_path: normalize(&cover_path),
-        chapter_count: 1,
-        file_type: "cbz".to_string(),
-    })
-}
-
-/// Collect all manga/CBZ comics found within `dir`, searching up to `depth` levels deep.
+/// Collect all manga comics found within `dir`, searching up to `depth` levels deep.
 fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
     let mut comics = Vec::new();
 
-    let entries: Vec<PathBuf> = fs::read_dir(dir)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .collect();
+    let entries: Vec<PathBuf> = match fs::read_dir(dir) {
+        Ok(rd) => rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect(),
+        Err(e) => {
+            eprintln!("Cannot read {:?}: {}", dir, e);
+            return comics;
+        }
+    };
 
     for entry in entries {
-        let ext = entry.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase());
-
-        if ext.as_deref() == Some("cbz") && entry.is_file() {
-            match scan_cbz(&entry, cache_dir) {
+        if is_manga_dir(&entry) {
+            match scan_manga_dir(&entry, cache_dir) {
                 Ok(comic) => comics.push(comic),
-                Err(e) => eprintln!("Skipping CBZ {:?}: {}", entry, e),
+                Err(e) => eprintln!("Skipping manga {:?}: {}", entry, e),
             }
-        } else if entry.is_dir() {
-            if is_manga_dir(&entry) {
-                match scan_manga_dir(&entry, cache_dir) {
-                    Ok(comic) => comics.push(comic),
-                    Err(e) => eprintln!("Skipping manga {:?}: {}", entry, e),
-                }
-            } else if depth > 0 {
-                comics.extend(collect_comics(&entry, depth - 1, cache_dir));
-            }
+        } else if depth > 0 {
+            comics.extend(collect_comics(&entry, depth - 1, cache_dir));
         }
     }
 
@@ -240,7 +194,7 @@ pub fn list_sources(path: String) -> Result<Vec<Source>, String> {
             }
         })
         .collect();
-    sources.sort_by(|a, b| crate::utils::natural_cmp(&a.name, &b.name));
+    sources.sort_by(|a, b| natural_cmp(&a.name, &b.name));
     Ok(sources)
 }
 
@@ -291,7 +245,7 @@ pub fn scan_directory(
     fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
 
     let mut comics = collect_comics(dir, 1, &covers_dir);
-    comics.sort_by(|a, b| crate::utils::natural_cmp(&a.title, &b.title));
+    comics.sort_by(|a, b| natural_cmp(&a.title, &b.title));
 
     save_scan_cache(&cache_file, &comics);
     let _ = fs::write(last_dir_path(&app_data_dir), path.as_bytes());
