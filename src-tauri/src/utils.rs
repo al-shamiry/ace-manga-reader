@@ -14,7 +14,7 @@ pub(crate) fn is_image(path: &Path) -> bool {
 
 pub(crate) fn path_id(path: &Path) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(path.to_string_lossy().as_bytes());
+    hasher.update(normalize(path).as_bytes());
     hex::encode(&hasher.finalize()[..8])
 }
 
