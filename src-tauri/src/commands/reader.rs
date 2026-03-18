@@ -11,32 +11,31 @@ use crate::models::chapter::{Chapter, ChapterStatus};
 
 // ── Progress helpers ──────────────────────────────────────────────────────────
 
-fn progress_file(app_data_dir: &std::path::Path) -> std::path::PathBuf {
-    app_data_dir.join("progress.json")
+fn progress_file(app_data_dir: &std::path::Path, manga_id: &str) -> std::path::PathBuf {
+    app_data_dir.join("progress").join(format!("{}.json", manga_id))
 }
 
-fn load_progress_map(app_data_dir: &std::path::Path) -> HashMap<String, ChapterStatus> {
-    fs::read(progress_file(app_data_dir))
+fn load_progress_map(app_data_dir: &std::path::Path, manga_id: &str) -> HashMap<String, ChapterStatus> {
+    fs::read(progress_file(app_data_dir, manga_id))
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or_default()
 }
 
-fn load_status(app_data_dir: &std::path::Path, chapter_id: &str) -> ChapterStatus {
-    load_progress_map(app_data_dir)
-        .remove(chapter_id)
-        .unwrap_or(ChapterStatus::Unread)
-}
-
 fn save_status(
     app_data_dir: &std::path::Path,
+    manga_id: &str,
     chapter_id: &str,
     status: &ChapterStatus,
 ) -> Result<(), String> {
-    let mut map = load_progress_map(app_data_dir);
+    let pf = progress_file(app_data_dir, manga_id);
+    if let Some(parent) = pf.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let mut map = load_progress_map(app_data_dir, manga_id);
     map.insert(chapter_id.to_string(), status.clone());
     let json = serde_json::to_vec(&map).map_err(|e| e.to_string())?;
-    fs::write(progress_file(app_data_dir), json).map_err(|e| e.to_string())
+    fs::write(pf, json).map_err(|e| e.to_string())
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
@@ -49,8 +48,10 @@ pub fn get_chapters(
     let dir = Path::new(&manga_path);
     let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
 
-    let mut chapters: Vec<Chapter> = Vec::new();
+    let manga_id = path_id(dir);
+    let progress = load_progress_map(&app_data_dir, &manga_id);
     let (sub_dirs, cbz_files) = subdirs_and_cbz(dir);
+    let mut chapters: Vec<Chapter> = Vec::new();
 
     // Collect directory-based chapters
     for p in sub_dirs {
@@ -59,7 +60,7 @@ pub fn get_chapters(
             continue;
         }
         let id = path_id(&p);
-        let status = load_status(&app_data_dir, &id);
+        let status = progress.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
         chapters.push(Chapter {
             id,
             title: title_from_path(&p),
@@ -73,7 +74,7 @@ pub fn get_chapters(
     // Collect CBZ-based chapters
     for p in cbz_files {
         let id = path_id(&p);
-        let status = load_status(&app_data_dir, &id);
+        let status = progress.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
         let page_count = fs::File::open(&p)
             .ok()
             .and_then(|f| ZipArchive::new(f).ok())
@@ -180,6 +181,7 @@ pub fn open_chapter(
 
 #[tauri::command]
 pub fn set_chapter_progress(
+    manga_id: String,
     chapter_id: String,
     page: usize,
     total_pages: usize,
@@ -191,11 +193,12 @@ pub fn set_chapter_progress(
     } else {
         ChapterStatus::Ongoing { page }
     };
-    save_status(&app_data_dir, &chapter_id, &status)
+    save_status(&app_data_dir, &manga_id, &chapter_id, &status)
 }
 
 #[tauri::command]
 pub fn mark_chapter_read(
+    manga_id: String,
     chapter_id: String,
     read: bool,
     app_handle: tauri::AppHandle,
@@ -206,5 +209,5 @@ pub fn mark_chapter_read(
     } else {
         ChapterStatus::Unread
     };
-    save_status(&app_data_dir, &chapter_id, &status)
+    save_status(&app_data_dir, &manga_id, &chapter_id, &status)
 }

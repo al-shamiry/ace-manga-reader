@@ -69,6 +69,7 @@ export function ReaderView() {
 
     if (s.chapter.status.type !== "read") {
       invoke("set_chapter_progress", {
+        mangaId: s.comic.id,
         chapterId: s.chapter.id,
         page: idx,
         totalPages: total,
