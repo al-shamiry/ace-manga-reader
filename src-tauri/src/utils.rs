@@ -90,21 +90,26 @@ pub(crate) fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
     }
 }
 
-/// Returns sorted CBZ files directly inside a directory.
-pub(crate) fn cbz_files_in(path: &Path) -> Vec<PathBuf> {
-    let mut files: Vec<PathBuf> = fs::read_dir(path)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| {
-            p.is_file()
+/// Returns sorted (subdirectories, CBZ files) from a single directory read.
+pub(crate) fn subdirs_and_cbz(path: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    let mut dirs = Vec::new();
+    let mut cbz = Vec::new();
+    if let Ok(rd) = fs::read_dir(path) {
+        for entry in rd.filter_map(|e| e.ok()) {
+            let p = entry.path();
+            if p.is_dir() {
+                dirs.push(p);
+            } else if p.is_file()
                 && p.extension()
                     .and_then(|e| e.to_str())
                     .map(|e| e.eq_ignore_ascii_case("cbz"))
                     .unwrap_or(false)
-        })
-        .collect();
-    files.sort();
-    files
+            {
+                cbz.push(p);
+            }
+        }
+    }
+    dirs.sort();
+    cbz.sort();
+    (dirs, cbz)
 }

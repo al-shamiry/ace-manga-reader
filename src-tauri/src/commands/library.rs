@@ -6,7 +6,7 @@ use tauri::Manager;
 use zip::ZipArchive;
 
 use crate::models::comic::Comic;
-use crate::utils::{cbz_files_in, images_in, is_image, natural_cmp, normalize, path_id, subdirs, title_from_path};
+use crate::utils::{images_in, is_image, natural_cmp, normalize, path_id, subdirs_and_cbz, title_from_path};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Source {
@@ -17,15 +17,15 @@ pub struct Source {
 }
 
 /// Find the cover from explicit cover files or first issue's first image.
-fn find_folder_cover(manga_path: &Path) -> Option<String> {
+fn find_folder_cover(manga_path: &Path, sub_dirs: &[PathBuf]) -> Option<String> {
     for name in &["cover.png", "cover.jpg", "cover.jpeg", "cover.webp"] {
         let candidate = manga_path.join(name);
         if candidate.is_file() {
             return Some(normalize(&candidate));
         }
     }
-    let first_issue = subdirs(manga_path).into_iter().next()?;
-    let first_image = images_in(&first_issue).into_iter().next()?;
+    let first_issue = sub_dirs.first()?;
+    let first_image = images_in(first_issue).into_iter().next()?;
     Some(normalize(&first_image))
 }
 
@@ -65,12 +65,8 @@ fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Resul
 /// Scan a manga folder that may contain CBZ files, image subdirs, or both.
 /// Returns `None` if the folder has no chapters.
 fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Comic, String>> {
-    let cbz_files = cbz_files_in(path);
-    let image_dirs: Vec<PathBuf> = subdirs(path)
-        .into_iter()
-        .filter(|sub| !images_in(sub).is_empty())
-        .collect();
-    let chapter_count = cbz_files.len() + image_dirs.len();
+    let (sub_dirs, cbz_files) = subdirs_and_cbz(path);
+    let chapter_count = sub_dirs.len() + cbz_files.len();
 
     if chapter_count == 0 {
         return None;
@@ -79,7 +75,7 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Comic, String>> {
     let id = path_id(path);
 
     // Cover priority: explicit cover file > first image subdir > first CBZ
-    let cover_result = find_folder_cover(path)
+    let cover_result = find_folder_cover(path, &sub_dirs)
         .map(Ok)
         .or_else(|| cbz_files.first().map(|cbz| extract_cbz_cover(cbz, &id, cache_dir)));
 

@@ -6,7 +6,7 @@ use std::path::Path;
 use tauri::Manager;
 use zip::ZipArchive;
 
-use crate::utils::{cbz_files_in, images_in, is_image, normalize, path_id, subdirs, title_from_path};
+use crate::utils::{images_in, is_image, normalize, path_id, subdirs_and_cbz, title_from_path};
 use crate::models::chapter::{Chapter, ChapterStatus};
 
 // ── Progress helpers ──────────────────────────────────────────────────────────
@@ -50,15 +50,16 @@ pub fn get_chapters(
     let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
 
     let mut chapters: Vec<Chapter> = Vec::new();
+    let (sub_dirs, cbz_files) = subdirs_and_cbz(dir);
 
     // Collect directory-based chapters
-    for p in subdirs(dir) {
-        if images_in(&p).is_empty() {
+    for p in sub_dirs {
+        let page_count = images_in(&p).len();
+        if page_count == 0 {
             continue;
         }
         let id = path_id(&p);
         let status = load_status(&app_data_dir, &id);
-        let page_count = images_in(&p).len();
         chapters.push(Chapter {
             id,
             title: title_from_path(&p),
@@ -70,7 +71,7 @@ pub fn get_chapters(
     }
 
     // Collect CBZ-based chapters
-    for p in cbz_files_in(dir) {
+    for p in cbz_files {
         let id = path_id(&p);
         let status = load_status(&app_data_dir, &id);
         let page_count = fs::File::open(&p)
