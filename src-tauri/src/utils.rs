@@ -40,26 +40,20 @@ pub(crate) fn normalize(path: &Path) -> String {
 
 /// Returns sorted subdirectories of a path.
 pub(crate) fn subdirs(path: &Path) -> Vec<PathBuf> {
-    let mut dirs: Vec<PathBuf> = fs::read_dir(path)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| p.is_dir())
-        .collect();
+    let mut dirs: Vec<PathBuf> = match fs::read_dir(path) {
+        Ok(rd) => rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect(),
+        Err(_) => return Vec::new(),
+    };
     dirs.sort();
     dirs
 }
 
 /// Returns sorted image files directly inside a directory.
 pub(crate) fn images_in(path: &Path) -> Vec<PathBuf> {
-    let mut imgs: Vec<PathBuf> = fs::read_dir(path)
-        .into_iter()
-        .flatten()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| p.is_file() && is_image(p))
-        .collect();
+    let mut imgs: Vec<PathBuf> = match fs::read_dir(path) {
+        Ok(rd) => rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_file() && is_image(p)).collect(),
+        Err(_) => return Vec::new(),
+    };
     imgs.sort();
     imgs
 }
