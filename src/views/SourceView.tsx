@@ -44,9 +44,9 @@ export function SourceView() {
   return (
     <>
       <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
-        <Button variant="ghost" onClick={() => navigate("/")}>
+        <Button variant="ghost" onClick={() => navigate("/sources")}>
           <ArrowLeft size={14} />
-          Library
+          Sources
         </Button>
         <span class="text-zinc-600 text-sm">/</span>
         <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">

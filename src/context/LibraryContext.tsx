@@ -1,7 +1,7 @@
 import { createContext, createSignal, onMount, useContext, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { Source } from "../types";
+import type { Source, Category, LibraryEntry } from "../types";
 
 type Status = "idle" | "loading" | "error";
 
@@ -11,6 +11,10 @@ interface LibraryContextValue {
   error: () => string;
   loadRoot: (path: string) => Promise<void>;
   getSource: (id: string) => Source | undefined;
+  categories: () => Category[];
+  libraryEntries: () => LibraryEntry[];
+  refreshCategories: () => Promise<void>;
+  refreshLibrary: () => Promise<void>;
 }
 
 const LibraryContext = createContext<LibraryContextValue>();
@@ -19,10 +23,14 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   const [sources, setSources] = createSignal<Source[]>([]);
   const [status, setStatus] = createSignal<Status>("idle");
   const [error, setError] = createSignal("");
+  const [categories, setCategories] = createSignal<Category[]>([]);
+  const [libraryEntries, setLibraryEntries] = createSignal<LibraryEntry[]>([]);
 
   onMount(async () => {
     const root = await invoke<string | null>("get_root_directory");
     if (root) await loadRoot(root);
+    await refreshCategories();
+    await refreshLibrary();
   });
 
   async function loadRoot(path: string) {
@@ -44,8 +52,29 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     return sources().find((s) => s.id === id);
   }
 
+  async function refreshCategories() {
+    try {
+      const cats = await invoke<Category[]>("get_categories");
+      setCategories(cats);
+    } catch (e) {
+      console.error("Failed to load categories:", e);
+    }
+  }
+
+  async function refreshLibrary() {
+    try {
+      const entries = await invoke<LibraryEntry[]>("get_library");
+      setLibraryEntries(entries);
+    } catch (e) {
+      console.error("Failed to load library:", e);
+    }
+  }
+
   return (
-    <LibraryContext.Provider value={{ sources, status, error, loadRoot, getSource }}>
+    <LibraryContext.Provider value={{
+      sources, status, error, loadRoot, getSource,
+      categories, libraryEntries, refreshCategories, refreshLibrary,
+    }}>
       {props.children}
     </LibraryContext.Provider>
   );

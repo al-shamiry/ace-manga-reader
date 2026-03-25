@@ -16,7 +16,10 @@ export function SideNav() {
 
   function isActive(path: string) {
     if (path === "/") {
-      return location.pathname === "/" || location.pathname.startsWith("/source/") || location.pathname.startsWith("/manga/");
+      return location.pathname === "/" || location.pathname.startsWith("/manga/");
+    }
+    if (path === "/sources") {
+      return location.pathname === "/sources" || location.pathname.startsWith("/source/");
     }
     return location.pathname.startsWith(path);
   }
