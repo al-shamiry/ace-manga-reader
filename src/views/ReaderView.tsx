@@ -1,6 +1,6 @@
 import { createSignal, createEffect, createMemo, onMount, onCleanup, Show, Index } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronFirst, ChevronLast, Maximize, MoveHorizontal, MoveVertical, ScanEye, Fullscreen, BookOpen, BookOpenCheck, ArrowDownUp, Scroll } from "lucide-solid";
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronFirst, ChevronLast, Maximize, Maximize2, Minimize2, MoveHorizontal, MoveVertical, ScanEye, Fullscreen, BookOpen, BookOpenCheck, ArrowDownUp, Scroll } from "lucide-solid";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
@@ -52,6 +52,7 @@ export function ReaderView() {
   const [jumpInput, setJumpInput] = createSignal("");
   const [fitMode, setFitMode] = createSignal<FitMode>("fit-screen");
   const [readingMode, setReadingMode] = createSignal<ReadingMode>("paged-ltr");
+  const [isFullscreen, setIsFullscreen] = createSignal(false);
 
   // Load saved settings (manga-specific, with global fallback)
   onMount(() => {
@@ -224,6 +225,7 @@ export function ReaderView() {
             else startContinuousScroll(1);
             break;
           case "m": cycleReadingMode(); break;
+          case "F11": e.preventDefault(); toggleFullscreen(); break;
           case "Backspace":
           case "Escape": navigate(-1); break;
         }
@@ -252,6 +254,10 @@ export function ReaderView() {
           break;
         case "m":
           cycleReadingMode();
+          break;
+        case "F11":
+          e.preventDefault();
+          toggleFullscreen();
           break;
         case "Backspace":
         case "Escape":
@@ -309,7 +315,17 @@ export function ReaderView() {
     goChapter(state()?.nextChapter, 0);
   }
 
-  function goBack() { navigate(-1); }
+  function goBack() {
+    if (isFullscreen()) getCurrentWindow().setFullscreen(false);
+    navigate(-1);
+  }
+
+  async function toggleFullscreen() {
+    const win = getCurrentWindow();
+    const full = await win.isFullscreen();
+    await win.setFullscreen(!full);
+    setIsFullscreen(!full);
+  }
 
   function initWebtoonRef(el: HTMLDivElement) {
     webtoonContainer = el;
@@ -426,6 +442,9 @@ export function ReaderView() {
                 <span class="text-xs">{FIT_LABELS[fitMode()]}</span>
               </Button>
             </Show>
+            <Button variant="ghost" iconOnly onClick={toggleFullscreen} title="Fullscreen (F11)">
+              {isFullscreen() ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </Button>
           </div>
 
           {/* Page area */}
