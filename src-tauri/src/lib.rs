@@ -19,6 +19,15 @@ pub fn run() {
             commands::reader::mark_chapter_read,
             commands::settings::get_settings,
             commands::settings::set_settings,
+            commands::categories::get_categories,
+            commands::categories::create_category,
+            commands::categories::rename_category,
+            commands::categories::delete_category,
+            commands::categories::reorder_categories,
+            commands::categories::get_library,
+            commands::categories::add_to_library,
+            commands::categories::remove_from_library,
+            commands::categories::is_in_library,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

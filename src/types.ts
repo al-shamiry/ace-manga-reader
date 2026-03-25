@@ -27,6 +27,22 @@ export interface Source {
   manga_count: number;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  sort_order: number;
+}
+
+export interface LibraryEntry {
+  manga_id: string;
+  title: string;
+  path: string;
+  cover_path: string;
+  chapter_count: number;
+  category_ids: string[];
+  added_at: number;
+}
+
 export type FitMode = "fit-screen" | "fit-width" | "fit-height" | "original" | "stretch";
 export type ReadingMode = "paged-ltr" | "paged-rtl" | "paged-vertical" | "webtoon";
 
