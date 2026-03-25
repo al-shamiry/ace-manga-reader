@@ -1,6 +1,6 @@
 # Ace Manga Reader
 
-A lightweight desktop manga and comic reader built with Tauri v2 and SolidJS.
+A lightweight desktop manga reader built with Tauri v2 and SolidJS.
 
 ## Features
 
@@ -66,7 +66,7 @@ Tap zones on the page image also work for mouse navigation — direction adapts 
 
 ```
 Stage 1 — Library Browser     ██████████  done
-Stage 2 — Comic Reader        ██████████  done
+Stage 2 — Manga Reader        ██████████  done
 Stage 3 — Library Mgmt        ░░░░░░░░░░  planned
 Stage 4 — Reading Experience  ░░░░░░░░░░  planned
 Stage 5 — Advanced            ░░░░░░░░░░  planned
@@ -77,7 +77,7 @@ Stage 5 — Advanced            ░░░░░░░░░░  planned
 
 - ✅Project scaffold (Tauri v2 + SolidJS + Tailwind)
 - ✅Directory scanner — folder-based and CBZ manga
-- ✅Source grid and comic grid with cover images
+- ✅Source grid and manga grid with cover images
 - ✅CBZ cover extraction and caching
 - ✅Shimmer skeletons, empty states, error handling
 - ✅Scan cache, alphabetical + natural sort, window title
@@ -85,7 +85,7 @@ Stage 5 — Advanced            ░░░░░░░░░░  planned
 </details>
 
 <details open>
-<summary><b>Stage 2 — Comic Reader</b> ✅</summary>
+<summary><b>Stage 2 — Manga Reader</b> ✅</summary>
 
 - ✅Router with four views: root, source, manga detail, reader
 - ✅Chapter list with New / Page N / Done status badges
@@ -128,7 +128,7 @@ Stage 5 — Advanced            ░░░░░░░░░░  planned
 - ⬜ComicInfo.xml metadata parsing
 - ⬜Settings panel (theme, default reading mode, cache size)
 - ⬜Drag-and-drop files onto window
-- ⬜Auto-detect new comics in watched directories
+- ⬜Auto-detect new manga in watched directories
 
 </details>
 
@@ -136,8 +136,8 @@ Stage 5 — Advanced            ░░░░░░░░░░  planned
 
 | | |
 |---|---|
-| ![Source grid](docs/screenshots/Screenshot%2001.png) | ![Comic grid](docs/screenshots/Screenshot%2002.png) |
-| ![Comic grid (CBZ)](docs/screenshots/Screenshot%2003.png) | ![Chapter list](docs/screenshots/Screenshot%2004.png) |
+| ![Source grid](docs/screenshots/Screenshot%2001.png) | ![Manga grid](docs/screenshots/Screenshot%2002.png) |
+| ![Manga grid (CBZ)](docs/screenshots/Screenshot%2003.png) | ![Chapter list](docs/screenshots/Screenshot%2004.png) |
 
 ![Reader](docs/screenshots/Screenshot%2005.png)
 

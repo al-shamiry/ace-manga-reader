@@ -1,4 +1,4 @@
-export interface Comic {
+export interface Manga {
   id: string;
   title: string;
   path: string;

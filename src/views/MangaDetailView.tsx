@@ -6,7 +6,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
 import { ChapterListSkeleton } from "../components/Skeleton";
-import type { Comic, Chapter, ChapterStatus } from "../types";
+import type { Manga, Chapter, ChapterStatus } from "../types";
 
 function StatusBadge(props: { status: ChapterStatus }) {
   switch (props.status.type) {
@@ -41,18 +41,18 @@ function StatusBadge(props: { status: ChapterStatus }) {
 export function MangaDetailView() {
   const navigate = useNavigate();
   const location = useLocation();
-  const comic = location.state as Comic | undefined;
+  const manga = location.state as Manga | undefined;
 
   const [chapters, setChapters] = createSignal<Chapter[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal("");
 
   onMount(async () => {
-    if (!comic) return;
-    getCurrentWindow().setTitle(`Ace Manga Reader — ${comic.title}`);
+    if (!manga) return;
+    getCurrentWindow().setTitle(`Ace Manga Reader — ${manga.title}`);
     try {
       const result = await invoke<Chapter[]>("get_chapters", {
-        mangaPath: comic.path,
+        mangaPath: manga.path,
       });
       setChapters(result);
     } catch (e) {
@@ -85,14 +85,14 @@ export function MangaDetailView() {
     navigate("/reader/" + chapter.id, {
       state: {
         chapter,
-        comic,
+        manga,
         prevChapter: chapters()[idx - 1],
         nextChapter: chapters()[idx + 1],
       },
     });
   }
 
-  if (!comic) {
+  if (!manga) {
     return (
       <div class="flex flex-col items-center justify-center flex-1 gap-4 text-zinc-500">
         <p class="text-sm">No manga data — navigate here from the library.</p>
@@ -112,23 +112,23 @@ export function MangaDetailView() {
           Back
         </Button>
         <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
-          {comic.title}
+          {manga.title}
         </span>
       </div>
 
       {/* Header */}
       <div class="flex gap-4 p-4 border-b border-zinc-800 shrink-0">
         <img
-          src={convertFileSrc(comic.cover_path)}
-          alt={comic.title}
+          src={convertFileSrc(manga.cover_path)}
+          alt={manga.title}
           class="w-24 rounded-lg object-cover shrink-0 bg-zinc-800"
         />
         <div class="flex flex-col gap-2 flex-1 min-w-0 justify-center">
           <h1 class="text-base font-bold text-zinc-100 leading-snug">
-            {comic.title}
+            {manga.title}
           </h1>
           <p class="text-xs text-zinc-500">
-            {comic.chapter_count} {comic.chapter_count === 1 ? "chapter" : "chapters"}
+            {manga.chapter_count} {manga.chapter_count === 1 ? "chapter" : "chapters"}
           </p>
           <Show when={primaryLabel()}>
             <Button

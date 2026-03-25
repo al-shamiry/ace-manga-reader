@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronFi
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
-import type { Chapter, Comic, FitMode, ReadingMode, Settings } from "../types";
+import type { Chapter, Manga, FitMode, ReadingMode, Settings } from "../types";
 
 const FIT_MODES: FitMode[] = ["fit-screen", "fit-width", "fit-height", "original", "stretch"];
 const FIT_LABELS: Record<FitMode, string> = {
@@ -32,7 +32,7 @@ const READING_LABELS: Record<ReadingMode, string> = {
 
 interface ReaderState {
   chapter: Chapter;
-  comic: Comic;
+  manga: Manga;
   prevChapter?: Chapter;
   nextChapter?: Chapter;
   initialPage?: number | "last";
@@ -58,7 +58,7 @@ export function ReaderView() {
   onMount(() => {
     const s = state();
     if (!s) return;
-    invoke<Settings>("get_settings", { mangaId: s.comic.id }).then((settings) => {
+    invoke<Settings>("get_settings", { mangaId: s.manga.id }).then((settings) => {
       if (settings.fit_mode) setFitMode(settings.fit_mode);
       if (settings.reading_mode) setReadingMode(settings.reading_mode);
     }).catch(() => {});
@@ -68,7 +68,7 @@ export function ReaderView() {
     const s = state();
     invoke("set_settings", {
       settings: patch,
-      mangaId: s?.comic.id,
+      mangaId: s?.manga.id,
     }).catch(console.error);
   }
 
@@ -194,12 +194,12 @@ export function ReaderView() {
     const idx = pageIndex();
 
     getCurrentWindow().setTitle(
-      `${s.comic.title} — ${s.chapter.title} — Page ${idx + 1} / ${total}`
+      `${s.manga.title} — ${s.chapter.title} — Page ${idx + 1} / ${total}`
     );
 
     if (s.chapter.status.type !== "read") {
       invoke("set_chapter_progress", {
-        mangaId: s.comic.id,
+        mangaId: s.manga.id,
         chapterId: s.chapter.id,
         page: idx,
         totalPages: total,
@@ -279,14 +279,14 @@ export function ReaderView() {
     const s = state();
     if (!s) return;
     const allChapters = await invoke<Chapter[]>("get_chapters", {
-      mangaPath: s.comic.path,
+      mangaPath: s.manga.path,
     }).catch(() => [] as Chapter[]);
     const idx = allChapters.findIndex((c) => c.id === chapter.id);
 
     navigate("/reader/" + chapter.id, {
       state: {
         chapter,
-        comic: s.comic,
+        manga: s.manga,
         prevChapter: allChapters[idx - 1],
         nextChapter: allChapters[idx + 1],
         initialPage,
@@ -423,7 +423,7 @@ export function ReaderView() {
               Back
             </Button>
             <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
-              {s().comic.title} — {s().chapter.title}
+              {s().manga.title} — {s().chapter.title}
             </span>
             <Button variant="ghost" onClick={cycleReadingMode} title={READING_LABELS[readingMode()]}>
               {readingMode() === "paged-ltr" && <BookOpen size={14} />}

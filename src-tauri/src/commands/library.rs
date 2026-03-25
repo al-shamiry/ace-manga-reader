@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tauri::Manager;
 use zip::ZipArchive;
 
-use crate::models::comic::Comic;
+use crate::models::manga::Manga;
 use crate::utils::{images_in, is_image, natural_cmp, normalize, path_id, subdirs_and_cbz, title_from_path};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -65,7 +65,7 @@ fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Resul
 
 /// Scan a manga folder that may contain CBZ files, image subdirs, or both.
 /// Returns `None` if the folder has no chapters.
-fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Comic, String>> {
+fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Manga, String>> {
     let (sub_dirs, cbz_files) = subdirs_and_cbz(path);
     let chapter_count = sub_dirs.len() + cbz_files.len();
 
@@ -86,7 +86,7 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Comic, String>> {
         None => return Some(Err("No cover found".to_string())),
     };
 
-    Some(Ok(Comic {
+    Some(Ok(Manga {
         id,
         title: title_from_path(path),
         path: normalize(path),
@@ -95,8 +95,8 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Comic, String>> {
     }))
 }
 
-/// Collect all manga comics found within `dir`, searching up to `depth` levels deep.
-fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
+/// Collect all mangas found within `dir`, searching up to `depth` levels deep.
+fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Manga> {
     let entries: Vec<PathBuf> = match fs::read_dir(dir) {
         Ok(rd) => rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect(),
         Err(e) => {
@@ -108,12 +108,12 @@ fn collect_comics(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Comic> {
     entries
         .par_iter()
         .flat_map(|entry| match scan_manga(entry, cache_dir) {
-            Some(Ok(comic)) => vec![comic],
+            Some(Ok(manga)) => vec![manga],
             Some(Err(e)) => {
                 eprintln!("Skipping manga {:?}: {}", entry, e);
                 vec![]
             }
-            None if depth > 0 => collect_comics(entry, depth - 1, cache_dir),
+            None if depth > 0 => collect_mangas(entry, depth - 1, cache_dir),
             None => vec![],
         })
         .collect()
@@ -182,16 +182,16 @@ fn scan_cache_path(app_data_dir: &Path, scan_path: &Path) -> PathBuf {
     app_data_dir.join("scan_cache").join(format!("{}.json", id))
 }
 
-fn load_scan_cache(cache_file: &Path) -> Option<Vec<Comic>> {
+fn load_scan_cache(cache_file: &Path) -> Option<Vec<Manga>> {
     let bytes = fs::read(cache_file).ok()?;
     serde_json::from_slice(&bytes).ok()
 }
 
-fn save_scan_cache(cache_file: &Path, comics: &[Comic]) {
+fn save_scan_cache(cache_file: &Path, mangas: &[Manga]) {
     if let Some(parent) = cache_file.parent() {
         let _ = fs::create_dir_all(parent);
     }
-    if let Ok(json) = serde_json::to_vec_pretty(comics) {
+    if let Ok(json) = serde_json::to_vec_pretty(mangas) {
         let _ = fs::write(cache_file, json);
     }
 }
@@ -201,7 +201,7 @@ pub fn scan_directory(
     path: String,
     force_refresh: bool,
     app_handle: tauri::AppHandle,
-) -> Result<Vec<Comic>, String> {
+) -> Result<Vec<Manga>, String> {
     let dir = Path::new(&path);
     if !dir.is_dir() {
         return Err(format!("'{}' is not a directory", path));
@@ -223,11 +223,11 @@ pub fn scan_directory(
     let covers_dir = app_data_dir.join("covers");
     fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
 
-    let mut comics = collect_comics(dir, 1, &covers_dir);
-    comics.sort_by(|a, b| natural_cmp(&a.title, &b.title));
+    let mut mangas = collect_mangas(dir, 1, &covers_dir);
+    mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
 
-    save_scan_cache(&cache_file, &comics);
+    save_scan_cache(&cache_file, &mangas);
     let _ = fs::write(last_dir_path(&app_data_dir), path.as_bytes());
 
-    Ok(comics)
+    Ok(mangas)
 }

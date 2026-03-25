@@ -1,7 +1,7 @@
 import { For } from "solid-js";
 
-/** Skeleton that matches a ComicCard in the grid */
-export function ComicCardSkeleton() {
+/** Skeleton that matches a MangaCard in the grid */
+export function MangaCardSkeleton() {
   return (
     <div class="flex flex-col bg-zinc-900 rounded-lg overflow-hidden">
       <div class="skeleton flex-1 min-h-0" />
@@ -13,12 +13,12 @@ export function ComicCardSkeleton() {
   );
 }
 
-/** N comic card skeletons inside the existing grid container */
-export function ComicGridSkeleton(props: { count?: number }) {
+/** N manga card skeletons inside the existing grid container */
+export function MangaGridSkeleton(props: { count?: number }) {
   return (
-    <div class="comic-grid">
+    <div class="manga-grid">
       <For each={Array(props.count ?? 12).fill(0)}>
-        {() => <ComicCardSkeleton />}
+        {() => <MangaCardSkeleton />}
       </For>
     </div>
   );
