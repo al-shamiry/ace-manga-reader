@@ -48,6 +48,7 @@ export function ReaderView() {
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal("");
   const [jumping, setJumping] = createSignal(false);
+  const [webtoonHeight, setWebtoonHeight] = createSignal(0);
   const [jumpInput, setJumpInput] = createSignal("");
   const [fitMode, setFitMode] = createSignal<FitMode>("fit-screen");
   const [readingMode, setReadingMode] = createSignal<ReadingMode>("paged-ltr");
@@ -371,6 +372,10 @@ export function ReaderView() {
                 class="absolute inset-0 overflow-y-auto"
                 ref={(el) => {
                   webtoonContainer = el;
+                  // Track container viewport height for sticky tap zones
+                  const ro = new ResizeObserver(() => setWebtoonHeight(el.clientHeight));
+                  ro.observe(el);
+                  onCleanup(() => ro.disconnect());
                   // Track current page via scroll position using IntersectionObserver
                   const observer = new IntersectionObserver(
                     (entries) => {
@@ -406,6 +411,12 @@ export function ReaderView() {
                   onCleanup(() => { observer.disconnect(); mo.disconnect(); });
                 }}
               >
+                {/* Tap zones — sticky inside scroll container to respect scrollbars */}
+                <div class="sticky top-0 flex flex-col pointer-events-none z-10" style={{ height: `${webtoonHeight()}px`, "margin-bottom": `-${webtoonHeight()}px` }}>
+                  <div class="w-full h-1/3 pointer-events-auto cursor-up" onClick={() => webtoonScroll("up")} />
+                  <div class="w-full h-1/3" />
+                  <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={() => webtoonScroll("down")} />
+                </div>
                 <div class="flex flex-col items-center">
                   <Index each={pages()}>
                     {(page, idx) => (
@@ -419,12 +430,6 @@ export function ReaderView() {
                     )}
                   </Index>
                 </div>
-              </div>
-              {/* Tap zones — fixed overlay outside scroll container */}
-              <div class="absolute inset-0 flex flex-col pointer-events-none z-10">
-                <div class="w-full h-1/3 pointer-events-auto cursor-up" onClick={() => webtoonScroll("up")} onWheel={(e) => { webtoonContainer?.scrollBy(0, e.deltaY); }} />
-                <div class="w-full h-1/3" />
-                <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={() => webtoonScroll("down")} onWheel={(e) => { webtoonContainer?.scrollBy(0, e.deltaY); }} />
               </div>
               </div>
             </Show>
