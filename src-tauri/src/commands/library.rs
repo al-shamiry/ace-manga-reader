@@ -119,20 +119,8 @@ fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Manga> {
         .collect()
 }
 
-fn last_dir_path(app_data_dir: &Path) -> PathBuf {
-    app_data_dir.join("last_directory.txt")
-}
-
 fn root_dir_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("root_directory.txt")
-}
-
-#[tauri::command]
-pub fn get_last_directory(app_handle: tauri::AppHandle) -> Option<String> {
-    let app_data_dir = app_handle.path().app_data_dir().ok()?;
-    let content = fs::read_to_string(last_dir_path(&app_data_dir)).ok()?;
-    let path = content.trim().to_string();
-    if path.is_empty() { None } else { Some(path) }
 }
 
 #[tauri::command]
@@ -227,7 +215,6 @@ pub fn scan_directory(
     mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
 
     save_scan_cache(&cache_file, &mangas);
-    let _ = fs::write(last_dir_path(&app_data_dir), path.as_bytes());
 
     Ok(mangas)
 }
