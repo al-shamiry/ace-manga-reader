@@ -88,6 +88,17 @@ export function ReaderView() {
   const isVertical = () => readingMode() === "paged-vertical";
   const isRtl = () => readingMode() === "paged-rtl";
 
+  // Page flip animation
+  type SlideDir = "left" | "right" | "up" | "down";
+  const [anim, setAnim] = createSignal<{ prevIdx: number; dir: SlideDir } | null>(null);
+
+  function slideDir(action: "prev" | "next"): SlideDir {
+    const mode = readingMode();
+    if (mode === "paged-vertical") return action === "next" ? "up" : "down";
+    if (mode === "paged-rtl") return action === "next" ? "right" : "left";
+    return action === "next" ? "left" : "right";
+  }
+
   // Reload whenever the chapter changes
   createEffect(() => {
     const s = state();
@@ -188,6 +199,7 @@ export function ReaderView() {
 
   async function prev() {
     if (pageIndex() > 0) {
+      if (isPaged()) setAnim({ prevIdx: pageIndex(), dir: slideDir("prev") });
       setPageIndex((i) => i - 1);
       return;
     }
@@ -214,6 +226,7 @@ export function ReaderView() {
 
   async function next() {
     if (pageIndex() < pages().length - 1) {
+      if (isPaged()) setAnim({ prevIdx: pageIndex(), dir: slideDir("next") });
       setPageIndex((i) => i + 1);
       return;
     }
@@ -345,24 +358,43 @@ export function ReaderView() {
 
             {/* Paged modes — single image with tap zones */}
             <Show when={isPaged()}>
-              <div class={`flex-1 flex items-center justify-center relative ${fitMode() === "original" || fitMode() === "fit-width" || fitMode() === "fit-height" ? "overflow-auto" : "overflow-hidden"}`}>
-                <img
-                  src={convertFileSrc(pages()[pageIndex()])}
-                  alt={`Page ${pageIndex() + 1}`}
-                  class={`select-none ${FIT_CLASSES[fitMode()]}`}
-                  draggable={false}
-                />
+              <div class="flex-1 relative overflow-hidden">
+                {/* Outgoing page (only during animation) */}
+                <Show when={anim()}>
+                  {(a) => (
+                    <div class={`absolute inset-0 flex items-center justify-center overflow-hidden slide-out-${a().dir}`}>
+                      <img
+                        src={convertFileSrc(pages()[a().prevIdx])}
+                        alt="Previous page"
+                        class={`select-none ${FIT_CLASSES[fitMode()]}`}
+                        draggable={false}
+                      />
+                    </div>
+                  )}
+                </Show>
+                {/* Current page */}
+                <div
+                  class={`absolute inset-0 flex items-center justify-center ${anim() ? `overflow-hidden slide-in-${anim()!.dir}` : fitMode() === "original" || fitMode() === "fit-width" || fitMode() === "fit-height" ? "overflow-auto" : "overflow-hidden"}`}
+                  onAnimationEnd={() => setAnim(null)}
+                >
+                  <img
+                    src={convertFileSrc(pages()[pageIndex()])}
+                    alt={`Page ${pageIndex() + 1}`}
+                    class={`select-none ${FIT_CLASSES[fitMode()]}`}
+                    draggable={false}
+                  />
+                </div>
                 {/* Tap zones — direction depends on mode */}
                 <Show when={isVertical()} fallback={
                   /* Horizontal tap zones (LTR / RTL) */
-                  <div class="absolute inset-0 flex pointer-events-none">
+                  <div class="absolute inset-0 flex pointer-events-none z-10">
                     <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={isRtl() ? next : prev} />
                     <div class="w-1/3 h-full" />
                     <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={isRtl() ? prev : next} />
                   </div>
                 }>
                   {/* Vertical tap zones */}
-                  <div class="absolute inset-0 flex flex-col pointer-events-none">
+                  <div class="absolute inset-0 flex flex-col pointer-events-none z-10">
                     <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={prev} />
                     <div class="w-full h-1/3" />
                     <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={next} />
