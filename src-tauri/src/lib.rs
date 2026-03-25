@@ -2,11 +2,25 @@ mod commands;
 mod models;
 mod utils;
 
+use tauri::Manager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            let data_dir = app.handle().path().app_data_dir()?;
+            std::fs::create_dir_all(&data_dir)?;
+            let settings_path = data_dir.join("settings.json");
+            if !settings_path.exists() {
+                let defaults = commands::settings::Settings::default();
+                let json = serde_json::to_string_pretty(&defaults)
+                    .expect("failed to serialize default settings");
+                std::fs::write(&settings_path, json)?;
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::library::scan_directory,
             commands::library::get_last_directory,

@@ -2,10 +2,19 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use tauri::Manager;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub fit_mode: Option<String>,
     pub reading_mode: Option<String>,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            fit_mode: Some("fit-screen".to_string()),
+            reading_mode: Some("paged-rtl".to_string()),
+        }
+    }
 }
 
 fn global_path(app: &tauri::AppHandle) -> std::path::PathBuf {
