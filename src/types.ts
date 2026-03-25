@@ -26,3 +26,9 @@ export interface Source {
   path: string;
   manga_count: number;
 }
+
+export type FitMode = "fit-screen" | "fit-width" | "fit-height" | "original" | "stretch";
+
+export interface Settings {
+  fit_mode?: FitMode;
+}

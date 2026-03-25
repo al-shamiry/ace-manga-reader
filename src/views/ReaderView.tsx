@@ -1,10 +1,26 @@
 import { createSignal, createEffect, createMemo, onMount, onCleanup, Show } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-solid";
+import { ArrowLeft, ChevronLeft, ChevronRight, Maximize, MoveHorizontal, MoveVertical, ScanEye, Fullscreen } from "lucide-solid";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
-import type { Chapter, Comic } from "../types";
+import type { Chapter, Comic, FitMode, Settings } from "../types";
+
+const FIT_MODES: FitMode[] = ["fit-screen", "fit-width", "fit-height", "original", "stretch"];
+const FIT_LABELS: Record<FitMode, string> = {
+  "fit-screen": "Fit Screen",
+  "fit-width": "Fit Width",
+  "fit-height": "Fit Height",
+  "original": "Original",
+  "stretch": "Stretch",
+};
+const FIT_CLASSES: Record<FitMode, string> = {
+  "fit-screen": "max-h-full max-w-full object-contain",
+  "fit-width": "w-full h-auto object-contain",
+  "fit-height": "h-full w-auto max-w-none object-contain",
+  "original": "max-w-none",
+  "stretch": "w-full h-full object-fill",
+};
 
 interface ReaderState {
   chapter: Chapter;
@@ -25,6 +41,27 @@ export function ReaderView() {
   const [error, setError] = createSignal("");
   const [jumping, setJumping] = createSignal(false);
   const [jumpInput, setJumpInput] = createSignal("");
+  const [fitMode, setFitMode] = createSignal<FitMode>("fit-screen");
+
+  // Load saved fit mode (manga-specific, with global fallback)
+  onMount(() => {
+    const s = state();
+    if (!s) return;
+    invoke<Settings>("get_settings", { mangaId: s.comic.id }).then((settings) => {
+      if (settings.fit_mode) setFitMode(settings.fit_mode);
+    }).catch(() => {});
+  });
+
+  function cycleFitMode() {
+    const s = state();
+    const current = fitMode();
+    const next = FIT_MODES[(FIT_MODES.indexOf(current) + 1) % FIT_MODES.length];
+    setFitMode(next);
+    invoke("set_settings", {
+      settings: { fit_mode: next },
+      mangaId: s?.comic.id,
+    }).catch(console.error);
+  }
 
   // Reload whenever the chapter changes
   createEffect(() => {
@@ -90,6 +127,9 @@ export function ReaderView() {
         case "ArrowDown":
           e.preventDefault();
           next();
+          break;
+        case "f":
+          cycleFitMode();
           break;
         case "Backspace":
         case "Escape":
@@ -176,10 +216,18 @@ export function ReaderView() {
             <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
               {s().comic.title} — {s().chapter.title}
             </span>
+            <Button variant="ghost" onClick={cycleFitMode} title={FIT_LABELS[fitMode()]}>
+              {fitMode() === "fit-screen" && <Maximize size={14} />}
+              {fitMode() === "fit-width" && <MoveHorizontal size={14} />}
+              {fitMode() === "fit-height" && <MoveVertical size={14} />}
+              {fitMode() === "original" && <ScanEye size={14} />}
+              {fitMode() === "stretch" && <Fullscreen size={14} />}
+              <span class="text-xs">{FIT_LABELS[fitMode()]}</span>
+            </Button>
           </div>
 
           {/* Page area */}
-          <div class="flex-1 flex items-center justify-center overflow-hidden relative">
+          <div class={`flex-1 flex items-center justify-center relative ${fitMode() === "original" || fitMode() === "fit-width" || fitMode() === "fit-height" ? "overflow-auto" : "overflow-hidden"}`}>
             <Show when={loading()}>
               <div class="text-zinc-500 text-sm">Loading pages…</div>
             </Show>
@@ -192,7 +240,7 @@ export function ReaderView() {
               <img
                 src={convertFileSrc(pages()[pageIndex()])}
                 alt={`Page ${pageIndex() + 1}`}
-                class="max-h-full max-w-full object-contain select-none"
+                class={`select-none ${FIT_CLASSES[fitMode()]}`}
                 draggable={false}
               />
               {/* Tap zones */}
