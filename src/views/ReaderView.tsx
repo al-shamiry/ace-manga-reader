@@ -363,9 +363,9 @@ export function ReaderView() {
               </div>
               {/* Tap zones — fixed overlay outside scroll container */}
               <div class="absolute inset-0 flex flex-col pointer-events-none z-10">
-                <div class="w-full h-1/3 pointer-events-auto cursor-up" onClick={() => webtoonScroll("up")} />
+                <div class="w-full h-1/3 pointer-events-auto cursor-up" onClick={() => webtoonScroll("up")} onWheel={(e) => { webtoonContainer?.scrollBy(0, e.deltaY); }} />
                 <div class="w-full h-1/3" />
-                <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={() => webtoonScroll("down")} />
+                <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={() => webtoonScroll("down")} onWheel={(e) => { webtoonContainer?.scrollBy(0, e.deltaY); }} />
               </div>
               </div>
             </Show>
