@@ -1,10 +1,10 @@
-import { createSignal, createEffect, createMemo, onMount, onCleanup, Show } from "solid-js";
+import { createSignal, createEffect, createMemo, onMount, onCleanup, Show, Index } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
-import { ArrowLeft, ChevronLeft, ChevronRight, Maximize, MoveHorizontal, MoveVertical, ScanEye, Fullscreen } from "lucide-solid";
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Maximize, MoveHorizontal, MoveVertical, ScanEye, Fullscreen, BookOpen, BookOpenCheck, ArrowDownUp, Scroll } from "lucide-solid";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
-import type { Chapter, Comic, FitMode, Settings } from "../types";
+import type { Chapter, Comic, FitMode, ReadingMode, Settings } from "../types";
 
 const FIT_MODES: FitMode[] = ["fit-screen", "fit-width", "fit-height", "original", "stretch"];
 const FIT_LABELS: Record<FitMode, string> = {
@@ -20,6 +20,14 @@ const FIT_CLASSES: Record<FitMode, string> = {
   "fit-height": "h-full w-auto max-w-none object-contain",
   "original": "max-w-none",
   "stretch": "w-full h-full object-fill",
+};
+
+const READING_MODES: ReadingMode[] = ["paged-ltr", "paged-rtl", "paged-vertical", "webtoon"];
+const READING_LABELS: Record<ReadingMode, string> = {
+  "paged-ltr": "Paged LTR",
+  "paged-rtl": "Paged RTL",
+  "paged-vertical": "Paged Vertical",
+  "webtoon": "Webtoon",
 };
 
 interface ReaderState {
@@ -42,26 +50,43 @@ export function ReaderView() {
   const [jumping, setJumping] = createSignal(false);
   const [jumpInput, setJumpInput] = createSignal("");
   const [fitMode, setFitMode] = createSignal<FitMode>("fit-screen");
+  const [readingMode, setReadingMode] = createSignal<ReadingMode>("paged-ltr");
 
-  // Load saved fit mode (manga-specific, with global fallback)
+  // Load saved settings (manga-specific, with global fallback)
   onMount(() => {
     const s = state();
     if (!s) return;
     invoke<Settings>("get_settings", { mangaId: s.comic.id }).then((settings) => {
       if (settings.fit_mode) setFitMode(settings.fit_mode);
+      if (settings.reading_mode) setReadingMode(settings.reading_mode);
     }).catch(() => {});
   });
 
-  function cycleFitMode() {
+  function saveSetting(patch: Partial<Settings>) {
     const s = state();
-    const current = fitMode();
-    const next = FIT_MODES[(FIT_MODES.indexOf(current) + 1) % FIT_MODES.length];
-    setFitMode(next);
     invoke("set_settings", {
-      settings: { fit_mode: next },
+      settings: patch,
       mangaId: s?.comic.id,
     }).catch(console.error);
   }
+
+  function cycleFitMode() {
+    const current = fitMode();
+    const next = FIT_MODES[(FIT_MODES.indexOf(current) + 1) % FIT_MODES.length];
+    setFitMode(next);
+    saveSetting({ fit_mode: next });
+  }
+
+  function cycleReadingMode() {
+    const current = readingMode();
+    const next = READING_MODES[(READING_MODES.indexOf(current) + 1) % READING_MODES.length];
+    setReadingMode(next);
+    saveSetting({ reading_mode: next });
+  }
+
+  const isPaged = () => readingMode() !== "webtoon";
+  const isVertical = () => readingMode() === "paged-vertical";
+  const isRtl = () => readingMode() === "paged-rtl";
 
   // Reload whenever the chapter changes
   createEffect(() => {
@@ -117,19 +142,39 @@ export function ReaderView() {
   // Keyboard listeners — synchronous so onCleanup registers correctly
   onMount(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (readingMode() === "webtoon") {
+        // In webtoon mode, let arrow keys scroll naturally; only handle shortcuts
+        switch (e.key) {
+          case "f": cycleFitMode(); break;
+          case "m": cycleReadingMode(); break;
+          case "Backspace":
+          case "Escape": navigate(-1); break;
+        }
+        return;
+      }
+      const rtl = isRtl();
       switch (e.key) {
         case "ArrowLeft":
+          e.preventDefault();
+          rtl ? next() : prev();
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          rtl ? prev() : next();
+          break;
         case "ArrowUp":
           e.preventDefault();
           prev();
           break;
-        case "ArrowRight":
         case "ArrowDown":
           e.preventDefault();
           next();
           break;
         case "f":
           cycleFitMode();
+          break;
+        case "m":
+          cycleReadingMode();
           break;
         case "Backspace":
         case "Escape":
@@ -216,47 +261,124 @@ export function ReaderView() {
             <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
               {s().comic.title} — {s().chapter.title}
             </span>
-            <Button variant="ghost" onClick={cycleFitMode} title={FIT_LABELS[fitMode()]}>
-              {fitMode() === "fit-screen" && <Maximize size={14} />}
-              {fitMode() === "fit-width" && <MoveHorizontal size={14} />}
-              {fitMode() === "fit-height" && <MoveVertical size={14} />}
-              {fitMode() === "original" && <ScanEye size={14} />}
-              {fitMode() === "stretch" && <Fullscreen size={14} />}
-              <span class="text-xs">{FIT_LABELS[fitMode()]}</span>
+            <Button variant="ghost" onClick={cycleReadingMode} title={READING_LABELS[readingMode()]}>
+              {readingMode() === "paged-ltr" && <BookOpen size={14} />}
+              {readingMode() === "paged-rtl" && <BookOpenCheck size={14} />}
+              {readingMode() === "paged-vertical" && <ArrowDownUp size={14} />}
+              {readingMode() === "webtoon" && <Scroll size={14} />}
+              <span class="text-xs">{READING_LABELS[readingMode()]}</span>
             </Button>
+            <Show when={isPaged()}>
+              <Button variant="ghost" onClick={cycleFitMode} title={FIT_LABELS[fitMode()]}>
+                {fitMode() === "fit-screen" && <Maximize size={14} />}
+                {fitMode() === "fit-width" && <MoveHorizontal size={14} />}
+                {fitMode() === "fit-height" && <MoveVertical size={14} />}
+                {fitMode() === "original" && <ScanEye size={14} />}
+                {fitMode() === "stretch" && <Fullscreen size={14} />}
+                <span class="text-xs">{FIT_LABELS[fitMode()]}</span>
+              </Button>
+            </Show>
           </div>
 
           {/* Page area */}
-          <div class={`flex-1 flex items-center justify-center relative ${fitMode() === "original" || fitMode() === "fit-width" || fitMode() === "fit-height" ? "overflow-auto" : "overflow-hidden"}`}>
-            <Show when={loading()}>
+          <Show when={loading()}>
+            <div class="flex-1 flex items-center justify-center">
               <div class="text-zinc-500 text-sm">Loading pages…</div>
-            </Show>
+            </div>
+          </Show>
 
-            <Show when={error()}>
+          <Show when={error()}>
+            <div class="flex-1 flex items-center justify-center">
               <p class="text-red-400 text-sm">{error()}</p>
-            </Show>
+            </div>
+          </Show>
 
-            <Show when={!loading() && !error() && pages().length > 0}>
-              <img
-                src={convertFileSrc(pages()[pageIndex()])}
-                alt={`Page ${pageIndex() + 1}`}
-                class={`select-none ${FIT_CLASSES[fitMode()]}`}
-                draggable={false}
-              />
-              {/* Tap zones */}
-              <div class="absolute inset-0 flex pointer-events-none">
-                <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={prev} />
-                <div class="w-1/3 h-full" />
-                <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={next} />
+          <Show when={!loading() && !error() && pages().length > 0}>
+            {/* Webtoon mode — continuous scroll */}
+            <Show when={readingMode() === "webtoon"}>
+              <div
+                class="flex-1 overflow-y-auto"
+                ref={(el) => {
+                  // Track current page via scroll position using IntersectionObserver
+                  const observer = new IntersectionObserver(
+                    (entries) => {
+                      for (const entry of entries) {
+                        if (entry.isIntersecting) {
+                          const idx = parseInt((entry.target as HTMLElement).dataset.page || "0", 10);
+                          setPageIndex(idx);
+                        }
+                      }
+                    },
+                    { root: el, rootMargin: "-50% 0px", threshold: 0 }
+                  );
+                  // Observe page images once they mount, and scroll to current page
+                  let scrolledToInitial = false;
+                  const mo = new MutationObserver(() => {
+                    el.querySelectorAll("[data-page]").forEach((img) => observer.observe(img));
+                    if (!scrolledToInitial) {
+                      const target = el.querySelector(`[data-page="${pageIndex()}"]`);
+                      if (target) {
+                        target.scrollIntoView({ behavior: "instant" });
+                        scrolledToInitial = true;
+                      }
+                    }
+                  });
+                  mo.observe(el, { childList: true, subtree: true });
+                  onCleanup(() => { observer.disconnect(); mo.disconnect(); });
+                }}
+              >
+                <div class="flex flex-col items-center">
+                  <Index each={pages()}>
+                    {(page, idx) => (
+                      <img
+                        src={convertFileSrc(page())}
+                        alt={`Page ${idx + 1}`}
+                        data-page={idx}
+                        class="w-full h-auto select-none"
+                        draggable={false}
+                      />
+                    )}
+                  </Index>
+                </div>
               </div>
             </Show>
-          </div>
+
+            {/* Paged modes — single image with tap zones */}
+            <Show when={isPaged()}>
+              <div class={`flex-1 flex items-center justify-center relative ${fitMode() === "original" || fitMode() === "fit-width" || fitMode() === "fit-height" ? "overflow-auto" : "overflow-hidden"}`}>
+                <img
+                  src={convertFileSrc(pages()[pageIndex()])}
+                  alt={`Page ${pageIndex() + 1}`}
+                  class={`select-none ${FIT_CLASSES[fitMode()]}`}
+                  draggable={false}
+                />
+                {/* Tap zones — direction depends on mode */}
+                <Show when={isVertical()} fallback={
+                  /* Horizontal tap zones (LTR / RTL) */
+                  <div class="absolute inset-0 flex pointer-events-none">
+                    <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={isRtl() ? next : prev} />
+                    <div class="w-1/3 h-full" />
+                    <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={isRtl() ? prev : next} />
+                  </div>
+                }>
+                  {/* Vertical tap zones */}
+                  <div class="absolute inset-0 flex flex-col pointer-events-none">
+                    <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={prev} />
+                    <div class="w-full h-1/3" />
+                    <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={next} />
+                  </div>
+                </Show>
+              </div>
+            </Show>
+          </Show>
 
           {/* Bottom nav */}
           <div class="flex items-center justify-center gap-4 px-4 py-2.5 bg-zinc-900 border-t border-zinc-800 shrink-0">
-            <Button variant="ghost" iconOnly onClick={prev} disabled={pageIndex() === 0 && !s().prevChapter}>
-              <ChevronLeft size={16} />
-            </Button>
+            <Show when={isPaged()}>
+              <Button variant="ghost" iconOnly onClick={isRtl() ? next : prev} disabled={isRtl() ? pageIndex() === pages().length - 1 && !s().nextChapter : pageIndex() === 0 && !s().prevChapter}>
+                {isVertical() ? <ChevronUp size={16} /> : <ChevronLeft size={16} />}
+              </Button>
+            </Show>
             <Show
               when={jumping()}
               fallback={
@@ -290,9 +412,11 @@ export function ReaderView() {
                 <span class="text-sm text-zinc-500">/ {pages().length}</span>
               </form>
             </Show>
-            <Button variant="ghost" iconOnly onClick={next} disabled={pageIndex() === pages().length - 1 && !s().nextChapter}>
-              <ChevronRight size={16} />
-            </Button>
+            <Show when={isPaged()}>
+              <Button variant="ghost" iconOnly onClick={isRtl() ? prev : next} disabled={isRtl() ? pageIndex() === 0 && !s().prevChapter : pageIndex() === pages().length - 1 && !s().nextChapter}>
+                {isVertical() ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              </Button>
+            </Show>
           </div>
         </div>
       )}

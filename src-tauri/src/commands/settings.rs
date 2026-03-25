@@ -5,6 +5,7 @@ use tauri::Manager;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Settings {
     pub fit_mode: Option<String>,
+    pub reading_mode: Option<String>,
 }
 
 fn global_path(app: &tauri::AppHandle) -> std::path::PathBuf {
@@ -45,6 +46,7 @@ pub fn get_settings(app: tauri::AppHandle, manga_id: Option<String>) -> Settings
             match manga {
                 Some(m) => Settings {
                     fit_mode: m.fit_mode.or(global.fit_mode),
+                    reading_mode: m.reading_mode.or(global.reading_mode),
                 },
                 None => global,
             }
