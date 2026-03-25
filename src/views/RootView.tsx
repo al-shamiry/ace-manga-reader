@@ -1,4 +1,4 @@
-import { Show, For, createSignal, createMemo } from "solid-js";
+import { Show, For, createSignal, createMemo, createEffect, on } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { Library, Plus, Pencil, Trash2 } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
@@ -11,7 +11,7 @@ const ALL_TAB_ID = "__all__";
 export function RootView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = createSignal(ALL_TAB_ID);
+  const [activeTab, setActiveTab] = createSignal("");
   const [showCreateDialog, setShowCreateDialog] = createSignal(false);
   const [newCategoryName, setNewCategoryName] = createSignal("");
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number; category: Category } | null>(null);
@@ -27,6 +27,15 @@ export function RootView() {
     if (defaultCount === 0) return cats.filter((c) => c.id !== "default");
     return cats;
   });
+
+  // Default to first visible category; update if current tab becomes hidden
+  createEffect(on(visibleCategories, (cats) => {
+    const current = activeTab();
+    if (current === ALL_TAB_ID) return;
+    if (current === "" || !cats.some((c) => c.id === current)) {
+      setActiveTab(cats.length > 0 ? cats[0].id : ALL_TAB_ID);
+    }
+  }));
 
   // Manga entries filtered by active tab
   const filteredEntries = createMemo(() => {
@@ -102,19 +111,6 @@ export function RootView() {
     <div class="flex flex-col flex-1 overflow-hidden" onClick={closeContextMenu}>
       {/* Category tab bar */}
       <div class="flex items-center gap-1 px-3 py-2 bg-zinc-900 border-b border-zinc-800 shrink-0 overflow-x-auto">
-        {/* All tab */}
-        <button
-          class="px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer"
-          classList={{
-            "bg-indigo-600 text-white": activeTab() === ALL_TAB_ID,
-            "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200": activeTab() !== ALL_TAB_ID,
-          }}
-          onClick={() => setActiveTab(ALL_TAB_ID)}
-        >
-          All
-          <span class="ml-1.5 text-xs opacity-70">{libraryEntries().length}</span>
-        </button>
-
         {/* Category tabs */}
         <For each={visibleCategories()}>
           {(cat) => {
@@ -154,6 +150,19 @@ export function RootView() {
             );
           }}
         </For>
+
+        {/* All tab */}
+        <button
+          class="px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer"
+          classList={{
+            "bg-indigo-600 text-white": activeTab() === ALL_TAB_ID,
+            "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200": activeTab() !== ALL_TAB_ID,
+          }}
+          onClick={() => setActiveTab(ALL_TAB_ID)}
+        >
+          All
+          <span class="ml-1.5 text-xs opacity-70">{libraryEntries().length}</span>
+        </button>
 
         {/* Add category button */}
         <button

@@ -1,11 +1,12 @@
 import { For, Show, createSignal, onMount } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
-import { ArrowLeft, BookOpen, Play } from "lucide-solid";
+import { ArrowLeft, BookOpen, Play, Bookmark, Check } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
 import { ChapterListSkeleton } from "../components/Skeleton";
+import { useLibrary } from "../context/LibraryContext";
 import type { Manga, Chapter, ChapterStatus } from "../types";
 
 function StatusBadge(props: { status: ChapterStatus }) {
@@ -42,10 +43,13 @@ export function MangaDetailView() {
   const navigate = useNavigate();
   const location = useLocation();
   const manga = location.state as Manga | undefined;
+  const { categories, libraryEntries, refreshLibrary, refreshCategories } = useLibrary();
 
   const [chapters, setChapters] = createSignal<Chapter[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal("");
+  const [showCategoryPicker, setShowCategoryPicker] = createSignal(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = createSignal<string[]>([]);
 
   onMount(async () => {
     if (!manga) return;
@@ -79,6 +83,73 @@ export function MangaDetailView() {
     if (!target) return null; // all read
     return "Continue Reading";
   };
+
+  // ── Library helpers ──
+
+  const libraryEntry = () => libraryEntries().find((e) => e.manga_id === manga?.id);
+  const isInLibrary = () => !!libraryEntry();
+
+  async function handleAddToLibrary() {
+    if (!manga) return;
+    const cats = categories();
+    // Already in library → always open picker (to edit categories or remove)
+    if (isInLibrary()) {
+      setSelectedCategoryIds(libraryEntry()!.category_ids);
+      await refreshCategories();
+      setShowCategoryPicker(true);
+      return;
+    }
+    // Quick action: only one category → add directly
+    if (cats.length === 1) {
+      await invoke("add_to_library", {
+        mangaId: manga.id,
+        title: manga.title,
+        path: manga.path,
+        coverPath: manga.cover_path,
+        chapterCount: manga.chapter_count,
+        categoryIds: [cats[0].id],
+      });
+      await refreshLibrary();
+      return;
+    }
+    // Multiple categories → open picker
+    setSelectedCategoryIds([cats[0].id]);
+    await refreshCategories();
+    setShowCategoryPicker(true);
+  }
+
+  function toggleCategory(catId: string) {
+    const current = selectedCategoryIds();
+    if (current.includes(catId)) {
+      // Don't allow deselecting all
+      if (current.length > 1) {
+        setSelectedCategoryIds(current.filter((id) => id !== catId));
+      }
+    } else {
+      setSelectedCategoryIds([...current, catId]);
+    }
+  }
+
+  async function confirmCategoryPicker() {
+    if (!manga) return;
+    await invoke("add_to_library", {
+      mangaId: manga.id,
+      title: manga.title,
+      path: manga.path,
+      coverPath: manga.cover_path,
+      chapterCount: manga.chapter_count,
+      categoryIds: selectedCategoryIds(),
+    });
+    setShowCategoryPicker(false);
+    await refreshLibrary();
+  }
+
+  async function handleRemoveFromLibrary() {
+    if (!manga) return;
+    await invoke("remove_from_library", { mangaId: manga.id });
+    setShowCategoryPicker(false);
+    await refreshLibrary();
+  }
 
   function openChapter(chapter: Chapter) {
     const idx = chapters().findIndex((c) => c.id === chapter.id);
@@ -127,20 +198,92 @@ export function MangaDetailView() {
           <p class="text-xs text-zinc-500">
             {manga.chapter_count} {manga.chapter_count === 1 ? "chapter" : "chapters"}
           </p>
-          <Show when={primaryLabel()}>
+          <div class="flex items-center gap-2">
+            <Show when={primaryLabel()}>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const ch = primaryChapter();
+                  if (ch) openChapter(ch);
+                }}
+              >
+                <Play size={12} />
+                {primaryLabel()}
+              </Button>
+            </Show>
             <Button
-              variant="primary"
-              onClick={() => {
-                const ch = primaryChapter();
-                if (ch) openChapter(ch);
-              }}
+              variant={isInLibrary() ? "primary" : "ghost"}
+              onClick={handleAddToLibrary}
+              title={isInLibrary() ? "Edit library categories" : "Add to library"}
             >
-              <Play size={12} />
-              {primaryLabel()}
+              <Bookmark size={14} fill={isInLibrary() ? "currentColor" : "none"} />
+              {isInLibrary() ? "In Library" : "Add to Library"}
             </Button>
-          </Show>
+          </div>
         </div>
       </div>
+
+      {/* Category picker dialog */}
+      <Show when={showCategoryPicker()}>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowCategoryPicker(false)}>
+          <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-80 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-3">
+              {isInLibrary() ? "Edit Categories" : "Add to Library"}
+            </h3>
+            <div class="flex flex-col gap-1 max-h-60 overflow-y-auto">
+              <For each={categories()}>
+                {(cat) => (
+                  <button
+                    class="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer hover:bg-zinc-800"
+                    classList={{
+                      "text-zinc-100": selectedCategoryIds().includes(cat.id),
+                      "text-zinc-400": !selectedCategoryIds().includes(cat.id),
+                    }}
+                    onClick={() => toggleCategory(cat.id)}
+                  >
+                    <div
+                      class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
+                      classList={{
+                        "bg-indigo-600 border-indigo-600": selectedCategoryIds().includes(cat.id),
+                        "border-zinc-600": !selectedCategoryIds().includes(cat.id),
+                      }}
+                    >
+                      <Show when={selectedCategoryIds().includes(cat.id)}>
+                        <Check size={12} stroke-width={3} />
+                      </Show>
+                    </div>
+                    {cat.name}
+                  </button>
+                )}
+              </For>
+            </div>
+            <div class="flex justify-between mt-4">
+              <Show when={isInLibrary()}>
+                <button
+                  class="px-3 py-1.5 rounded-md text-sm text-red-400 hover:bg-zinc-800 transition-colors cursor-pointer"
+                  onClick={handleRemoveFromLibrary}
+                >
+                  Remove
+                </button>
+              </Show>
+              <div class="flex gap-2 ml-auto">
+                <button
+                  class="px-3 py-1.5 rounded-md text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors cursor-pointer"
+                  onClick={() => setShowCategoryPicker(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  class="px-3 py-1.5 rounded-md text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer"
+                  onClick={confirmCategoryPicker}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Show>
 
       {/* Chapter count */}
       <div class="px-4 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 shrink-0">
