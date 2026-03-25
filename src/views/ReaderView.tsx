@@ -98,6 +98,35 @@ export function ReaderView() {
     webtoonContainer.scrollBy({ top: direction === "down" ? amount : -amount, behavior: "smooth" });
   }
 
+  // Continuous keyboard scroll for webtoon mode
+  let scrollDir = 0;
+  let scrollRaf = 0;
+  let lastFrame = 0;
+  const SCROLL_SPEED = 3000; // px per second
+
+  function scrollLoop(now: number) {
+    if (!scrollDir) return;
+    if (lastFrame) {
+      const dt = (now - lastFrame) / 1000;
+      webtoonContainer?.scrollBy(0, scrollDir * SCROLL_SPEED * dt);
+    }
+    lastFrame = now;
+    scrollRaf = requestAnimationFrame(scrollLoop);
+  }
+
+  function startContinuousScroll(dir: number) {
+    if (scrollDir === dir) return;
+    scrollDir = dir;
+    lastFrame = 0;
+    scrollRaf = requestAnimationFrame(scrollLoop);
+  }
+
+  function stopContinuousScroll(dir: number) {
+    if (scrollDir !== dir) return;
+    scrollDir = 0;
+    cancelAnimationFrame(scrollRaf);
+  }
+
   // Page flip animation
   type SlideDir = "left" | "right" | "up" | "down";
   const [anim, setAnim] = createSignal<{ prevIdx: number; dir: SlideDir } | null>(null);
@@ -168,12 +197,12 @@ export function ReaderView() {
           case "ArrowUp":
           case "ArrowLeft":
             e.preventDefault();
-            webtoonScroll("up");
+            startContinuousScroll(-1);
             break;
           case "ArrowDown":
           case "ArrowRight":
             e.preventDefault();
-            webtoonScroll("down");
+            startContinuousScroll(1);
             break;
           case "m": cycleReadingMode(); break;
           case "Backspace":
@@ -211,8 +240,13 @@ export function ReaderView() {
           break;
       }
     }
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") stopContinuousScroll(-1);
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") stopContinuousScroll(1);
+    }
     window.addEventListener("keydown", onKeyDown);
-    onCleanup(() => window.removeEventListener("keydown", onKeyDown));
+    window.addEventListener("keyup", onKeyUp);
+    onCleanup(() => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); cancelAnimationFrame(scrollRaf); });
   });
 
   async function goChapter(chapter: Chapter | undefined, initialPage: number | "last") {
