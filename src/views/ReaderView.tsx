@@ -1,6 +1,6 @@
 import { createSignal, createEffect, createMemo, onMount, onCleanup, Show, Index } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Maximize, MoveHorizontal, MoveVertical, ScanEye, Fullscreen, BookOpen, BookOpenCheck, ArrowDownUp, Scroll } from "lucide-solid";
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronFirst, ChevronLast, Maximize, MoveHorizontal, MoveVertical, ScanEye, Fullscreen, BookOpen, BookOpenCheck, ArrowDownUp, Scroll } from "lucide-solid";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/Button";
@@ -87,6 +87,9 @@ export function ReaderView() {
   const isPaged = () => readingMode() !== "webtoon";
   const isVertical = () => readingMode() === "paged-vertical";
   const isRtl = () => readingMode() === "paged-rtl";
+
+  // Paged scroll container ref — reset scroll on page turn
+  let pageContainer: HTMLDivElement | undefined;
 
   // Page flip animation
   type SlideDir = "left" | "right" | "up" | "down";
@@ -197,58 +200,45 @@ export function ReaderView() {
     onCleanup(() => window.removeEventListener("keydown", onKeyDown));
   });
 
+  async function goChapter(chapter: Chapter | undefined, initialPage: number | "last") {
+    if (!chapter) return;
+    const s = state();
+    if (!s) return;
+    const allChapters = await invoke<Chapter[]>("get_chapters", {
+      mangaPath: s.comic.path,
+    }).catch(() => [] as Chapter[]);
+    const idx = allChapters.findIndex((c) => c.id === chapter.id);
+
+    navigate("/reader/" + chapter.id, {
+      state: {
+        chapter,
+        comic: s.comic,
+        prevChapter: allChapters[idx - 1],
+        nextChapter: allChapters[idx + 1],
+        initialPage,
+      },
+      replace: true,
+    });
+  }
+
   async function prev() {
     if (pageIndex() > 0) {
       if (isPaged()) setAnim({ prevIdx: pageIndex(), dir: slideDir("prev") });
       setPageIndex((i) => i - 1);
+      pageContainer?.scrollTo(0, 0);
       return;
     }
-    const s = state();
-    if (!s?.prevChapter) return;
-    const { prevChapter, comic } = s;
-
-    const allChapters = await invoke<Chapter[]>("get_chapters", {
-      mangaPath: comic.path,
-    }).catch(() => [] as Chapter[]);
-    const idx = allChapters.findIndex((c) => c.id === prevChapter.id);
-
-    navigate("/reader/" + prevChapter.id, {
-      state: {
-        chapter: prevChapter,
-        comic,
-        prevChapter: allChapters[idx - 1],
-        nextChapter: allChapters[idx + 1],
-        initialPage: "last",
-      },
-      replace: true,
-    });
+    goChapter(state()?.prevChapter, "last");
   }
 
   async function next() {
     if (pageIndex() < pages().length - 1) {
       if (isPaged()) setAnim({ prevIdx: pageIndex(), dir: slideDir("next") });
       setPageIndex((i) => i + 1);
+      pageContainer?.scrollTo(0, 0);
       return;
     }
-    const s = state();
-    if (!s?.nextChapter) return;
-    const { nextChapter, comic } = s;
-
-    const allChapters = await invoke<Chapter[]>("get_chapters", {
-      mangaPath: comic.path,
-    }).catch(() => [] as Chapter[]);
-    const idx = allChapters.findIndex((c) => c.id === nextChapter.id);
-
-    navigate("/reader/" + nextChapter.id, {
-      state: {
-        chapter: nextChapter,
-        comic,
-        prevChapter: allChapters[idx - 1],
-        nextChapter: allChapters[idx + 1],
-        initialPage: 0,
-      },
-      replace: true,
-    });
+    goChapter(state()?.nextChapter, 0);
   }
 
   return (
@@ -374,6 +364,7 @@ export function ReaderView() {
                 </Show>
                 {/* Current page */}
                 <div
+                  ref={pageContainer}
                   class={`absolute inset-0 flex items-center justify-center ${anim() ? `overflow-hidden slide-in-${anim()!.dir}` : fitMode() === "original" || fitMode() === "fit-width" || fitMode() === "fit-height" ? "overflow-auto" : "overflow-hidden"}`}
                   onAnimationEnd={() => setAnim(null)}
                 >
@@ -406,6 +397,9 @@ export function ReaderView() {
 
           {/* Bottom nav */}
           <div class="flex items-center justify-center gap-4 px-4 py-2.5 bg-zinc-900 border-t border-zinc-800 shrink-0">
+            <Button variant="ghost" iconOnly onClick={() => goChapter(isRtl() ? s().nextChapter : s().prevChapter, 0)} disabled={isRtl() ? !s().nextChapter : !s().prevChapter} title={isRtl() ? "Next chapter" : "Previous chapter"}>
+              <ChevronFirst size={16} />
+            </Button>
             <Show when={isPaged()}>
               <Button variant="ghost" iconOnly onClick={isRtl() ? next : prev} disabled={isRtl() ? pageIndex() === pages().length - 1 && !s().nextChapter : pageIndex() === 0 && !s().prevChapter}>
                 {isVertical() ? <ChevronUp size={16} /> : <ChevronLeft size={16} />}
@@ -449,6 +443,9 @@ export function ReaderView() {
                 {isVertical() ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               </Button>
             </Show>
+            <Button variant="ghost" iconOnly onClick={() => goChapter(isRtl() ? s().prevChapter : s().nextChapter, 0)} disabled={isRtl() ? !s().prevChapter : !s().nextChapter} title={isRtl() ? "Previous chapter" : "Next chapter"}>
+              <ChevronLast size={16} />
+            </Button>
           </div>
         </div>
       )}
