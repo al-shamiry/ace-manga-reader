@@ -363,9 +363,9 @@ export function ReaderView() {
               </div>
               {/* Tap zones — fixed overlay outside scroll container */}
               <div class="absolute inset-0 flex flex-col pointer-events-none z-10">
-                <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={() => webtoonScroll("up")} />
+                <div class="w-full h-1/3 pointer-events-auto cursor-up" onClick={() => webtoonScroll("up")} />
                 <div class="w-full h-1/3" />
-                <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={() => webtoonScroll("down")} />
+                <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={() => webtoonScroll("down")} />
               </div>
               </div>
             </Show>
@@ -403,16 +403,16 @@ export function ReaderView() {
                 <Show when={isVertical()} fallback={
                   /* Horizontal tap zones (LTR / RTL) */
                   <div class="absolute inset-0 flex pointer-events-none z-10">
-                    <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={isRtl() ? next : prev} />
+                    <div class="w-1/3 h-full pointer-events-auto cursor-left" onClick={isRtl() ? next : prev} />
                     <div class="w-1/3 h-full" />
-                    <div class="w-1/3 h-full pointer-events-auto cursor-pointer" onClick={isRtl() ? prev : next} />
+                    <div class="w-1/3 h-full pointer-events-auto cursor-right" onClick={isRtl() ? prev : next} />
                   </div>
                 }>
                   {/* Vertical tap zones */}
                   <div class="absolute inset-0 flex flex-col pointer-events-none z-10">
-                    <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={prev} />
+                    <div class="w-full h-1/3 pointer-events-auto cursor-up" onClick={prev} />
                     <div class="w-full h-1/3" />
-                    <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={next} />
+                    <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={next} />
                   </div>
                 </Show>
               </div>
