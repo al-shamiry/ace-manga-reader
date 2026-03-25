@@ -92,8 +92,19 @@ export function ReaderView() {
   let pageContainer: HTMLDivElement | undefined;
   let webtoonContainer: HTMLDivElement | undefined;
 
+  function isAtScrollEdge(dir: "up" | "down"): boolean {
+    if (!webtoonContainer) return false;
+    if (dir === "up") return webtoonContainer.scrollTop <= 0;
+    return webtoonContainer.scrollTop + webtoonContainer.clientHeight >= webtoonContainer.scrollHeight - 1;
+  }
+
   function webtoonScroll(direction: "up" | "down") {
     if (!webtoonContainer) return;
+    if (isAtScrollEdge(direction)) {
+      if (direction === "up") goChapter(state()?.prevChapter, "last");
+      else goChapter(state()?.nextChapter, 0);
+      return;
+    }
     const amount = webtoonContainer.clientHeight * 0.7;
     webtoonContainer.scrollBy({ top: direction === "down" ? amount : -amount, behavior: "smooth" });
   }
@@ -102,13 +113,17 @@ export function ReaderView() {
   let scrollDir = 0;
   let scrollRaf = 0;
   let lastFrame = 0;
+  let scrollStart = 0;
   const SCROLL_SPEED = 3000; // px per second
+  const SCROLL_SPEED_FAST = 12000; // px per second after 3s
+  const BOOST_AFTER = 2000; // ms
 
   function scrollLoop(now: number) {
     if (!scrollDir) return;
     if (lastFrame) {
       const dt = (now - lastFrame) / 1000;
-      webtoonContainer?.scrollBy(0, scrollDir * SCROLL_SPEED * dt);
+      const speed = (now - scrollStart) > BOOST_AFTER ? SCROLL_SPEED_FAST : SCROLL_SPEED;
+      webtoonContainer?.scrollBy(0, scrollDir * speed * dt);
     }
     lastFrame = now;
     scrollRaf = requestAnimationFrame(scrollLoop);
@@ -118,6 +133,7 @@ export function ReaderView() {
     if (scrollDir === dir) return;
     scrollDir = dir;
     lastFrame = 0;
+    scrollStart = performance.now();
     scrollRaf = requestAnimationFrame(scrollLoop);
   }
 
@@ -197,12 +213,14 @@ export function ReaderView() {
           case "ArrowUp":
           case "ArrowLeft":
             e.preventDefault();
-            startContinuousScroll(-1);
+            if (!e.repeat && isAtScrollEdge("up")) { goChapter(state()?.prevChapter, "last"); }
+            else startContinuousScroll(-1);
             break;
           case "ArrowDown":
           case "ArrowRight":
             e.preventDefault();
-            startContinuousScroll(1);
+            if (!e.repeat && isAtScrollEdge("down")) { goChapter(state()?.nextChapter, 0); }
+            else startContinuousScroll(1);
             break;
           case "m": cycleReadingMode(); break;
           case "Backspace":
@@ -370,9 +388,16 @@ export function ReaderView() {
                   const mo = new MutationObserver(() => {
                     el.querySelectorAll("[data-page]").forEach((img) => observer.observe(img));
                     if (!scrolledToInitial) {
-                      const target = el.querySelector(`[data-page="${pageIndex()}"]`);
+                      const idx = pageIndex();
+                      const target = el.querySelector(`[data-page="${idx}"]`) as HTMLImageElement | null;
                       if (target) {
-                        target.scrollIntoView({ behavior: "instant" });
+                        if (state()?.initialPage === "last") {
+                          const scrollToEnd = () => { el.scrollTop = el.scrollHeight; };
+                          if (target.complete) scrollToEnd();
+                          else target.addEventListener("load", scrollToEnd, { once: true });
+                        } else {
+                          target.scrollIntoView({ behavior: "instant" });
+                        }
                         scrolledToInitial = true;
                       }
                     }
