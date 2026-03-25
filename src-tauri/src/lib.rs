@@ -12,6 +12,8 @@ pub fn run() {
         .setup(|app| {
             let data_dir = app.handle().path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
+
+            // Ensure settings.json exists with defaults
             let settings_path = data_dir.join("settings.json");
             if !settings_path.exists() {
                 let defaults = commands::settings::Settings::default();
@@ -19,6 +21,31 @@ pub fn run() {
                     .expect("failed to serialize default settings");
                 std::fs::write(&settings_path, json)?;
             }
+
+            // Migrate old categories.json + library.json → unified library.json
+            let old_categories = data_dir.join("categories.json");
+            if old_categories.exists() {
+                use crate::models::category::{Category, LibraryData, LibraryEntry};
+                use std::collections::HashMap;
+
+                let categories: Vec<Category> = std::fs::read_to_string(&old_categories)
+                    .ok()
+                    .and_then(|s| serde_json::from_str(&s).ok())
+                    .unwrap_or_default();
+
+                let library_path = data_dir.join("library.json");
+                let entries: HashMap<String, LibraryEntry> = std::fs::read_to_string(&library_path)
+                    .ok()
+                    .and_then(|s| serde_json::from_str(&s).ok())
+                    .unwrap_or_default();
+
+                let merged = LibraryData { categories, entries };
+                let json = serde_json::to_string_pretty(&merged)
+                    .expect("failed to serialize library data");
+                std::fs::write(&library_path, json)?;
+                std::fs::remove_file(&old_categories)?;
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

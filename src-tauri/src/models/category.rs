@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_CATEGORY_ID: &str = "default";
@@ -29,4 +31,12 @@ pub struct LibraryEntry {
     pub chapter_count: usize,
     pub category_ids: Vec<String>,
     pub added_at: u64,
+}
+
+/// Combined library data: categories + bookmarked manga entries.
+/// Persisted as a single `library.json` file.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LibraryData {
+    pub categories: Vec<Category>,
+    pub entries: HashMap<String, LibraryEntry>,
 }
