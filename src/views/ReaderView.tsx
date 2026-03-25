@@ -116,7 +116,7 @@ export function ReaderView() {
   let lastFrame = 0;
   let scrollStart = 0;
   const SCROLL_SPEED = 3000; // px per second
-  const SCROLL_SPEED_FAST = 12000; // px per second after 3s
+  const SCROLL_SPEED_FAST = 15000; // px per second after 3s
   const BOOST_AFTER = 2000; // ms
 
   function scrollLoop(now: number) {
@@ -309,13 +309,90 @@ export function ReaderView() {
     goChapter(state()?.nextChapter, 0);
   }
 
+  function goBack() { navigate(-1); }
+
+  function initWebtoonRef(el: HTMLDivElement) {
+    webtoonContainer = el;
+    const ro = new ResizeObserver(() => setWebtoonHeight(el.clientHeight));
+    ro.observe(el);
+    onCleanup(() => ro.disconnect());
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const idx = parseInt((entry.target as HTMLElement).dataset.page || "0", 10);
+            setPageIndex(idx);
+          }
+        }
+      },
+      { root: el, rootMargin: "-50% 0px", threshold: 0 }
+    );
+    let scrolledToInitial = false;
+    const mo = new MutationObserver(() => {
+      el.querySelectorAll("[data-page]").forEach((img) => observer.observe(img));
+      if (!scrolledToInitial) {
+        const idx = pageIndex();
+        const target = el.querySelector(`[data-page="${idx}"]`) as HTMLImageElement | null;
+        if (target) {
+          if (state()?.initialPage === "last") {
+            const scrollToEnd = () => { el.scrollTop = el.scrollHeight; };
+            if (target.complete) scrollToEnd();
+            else target.addEventListener("load", scrollToEnd, { once: true });
+          } else {
+            target.scrollIntoView({ behavior: "instant" });
+          }
+          scrolledToInitial = true;
+        }
+      }
+    });
+    mo.observe(el, { childList: true, subtree: true });
+    onCleanup(() => { observer.disconnect(); mo.disconnect(); });
+  }
+
+  function tapScrollUp() { webtoonScroll("up"); }
+  function tapScrollDown() { webtoonScroll("down"); }
+
+  function pageContainerClass() {
+    if (anim()) return `absolute inset-0 flex items-center justify-center overflow-hidden slide-in-${anim()!.dir}`;
+    const fm = fitMode();
+    const overflow = fm === "original" || fm === "fit-width" || fm === "fit-height" ? "overflow-auto" : "overflow-hidden";
+    return `absolute inset-0 flex items-center justify-center ${overflow}`;
+  }
+
+  function clearAnim() { setAnim(null); }
+
+  function tapLeft() { (isRtl() ? next : prev)(); }
+  function tapRight() { (isRtl() ? prev : next)(); }
+
+  function goFirstChapter() { goChapter(isRtl() ? state()?.nextChapter : state()?.prevChapter, 0); }
+  function goLastChapter() { goChapter(isRtl() ? state()?.prevChapter : state()?.nextChapter, 0); }
+  function firstChapterDisabled() { return isRtl() ? !state()?.nextChapter : !state()?.prevChapter; }
+  function lastChapterDisabled() { return isRtl() ? !state()?.prevChapter : !state()?.nextChapter; }
+
+  function navPrev() { return isPaged() ? (isRtl() ? next : prev)() : webtoonScroll("up"); }
+  function navNext() { return isPaged() ? (isRtl() ? prev : next)() : webtoonScroll("down"); }
+  function navPrevDisabled() { return isPaged() && (isRtl() ? pageIndex() === pages().length - 1 && !state()?.nextChapter : pageIndex() === 0 && !state()?.prevChapter); }
+  function navNextDisabled() { return isPaged() && (isRtl() ? pageIndex() === 0 && !state()?.prevChapter : pageIndex() === pages().length - 1 && !state()?.nextChapter); }
+
+  function startJump() { setJumpInput(String(pageIndex() + 1)); setJumping(true); }
+  function submitJump(e: Event) {
+    e.preventDefault();
+    const n = parseInt(jumpInput(), 10);
+    if (!isNaN(n)) setPageIndex(Math.max(0, Math.min(pages().length - 1, n - 1)));
+    setJumping(false);
+  }
+  function jumpKeyDown(e: KeyboardEvent) { if (e.key === "Escape") setJumping(false); e.stopPropagation(); }
+  function focusJumpInput(el: HTMLInputElement) { setTimeout(() => { el.focus(); el.select(); }, 0); }
+
+  const tapZoneStyle = () => ({ height: `${webtoonHeight()}px`, "margin-bottom": `-${webtoonHeight()}px` });
+
   return (
     <Show
       when={state()}
       fallback={
         <div class="flex flex-col items-center justify-center flex-1 gap-4 text-zinc-500">
           <p class="text-sm">No chapter data — navigate here from the chapter list.</p>
-          <Button variant="ghost" onClick={() => navigate(-1)}>
+          <Button variant="ghost" onClick={goBack}>
             <ArrowLeft size={14} /> Back
           </Button>
         </div>
@@ -325,7 +402,7 @@ export function ReaderView() {
         <div class="flex flex-col flex-1 overflow-hidden bg-black">
           {/* Toolbar */}
           <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
-            <Button variant="ghost" onClick={() => navigate(-1)}>
+            <Button variant="ghost" onClick={goBack}>
               <ArrowLeft size={14} />
               Back
             </Button>
@@ -370,52 +447,13 @@ export function ReaderView() {
               <div class="flex-1 relative">
               <div
                 class="absolute inset-0 overflow-y-auto"
-                ref={(el) => {
-                  webtoonContainer = el;
-                  // Track container viewport height for sticky tap zones
-                  const ro = new ResizeObserver(() => setWebtoonHeight(el.clientHeight));
-                  ro.observe(el);
-                  onCleanup(() => ro.disconnect());
-                  // Track current page via scroll position using IntersectionObserver
-                  const observer = new IntersectionObserver(
-                    (entries) => {
-                      for (const entry of entries) {
-                        if (entry.isIntersecting) {
-                          const idx = parseInt((entry.target as HTMLElement).dataset.page || "0", 10);
-                          setPageIndex(idx);
-                        }
-                      }
-                    },
-                    { root: el, rootMargin: "-50% 0px", threshold: 0 }
-                  );
-                  // Observe page images once they mount, and scroll to current page
-                  let scrolledToInitial = false;
-                  const mo = new MutationObserver(() => {
-                    el.querySelectorAll("[data-page]").forEach((img) => observer.observe(img));
-                    if (!scrolledToInitial) {
-                      const idx = pageIndex();
-                      const target = el.querySelector(`[data-page="${idx}"]`) as HTMLImageElement | null;
-                      if (target) {
-                        if (state()?.initialPage === "last") {
-                          const scrollToEnd = () => { el.scrollTop = el.scrollHeight; };
-                          if (target.complete) scrollToEnd();
-                          else target.addEventListener("load", scrollToEnd, { once: true });
-                        } else {
-                          target.scrollIntoView({ behavior: "instant" });
-                        }
-                        scrolledToInitial = true;
-                      }
-                    }
-                  });
-                  mo.observe(el, { childList: true, subtree: true });
-                  onCleanup(() => { observer.disconnect(); mo.disconnect(); });
-                }}
+                ref={initWebtoonRef}
               >
                 {/* Tap zones — sticky inside scroll container to respect scrollbars */}
-                <div class="sticky top-0 flex flex-col pointer-events-none z-10" style={{ height: `${webtoonHeight()}px`, "margin-bottom": `-${webtoonHeight()}px` }}>
-                  <div class="w-full h-1/3 pointer-events-auto cursor-up" onClick={() => webtoonScroll("up")} />
+                <div class="sticky top-0 flex flex-col pointer-events-none z-10" style={tapZoneStyle()}>
+                  <div class="w-full h-1/3 pointer-events-auto cursor-up" onClick={tapScrollUp} />
                   <div class="w-full h-1/3" />
-                  <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={() => webtoonScroll("down")} />
+                  <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={tapScrollDown} />
                 </div>
                 <div class="flex flex-col items-center">
                   <Index each={pages()}>
@@ -453,8 +491,8 @@ export function ReaderView() {
                 {/* Current page */}
                 <div
                   ref={pageContainer}
-                  class={`absolute inset-0 flex items-center justify-center ${anim() ? `overflow-hidden slide-in-${anim()!.dir}` : fitMode() === "original" || fitMode() === "fit-width" || fitMode() === "fit-height" ? "overflow-auto" : "overflow-hidden"}`}
-                  onAnimationEnd={() => setAnim(null)}
+                  class={pageContainerClass()}
+                  onAnimationEnd={clearAnim}
                 >
                   <img
                     src={convertFileSrc(pages()[pageIndex()])}
@@ -467,9 +505,9 @@ export function ReaderView() {
                 <Show when={isVertical()} fallback={
                   /* Horizontal tap zones (LTR / RTL) */
                   <div class="absolute inset-0 flex pointer-events-none z-10">
-                    <div class="w-1/3 h-full pointer-events-auto cursor-left" onClick={isRtl() ? next : prev} />
+                    <div class="w-1/3 h-full pointer-events-auto cursor-left" onClick={tapLeft} />
                     <div class="w-1/3 h-full" />
-                    <div class="w-1/3 h-full pointer-events-auto cursor-right" onClick={isRtl() ? prev : next} />
+                    <div class="w-1/3 h-full pointer-events-auto cursor-right" onClick={tapRight} />
                   </div>
                 }>
                   {/* Vertical tap zones */}
@@ -485,13 +523,10 @@ export function ReaderView() {
 
           {/* Bottom nav */}
           <div class="flex items-center justify-center gap-4 px-4 py-2.5 bg-zinc-900 border-t border-zinc-800 shrink-0">
-            <Button variant="ghost" iconOnly onClick={() => goChapter(isRtl() ? s().nextChapter : s().prevChapter, 0)} disabled={isRtl() ? !s().nextChapter : !s().prevChapter} title={isRtl() ? "Next chapter" : "Previous chapter"}>
+            <Button variant="ghost" iconOnly onClick={goFirstChapter} disabled={firstChapterDisabled()} title={isRtl() ? "Next chapter" : "Previous chapter"}>
               <ChevronFirst size={16} />
             </Button>
-            <Button variant="ghost" iconOnly
-              onClick={isPaged() ? (isRtl() ? next : prev) : () => webtoonScroll("up")}
-              disabled={isPaged() && (isRtl() ? pageIndex() === pages().length - 1 && !s().nextChapter : pageIndex() === 0 && !s().prevChapter)}
-            >
+            <Button variant="ghost" iconOnly onClick={navPrev} disabled={navPrevDisabled()}>
               {isVertical() || !isPaged() ? <ChevronUp size={16} /> : <ChevronLeft size={16} />}
             </Button>
             <Show
@@ -499,7 +534,7 @@ export function ReaderView() {
               fallback={
                 <button
                   class="text-sm text-zinc-400 tabular-nums hover:text-zinc-100 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-zinc-800"
-                  onClick={() => { setJumpInput(String(pageIndex() + 1)); setJumping(true); }}
+                  onClick={startJump}
                 >
                   {pageIndex() + 1} / {pages().length}
                 </button>
@@ -507,12 +542,7 @@ export function ReaderView() {
             >
               <form
                 class="flex items-center gap-1.5"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const n = parseInt(jumpInput(), 10);
-                  if (!isNaN(n)) setPageIndex(Math.max(0, Math.min(pages().length - 1, n - 1)));
-                  setJumping(false);
-                }}
+                onSubmit={submitJump}
               >
                 <input
                   type="number"
@@ -520,20 +550,17 @@ export function ReaderView() {
                   max={pages().length}
                   value={jumpInput()}
                   onInput={(e) => setJumpInput(e.currentTarget.value)}
-                  onKeyDown={(e) => { if (e.key === "Escape") setJumping(false); e.stopPropagation(); }}
-                  ref={(el) => setTimeout(() => { el.focus(); el.select(); }, 0)}
+                  onKeyDown={jumpKeyDown}
+                  ref={focusJumpInput}
                   class="w-14 text-center text-sm bg-zinc-800 text-zinc-100 rounded px-1.5 py-0.5 outline-none border border-zinc-600 focus:border-indigo-500 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <span class="text-sm text-zinc-500">/ {pages().length}</span>
               </form>
             </Show>
-            <Button variant="ghost" iconOnly
-              onClick={isPaged() ? (isRtl() ? prev : next) : () => webtoonScroll("down")}
-              disabled={isPaged() && (isRtl() ? pageIndex() === 0 && !s().prevChapter : pageIndex() === pages().length - 1 && !s().nextChapter)}
-            >
+            <Button variant="ghost" iconOnly onClick={navNext} disabled={navNextDisabled()}>
               {isVertical() || !isPaged() ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </Button>
-            <Button variant="ghost" iconOnly onClick={() => goChapter(isRtl() ? s().prevChapter : s().nextChapter, 0)} disabled={isRtl() ? !s().prevChapter : !s().nextChapter} title={isRtl() ? "Previous chapter" : "Next chapter"}>
+            <Button variant="ghost" iconOnly onClick={goLastChapter} disabled={lastChapterDisabled()} title={isRtl() ? "Previous chapter" : "Next chapter"}>
               <ChevronLast size={16} />
             </Button>
           </div>
