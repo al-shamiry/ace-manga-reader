@@ -88,8 +88,15 @@ export function ReaderView() {
   const isVertical = () => readingMode() === "paged-vertical";
   const isRtl = () => readingMode() === "paged-rtl";
 
-  // Paged scroll container ref — reset scroll on page turn
+  // Scroll container refs
   let pageContainer: HTMLDivElement | undefined;
+  let webtoonContainer: HTMLDivElement | undefined;
+
+  function webtoonScroll(direction: "up" | "down") {
+    if (!webtoonContainer) return;
+    const amount = webtoonContainer.clientHeight * 0.7;
+    webtoonContainer.scrollBy({ top: direction === "down" ? amount : -amount, behavior: "smooth" });
+  }
 
   // Page flip animation
   type SlideDir = "left" | "right" | "up" | "down";
@@ -157,9 +164,17 @@ export function ReaderView() {
   onMount(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (readingMode() === "webtoon") {
-        // In webtoon mode, let arrow keys scroll naturally; only handle shortcuts
         switch (e.key) {
-          case "f": cycleFitMode(); break;
+          case "ArrowUp":
+          case "ArrowLeft":
+            e.preventDefault();
+            webtoonScroll("up");
+            break;
+          case "ArrowDown":
+          case "ArrowRight":
+            e.preventDefault();
+            webtoonScroll("down");
+            break;
           case "m": cycleReadingMode(); break;
           case "Backspace":
           case "Escape": navigate(-1); break;
@@ -299,9 +314,11 @@ export function ReaderView() {
           <Show when={!loading() && !error() && pages().length > 0}>
             {/* Webtoon mode — continuous scroll */}
             <Show when={readingMode() === "webtoon"}>
+              <div class="flex-1 relative">
               <div
-                class="flex-1 overflow-y-auto"
+                class="absolute inset-0 overflow-y-auto"
                 ref={(el) => {
+                  webtoonContainer = el;
                   // Track current page via scroll position using IntersectionObserver
                   const observer = new IntersectionObserver(
                     (entries) => {
@@ -343,6 +360,13 @@ export function ReaderView() {
                     )}
                   </Index>
                 </div>
+              </div>
+              {/* Tap zones — fixed overlay outside scroll container */}
+              <div class="absolute inset-0 flex flex-col pointer-events-none z-10">
+                <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={() => webtoonScroll("up")} />
+                <div class="w-full h-1/3" />
+                <div class="w-full h-1/3 pointer-events-auto cursor-pointer" onClick={() => webtoonScroll("down")} />
+              </div>
               </div>
             </Show>
 
@@ -400,11 +424,12 @@ export function ReaderView() {
             <Button variant="ghost" iconOnly onClick={() => goChapter(isRtl() ? s().nextChapter : s().prevChapter, 0)} disabled={isRtl() ? !s().nextChapter : !s().prevChapter} title={isRtl() ? "Next chapter" : "Previous chapter"}>
               <ChevronFirst size={16} />
             </Button>
-            <Show when={isPaged()}>
-              <Button variant="ghost" iconOnly onClick={isRtl() ? next : prev} disabled={isRtl() ? pageIndex() === pages().length - 1 && !s().nextChapter : pageIndex() === 0 && !s().prevChapter}>
-                {isVertical() ? <ChevronUp size={16} /> : <ChevronLeft size={16} />}
-              </Button>
-            </Show>
+            <Button variant="ghost" iconOnly
+              onClick={isPaged() ? (isRtl() ? next : prev) : () => webtoonScroll("up")}
+              disabled={isPaged() && (isRtl() ? pageIndex() === pages().length - 1 && !s().nextChapter : pageIndex() === 0 && !s().prevChapter)}
+            >
+              {isVertical() || !isPaged() ? <ChevronUp size={16} /> : <ChevronLeft size={16} />}
+            </Button>
             <Show
               when={jumping()}
               fallback={
@@ -438,11 +463,12 @@ export function ReaderView() {
                 <span class="text-sm text-zinc-500">/ {pages().length}</span>
               </form>
             </Show>
-            <Show when={isPaged()}>
-              <Button variant="ghost" iconOnly onClick={isRtl() ? prev : next} disabled={isRtl() ? pageIndex() === 0 && !s().prevChapter : pageIndex() === pages().length - 1 && !s().nextChapter}>
-                {isVertical() ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </Button>
-            </Show>
+            <Button variant="ghost" iconOnly
+              onClick={isPaged() ? (isRtl() ? prev : next) : () => webtoonScroll("down")}
+              disabled={isPaged() && (isRtl() ? pageIndex() === 0 && !s().prevChapter : pageIndex() === pages().length - 1 && !s().nextChapter)}
+            >
+              {isVertical() || !isPaged() ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </Button>
             <Button variant="ghost" iconOnly onClick={() => goChapter(isRtl() ? s().prevChapter : s().nextChapter, 0)} disabled={isRtl() ? !s().prevChapter : !s().nextChapter} title={isRtl() ? "Previous chapter" : "Next chapter"}>
               <ChevronLast size={16} />
             </Button>
