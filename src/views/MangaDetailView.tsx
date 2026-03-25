@@ -111,9 +111,6 @@ export function MangaDetailView() {
           <ArrowLeft size={14} />
           Back
         </Button>
-        <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
-          {manga.title}
-        </span>
       </div>
 
       {/* Header */}
