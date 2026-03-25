@@ -6,10 +6,15 @@ A lightweight desktop manga and comic reader built with Tauri v2 and SolidJS.
 
 - Browse manga libraries organized by source folder
 - Supports both folder-based chapters (images in subfolders) and CBZ archives
+- **4 reading modes**: Paged LTR, Paged RTL, Paged Vertical, Webtoon (continuous scroll)
+- **5 fit modes**: Fit Screen, Fit Width, Fit Height, Original, Stretch
 - Chapter reading with keyboard, tap zone, and button navigation
-- Automatic reading progress saved per chapter
+- Continuous keyboard scrolling in webtoon mode with speed boost on long hold
+- Automatic reading progress saved per chapter, persisted per-manga settings
 - Jump to any page by clicking the page counter
-- Auto-advance to next/previous chapter at the end or beginning of a chapter
+- Auto-advance to next/previous chapter at chapter boundaries
+- Page flip animations (direction-aware for each reading mode)
+- Fullscreen mode (F11 or toolbar button)
 - Natural sort order (Chapter 2 before Chapter 10)
 - Shimmer loading skeletons while scanning
 
@@ -37,12 +42,15 @@ Set your root folder in the app and it will scan one level deep for manga.
 
 | Action | Keys |
 |---|---|
-| Next page | `→` `↓` |
-| Previous page | `←` `↑` |
+| Next page / Scroll down | `→` `↓` |
+| Previous page / Scroll up | `←` `↑` |
+| Cycle fit mode | `F` |
+| Cycle reading mode | `M` |
+| Fullscreen | `F11` |
 | Go back | `Backspace` `Escape` |
 | Jump to page | Click the page counter |
 
-Left/right tap zones on the page image also work for mouse navigation.
+Tap zones on the page image also work for mouse navigation — direction adapts to reading mode.
 
 ## Tech Stack
 
@@ -57,11 +65,11 @@ Left/right tap zones on the page image also work for mouse navigation.
 ## Roadmap
 
 ```
-Stage 1 — Library Browser   ██████████  done
-Stage 2 — Reader            ██████░░░░  in progress
-Stage 3 — Library Mgmt      ░░░░░░░░░░  planned
-Stage 4 — Reading Modes     ░░░░░░░░░░  planned
-Stage 5 — Advanced          ░░░░░░░░░░  planned
+Stage 1 — Library Browser     ██████████  done
+Stage 2 — Comic Reader        ██████████  done
+Stage 3 — Library Mgmt        ░░░░░░░░░░  planned
+Stage 4 — Reading Experience  ░░░░░░░░░░  planned
+Stage 5 — Advanced            ░░░░░░░░░░  planned
 ```
 
 <details open>
@@ -77,7 +85,7 @@ Stage 5 — Advanced          ░░░░░░░░░░  planned
 </details>
 
 <details open>
-<summary><b>Stage 2 — Reader</b> 🚧</summary>
+<summary><b>Stage 2 — Comic Reader</b> ✅</summary>
 
 - ✅Router with four views: root, source, manga detail, reader
 - ✅Chapter list with New / Page N / Done status badges
@@ -86,9 +94,12 @@ Stage 5 — Advanced          ░░░░░░░░░░  planned
 - ✅Jump to page by clicking the page counter
 - ✅Auto-advance to next/previous chapter at chapter boundaries
 - ✅Window title updates on every page turn
-- ⬜Fit modes — fit width / fit height / original
-- ⬜Reading modes — single page / double page / webtoon scroll
-- ⬜Preload adjacent pages, RTL support, fullscreen, progress bar on card
+- ✅5 fit modes (Fit Screen, Fit Width, Fit Height, Original, Stretch) — persisted per-manga
+- ✅4 reading modes (Paged LTR, Paged RTL, Paged Vertical, Webtoon Scroll) — persisted per-manga
+- ✅RTL support (reversed tap zones, arrow keys, and chapter navigation)
+- ✅Page flip animations (direction-aware)
+- ✅Continuous keyboard scrolling in webtoon mode with speed boost
+- ✅Fullscreen toggle (F11 / toolbar)
 
 </details>
 
@@ -105,11 +116,8 @@ Stage 5 — Advanced          ░░░░░░░░░░  planned
 <details open>
 <summary><b>Stage 4 — Reading Experience</b> 📋</summary>
 
-- ⬜Continuous webtoon scroll mode
 - ⬜Pinch-to-zoom / scroll zoom
 - ⬜Bookmarks
-- ⬜Reading direction toggle (LTR / RTL)
-- ⬜Fullscreen mode
 
 </details>
 
