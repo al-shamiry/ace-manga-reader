@@ -21,7 +21,7 @@ export function RootView() {
   const visibleCategories = createMemo(() => {
     const cats = categories();
     const entries = libraryEntries();
-    if (cats.length <= 1) return cats;
+    if (cats.length <= 1 || entries.length === 0) return cats;
 
     const defaultCount = entries.filter((e) => e.category_ids.includes("default")).length;
     if (defaultCount === 0) return cats.filter((c) => c.id !== "default");
