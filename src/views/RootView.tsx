@@ -22,7 +22,7 @@ export function RootView() {
   const [searchQuery, setSearchQuery] = createSignal("");
   const [filters, setFilters] = createSignal<FilterState>({ sources: [], readingStatus: [] });
 
-  // Load persisted filters
+  // Load persisted state
   onMount(async () => {
     try {
       const saved = await invoke<LibraryFilters>("get_library_filters");
@@ -31,6 +31,10 @@ export function RootView() {
         readingStatus: saved.reading_status as ReadingStatus[],
       });
     } catch (_) { /* no saved filters */ }
+    try {
+      const savedTab = await invoke<string | null>("get_active_category");
+      if (savedTab) setActiveTab(savedTab);
+    } catch (_) { /* no saved tab */ }
   });
 
   function handleFilterChange(next: FilterState) {
@@ -129,6 +133,7 @@ export function RootView() {
     setSlideClass("tab-fade-out");
     setTimeout(() => {
       setActiveTab(newTab);
+      invoke("set_active_category", { categoryId: newTab }).catch(() => {});
       setSlideClass(slideIn);
       setTimeout(() => {
         setSlideClass("");

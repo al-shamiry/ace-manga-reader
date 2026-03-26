@@ -119,25 +119,6 @@ fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Manga> {
         .collect()
 }
 
-fn root_dir_path(app_data_dir: &Path) -> PathBuf {
-    app_data_dir.join("root_directory.txt")
-}
-
-#[tauri::command]
-pub fn get_root_directory(app_handle: tauri::AppHandle) -> Option<String> {
-    let app_data_dir = app_handle.path().app_data_dir().ok()?;
-    let content = fs::read_to_string(root_dir_path(&app_data_dir)).ok()?;
-    let path = content.trim().to_string();
-    if path.is_empty() { None } else { Some(path) }
-}
-
-#[tauri::command]
-pub fn set_root_directory(path: String, app_handle: tauri::AppHandle) -> Result<(), String> {
-    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
-    fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
-    fs::write(root_dir_path(&app_data_dir), path.as_bytes()).map_err(|e| e.to_string())
-}
-
 #[tauri::command]
 pub fn list_sources(path: String) -> Result<Vec<Source>, String> {
     let dir = Path::new(&path);
