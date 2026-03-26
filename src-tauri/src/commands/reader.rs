@@ -9,6 +9,7 @@ use zip::ZipArchive;
 
 use crate::utils::{images_in, is_image, normalize, path_id, subdirs_and_cbz, title_from_path};
 use crate::models::chapter::{Chapter, ChapterStatus};
+use crate::commands::categories;
 
 // ── Progress helpers ──────────────────────────────────────────────────────────
 
@@ -37,6 +38,23 @@ fn save_status(
     map.insert(chapter_id.to_string(), status.clone());
     let json = serde_json::to_vec(&map).map_err(|e| e.to_string())?;
     fs::write(pf, json).map_err(|e| e.to_string())
+}
+
+fn count_read_chapters(app_data_dir: &std::path::Path, manga_id: &str) -> usize {
+    let progress = load_progress_map(app_data_dir, manga_id);
+    progress.values().filter(|s| matches!(s, ChapterStatus::Read)).count()
+}
+
+fn sync_library_read_chapters(app: &tauri::AppHandle, manga_id: &str) {
+    let app_data_dir = match app.path().app_data_dir() {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+    let mut data = categories::load_library_data(app);
+    if let Some(entry) = data.entries.get_mut(manga_id) {
+        entry.read_chapters = count_read_chapters(&app_data_dir, manga_id);
+        let _ = categories::save_library_data(app, &data);
+    }
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
@@ -192,7 +210,9 @@ pub fn set_chapter_progress(
     } else {
         ChapterStatus::Ongoing { page }
     };
-    save_status(&app_data_dir, &manga_id, &chapter_id, &status)
+    save_status(&app_data_dir, &manga_id, &chapter_id, &status)?;
+    sync_library_read_chapters(&app_handle, &manga_id);
+    Ok(())
 }
 
 #[tauri::command]
@@ -208,5 +228,7 @@ pub fn mark_chapter_read(
     } else {
         ChapterStatus::Unread
     };
-    save_status(&app_data_dir, &manga_id, &chapter_id, &status)
+    save_status(&app_data_dir, &manga_id, &chapter_id, &status)?;
+    sync_library_read_chapters(&app_handle, &manga_id);
+    Ok(())
 }

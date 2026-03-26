@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
 
 use crate::models::category::{Category, LibraryData, LibraryEntry, DEFAULT_CATEGORY_ID};
+use crate::models::chapter::ChapterStatus;
 
 // ── File path ────────────────────────────────────────────────────────────────
 
@@ -13,7 +14,7 @@ fn library_path(app: &tauri::AppHandle) -> std::path::PathBuf {
 
 // ── Persistence helpers ──────────────────────────────────────────────────────
 
-fn load_library_data(app: &tauri::AppHandle) -> LibraryData {
+pub(crate) fn load_library_data(app: &tauri::AppHandle) -> LibraryData {
     let path = library_path(app);
     let mut data: LibraryData = fs::read_to_string(&path)
         .ok()
@@ -28,7 +29,7 @@ fn load_library_data(app: &tauri::AppHandle) -> LibraryData {
     data
 }
 
-fn save_library_data(app: &tauri::AppHandle, data: &LibraryData) -> Result<(), String> {
+pub(crate) fn save_library_data(app: &tauri::AppHandle, data: &LibraryData) -> Result<(), String> {
     let path = library_path(app);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -104,6 +105,19 @@ pub fn reorder_categories(app: tauri::AppHandle, category_ids: Vec<String>) -> R
     save_library_data(&app, &data)
 }
 
+fn count_read_chapters(app: &tauri::AppHandle, manga_id: &str) -> usize {
+    let app_data_dir = match app.path().app_data_dir() {
+        Ok(d) => d,
+        Err(_) => return 0,
+    };
+    let progress_path = app_data_dir.join("progress").join(format!("{}.json", manga_id));
+    let map: std::collections::HashMap<String, ChapterStatus> = fs::read_to_string(&progress_path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default();
+    map.values().filter(|s| matches!(s, ChapterStatus::Read)).count()
+}
+
 // ── Library commands ─────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -128,12 +142,15 @@ pub fn add_to_library(
         category_ids
     };
 
+    let read_chapters = count_read_chapters(&app, &manga_id);
+
     match data.entries.get_mut(&manga_id) {
         Some(entry) => {
             entry.title = title;
             entry.path = path;
             entry.cover_path = cover_path;
             entry.chapter_count = chapter_count;
+            entry.read_chapters = read_chapters;
             entry.category_ids = ids;
         }
         None => {
@@ -143,6 +160,7 @@ pub fn add_to_library(
                 path,
                 cover_path,
                 chapter_count,
+                read_chapters,
                 category_ids: ids,
                 added_at: now_epoch(),
             });

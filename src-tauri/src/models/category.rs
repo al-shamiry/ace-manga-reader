@@ -29,6 +29,8 @@ pub struct LibraryEntry {
     pub path: String,
     pub cover_path: String,
     pub chapter_count: usize,
+    #[serde(default)]
+    pub read_chapters: usize,
     pub category_ids: Vec<String>,
     pub added_at: u64,
 }

@@ -39,6 +39,7 @@ export interface LibraryEntry {
   path: string;
   cover_path: string;
   chapter_count: number;
+  read_chapters: number;
   category_ids: string[];
   added_at: number;
 }
