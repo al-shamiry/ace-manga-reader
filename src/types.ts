@@ -44,6 +44,13 @@ export interface LibraryEntry {
   added_at: number;
 }
 
+export interface LibraryFilters {
+  sources: string[];
+  reading_status: string[];
+}
+
+export type ReadingStatus = "unread" | "started" | "completed";
+
 export type FitMode = "fit-screen" | "fit-width" | "fit-height" | "original" | "stretch";
 export type ReadingMode = "paged-ltr" | "paged-rtl" | "paged-vertical" | "webtoon";
 

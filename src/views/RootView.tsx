@@ -1,13 +1,14 @@
-import { Show, createSignal, createMemo, createEffect, on } from "solid-js";
+import { Show, createSignal, createMemo, createEffect, on, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { Library, Plus, Pencil, Trash2 } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { useLibrary } from "../context/LibraryContext";
 import { MangaGrid } from "../components/MangaGrid";
 import { SearchToggle } from "../components/SearchToggle";
+import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
 import { TabBar } from "../components/TabBar";
 import type { Tab } from "../components/TabBar";
-import type { Category, Manga } from "../types";
+import type { Category, LibraryEntry, LibraryFilters, Manga, ReadingStatus } from "../types";
 
 export function RootView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
@@ -19,6 +20,41 @@ export function RootView() {
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number; category: Category } | null>(null);
   const [renaming, setRenaming] = createSignal<{ id: string; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
+  const [filters, setFilters] = createSignal<FilterState>({ sources: [], readingStatus: [] });
+
+  // Load persisted filters
+  onMount(async () => {
+    try {
+      const saved = await invoke<LibraryFilters>("get_library_filters");
+      setFilters({
+        sources: saved.sources,
+        readingStatus: saved.reading_status as ReadingStatus[],
+      });
+    } catch (_) { /* no saved filters */ }
+  });
+
+  function handleFilterChange(next: FilterState) {
+    setFilters(next);
+    invoke("set_library_filters", {
+      filters: { sources: next.sources, reading_status: next.readingStatus },
+    }).catch(() => {});
+  }
+
+  // Derive available source names from library entries
+  const availableSources = createMemo(() => {
+    const names = new Set<string>();
+    for (const e of libraryEntries()) {
+      const parts = e.path.replace(/\\/g, "/").split("/");
+      if (parts.length >= 2) names.add(parts[parts.length - 2]);
+    }
+    return [...names].sort();
+  });
+
+  function readingStatus(e: LibraryEntry): ReadingStatus {
+    if (e.read_chapters === 0) return "unread";
+    if (e.read_chapters >= e.chapter_count) return "completed";
+    return "started";
+  }
 
   // Filter out Default tab when it's empty and other categories exist
   const visibleCategories = createMemo(() => {
@@ -46,21 +82,37 @@ export function RootView() {
     return entries.filter((e) => e.category_ids.includes(tab));
   });
 
-  // Convert LibraryEntry to Manga for MangaGrid, applying search filter
-  const mangasForGrid = createMemo((): Manga[] => {
+  // Apply search + filters to entries
+  function applyFilters(entries: LibraryEntry[]): LibraryEntry[] {
     const query = searchQuery().toLowerCase().trim();
-    let entries = filteredEntries();
+    const f = filters();
+    let result = entries;
     if (query) {
-      entries = entries.filter((e) => e.title.toLowerCase().includes(query));
+      result = result.filter((e) => e.title.toLowerCase().includes(query));
     }
-    return entries.map((e) => ({
+    if (f.readingStatus.length > 0) {
+      result = result.filter((e) => f.readingStatus.includes(readingStatus(e)));
+    }
+    if (f.sources.length > 0) {
+      result = result.filter((e) => {
+        const parts = e.path.replace(/\\/g, "/").split("/");
+        const source = parts.length >= 2 ? parts[parts.length - 2] : "";
+        return f.sources.includes(source);
+      });
+    }
+    return result;
+  }
+
+  // Convert LibraryEntry to Manga for MangaGrid
+  const mangasForGrid = createMemo((): Manga[] =>
+    applyFilters(filteredEntries()).map((e) => ({
       id: e.manga_id,
       title: e.title,
       path: e.path,
       cover_path: e.cover_path,
       chapter_count: e.chapter_count,
-    }));
-  });
+    }))
+  );
 
   let switching = false;
   function switchTab(newTab: string) {
@@ -86,12 +138,7 @@ export function RootView() {
   }
 
   function countForCategory(categoryId: string): number {
-    const query = searchQuery().toLowerCase().trim();
-    let entries = libraryEntries().filter((e) => e.category_ids.includes(categoryId));
-    if (query) {
-      entries = entries.filter((e) => e.title.toLowerCase().includes(query));
-    }
-    return entries.length;
+    return applyFilters(libraryEntries().filter((e) => e.category_ids.includes(categoryId))).length;
   }
 
   const tabs = createMemo((): Tab[] =>
@@ -185,6 +232,11 @@ export function RootView() {
         {/* Search & filter actions */}
         <div class="flex items-center gap-1 shrink-0 ml-3">
           <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
+          <FilterDropdown
+            state={filters()}
+            availableSources={availableSources()}
+            onChange={handleFilterChange}
+          />
         </div>
       </div>
 

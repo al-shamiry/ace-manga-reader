@@ -17,6 +17,14 @@ impl Default for Settings {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LibraryFilters {
+    #[serde(default)]
+    pub sources: Vec<String>,
+    #[serde(default)]
+    pub reading_status: Vec<String>,
+}
+
 fn global_path(app: &tauri::AppHandle) -> std::path::PathBuf {
     app.path().app_data_dir().unwrap().join("settings.json")
 }
@@ -75,4 +83,25 @@ pub fn set_settings(
         None => global_path(&app),
     };
     save(&path, &settings)
+}
+
+// ── Library filters ──────────────────────────────────────────────────────────
+
+fn filters_path(app: &tauri::AppHandle) -> std::path::PathBuf {
+    app.path().app_data_dir().unwrap().join("library_filters.json")
+}
+
+#[tauri::command]
+pub fn get_library_filters(app: tauri::AppHandle) -> LibraryFilters {
+    fs::read_to_string(filters_path(&app))
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+#[tauri::command]
+pub fn set_library_filters(app: tauri::AppHandle, filters: LibraryFilters) -> Result<(), String> {
+    let path = filters_path(&app);
+    let json = serde_json::to_string_pretty(&filters).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())
 }

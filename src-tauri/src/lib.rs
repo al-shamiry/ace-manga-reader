@@ -68,6 +68,8 @@ pub fn run() {
             commands::categories::add_to_library,
             commands::categories::remove_from_library,
             commands::categories::is_in_library,
+            commands::settings::get_library_filters,
+            commands::settings::set_library_filters,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
