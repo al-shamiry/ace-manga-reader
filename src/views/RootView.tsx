@@ -4,6 +4,7 @@ import { Library, Plus, Pencil, Trash2 } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { useLibrary } from "../context/LibraryContext";
 import { MangaGrid } from "../components/MangaGrid";
+import { SearchToggle } from "../components/SearchToggle";
 import { TabBar } from "../components/TabBar";
 import type { Tab } from "../components/TabBar";
 import type { Category, Manga } from "../types";
@@ -17,6 +18,7 @@ export function RootView() {
   const [newCategoryName, setNewCategoryName] = createSignal("");
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number; category: Category } | null>(null);
   const [renaming, setRenaming] = createSignal<{ id: string; name: string } | null>(null);
+  const [searchQuery, setSearchQuery] = createSignal("");
 
   // Filter out Default tab when it's empty and other categories exist
   const visibleCategories = createMemo(() => {
@@ -44,16 +46,21 @@ export function RootView() {
     return entries.filter((e) => e.category_ids.includes(tab));
   });
 
-  // Convert LibraryEntry to Manga for MangaGrid
-  const mangasForGrid = createMemo((): Manga[] =>
-    filteredEntries().map((e) => ({
+  // Convert LibraryEntry to Manga for MangaGrid, applying search filter
+  const mangasForGrid = createMemo((): Manga[] => {
+    const query = searchQuery().toLowerCase().trim();
+    let entries = filteredEntries();
+    if (query) {
+      entries = entries.filter((e) => e.title.toLowerCase().includes(query));
+    }
+    return entries.map((e) => ({
       id: e.manga_id,
       title: e.title,
       path: e.path,
       cover_path: e.cover_path,
       chapter_count: e.chapter_count,
-    }))
-  );
+    }));
+  });
 
   let switching = false;
   function switchTab(newTab: string) {
@@ -79,7 +86,12 @@ export function RootView() {
   }
 
   function countForCategory(categoryId: string): number {
-    return libraryEntries().filter((e) => e.category_ids.includes(categoryId)).length;
+    const query = searchQuery().toLowerCase().trim();
+    let entries = libraryEntries().filter((e) => e.category_ids.includes(categoryId));
+    if (query) {
+      entries = entries.filter((e) => e.title.toLowerCase().includes(query));
+    }
+    return entries.length;
   }
 
   const tabs = createMemo((): Tab[] =>
@@ -142,31 +154,38 @@ export function RootView() {
 
   return (
     <div class="flex flex-col flex-1 overflow-hidden" onClick={closeContextMenu}>
-      {/* Category tab bar */}
-      <div class="flex items-center gap-0 px-4 bg-zinc-900 shrink-0 overflow-x-auto">
-        <TabBar
-          tabs={tabs()}
-          activeTab={activeTab()}
-          onSelect={switchTab}
-          onContextMenu={(e, tab) => {
-            const cat = visibleCategories().find((c) => c.id === tab.id);
-            if (cat) handleContextMenu(e, cat);
-          }}
-          renamingId={renaming()?.id}
-          renamingValue={renaming()?.name}
-          onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
-          onRenameSubmit={handleRenameCategory}
-          onRenameCancel={() => setRenaming(null)}
-        />
+      {/* Library toolbar: tabs + actions */}
+      <div class="flex items-center gap-0 px-4 bg-zinc-900 shrink-0">
+        <div class="flex items-center overflow-x-auto flex-1 min-w-0">
+          <TabBar
+            tabs={tabs()}
+            activeTab={activeTab()}
+            onSelect={switchTab}
+            onContextMenu={(e, tab) => {
+              const cat = visibleCategories().find((c) => c.id === tab.id);
+              if (cat) handleContextMenu(e, cat);
+            }}
+            renamingId={renaming()?.id}
+            renamingValue={renaming()?.name}
+            onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
+            onRenameSubmit={handleRenameCategory}
+            onRenameCancel={() => setRenaming(null)}
+          />
 
-        {/* Add category button */}
-        <button
-          class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0 ml-2"
-          onClick={() => setShowCreateDialog(true)}
-          title="New category"
-        >
-          <Plus size={16} />
-        </button>
+          {/* Add category button */}
+          <button
+            class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0 ml-2"
+            onClick={() => setShowCreateDialog(true)}
+            title="New category"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+
+        {/* Search & filter actions */}
+        <div class="flex items-center gap-1 shrink-0 ml-3">
+          <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
+        </div>
       </div>
 
       {/* Create category dialog */}
