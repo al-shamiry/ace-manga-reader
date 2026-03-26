@@ -6,8 +6,6 @@ import { useLibrary } from "../context/LibraryContext";
 import { MangaGrid } from "../components/MangaGrid";
 import type { Category, Manga } from "../types";
 
-const ALL_TAB_ID = "__all__";
-
 export function RootView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
   const navigate = useNavigate();
@@ -32,7 +30,7 @@ export function RootView() {
   createEffect(on(visibleCategories, (cats) => {
     const current = activeTab();
     if (current === "" || !cats.some((c) => c.id === current)) {
-      setActiveTab(cats.length > 0 ? cats[0].id : ALL_TAB_ID);
+      if (cats.length > 0) setActiveTab(cats[0].id);
     }
   }));
 
@@ -40,7 +38,6 @@ export function RootView() {
   const filteredEntries = createMemo(() => {
     const tab = activeTab();
     const entries = libraryEntries();
-    if (tab === ALL_TAB_ID) return entries;
     return entries.filter((e) => e.category_ids.includes(tab));
   });
 
@@ -89,7 +86,10 @@ export function RootView() {
   async function handleDeleteCategory(categoryId: string) {
     try {
       await invoke("delete_category", { categoryId });
-      if (activeTab() === categoryId) setActiveTab(ALL_TAB_ID);
+      if (activeTab() === categoryId) {
+        const cats = visibleCategories();
+        setActiveTab(cats.length > 0 ? cats[0].id : "");
+      }
       await refreshCategories();
       await refreshLibrary();
     } catch (e) {
@@ -149,19 +149,6 @@ export function RootView() {
             );
           }}
         </For>
-
-        {/* All tab */}
-        <button
-          class="px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer"
-          classList={{
-            "bg-indigo-600 text-white": activeTab() === ALL_TAB_ID,
-            "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200": activeTab() !== ALL_TAB_ID,
-          }}
-          onClick={() => setActiveTab(ALL_TAB_ID)}
-        >
-          All
-          <span class="ml-1.5 text-xs opacity-70">{libraryEntries().length}</span>
-        </button>
 
         {/* Add category button */}
         <button
