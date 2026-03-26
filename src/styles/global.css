@@ -125,4 +125,8 @@
 .slide-out-up    { animation: slide-out-up    200ms ease-out forwards; }
 .slide-in-up     { animation: slide-in-up     200ms ease-out forwards; }
 .slide-out-down  { animation: slide-out-down  200ms ease-out forwards; }
+
+/* Tab switch fade */
+@keyframes tab-fade-out { to { opacity: 0; } }
+.tab-fade-out { animation: tab-fade-out 100ms ease-out forwards; }
 .slide-in-down   { animation: slide-in-down   200ms ease-out forwards; }

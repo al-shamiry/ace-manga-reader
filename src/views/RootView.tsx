@@ -12,6 +12,7 @@ export function RootView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal("");
+  const [slideClass, setSlideClass] = createSignal("");
   const [showCreateDialog, setShowCreateDialog] = createSignal(false);
   const [newCategoryName, setNewCategoryName] = createSignal("");
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number; category: Category } | null>(null);
@@ -53,6 +54,29 @@ export function RootView() {
       chapter_count: e.chapter_count,
     }))
   );
+
+  let switching = false;
+  function switchTab(newTab: string) {
+    if (switching) return;
+    const cats = visibleCategories();
+    const oldIndex = cats.findIndex((c) => c.id === activeTab());
+    const newIndex = cats.findIndex((c) => c.id === newTab);
+    if (oldIndex === newIndex) return;
+
+    switching = true;
+    const slideIn = newIndex > oldIndex ? "slide-in-left" : "slide-in-right";
+
+    // Fade out old content
+    setSlideClass("tab-fade-out");
+    setTimeout(() => {
+      setActiveTab(newTab);
+      setSlideClass(slideIn);
+      setTimeout(() => {
+        setSlideClass("");
+        switching = false;
+      }, 200);
+    }, 100);
+  }
 
   function countForCategory(categoryId: string): number {
     return libraryEntries().filter((e) => e.category_ids.includes(categoryId)).length;
@@ -123,7 +147,7 @@ export function RootView() {
         <TabBar
           tabs={tabs()}
           activeTab={activeTab()}
-          onSelect={setActiveTab}
+          onSelect={switchTab}
           onContextMenu={(e, tab) => {
             const cat = visibleCategories().find((c) => c.id === tab.id);
             if (cat) handleContextMenu(e, cat);
@@ -212,24 +236,26 @@ export function RootView() {
       </Show>
 
       {/* Manga grid or empty state */}
-      <Show
-        when={mangasForGrid().length > 0}
-        fallback={
-          <div class="flex flex-col items-center justify-center flex-1 gap-4 text-center px-8">
-            <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
-              <Library size={48} stroke-width={1} />
+      <div class={`flex-1 overflow-y-auto ${slideClass()}`}>
+        <Show
+          when={mangasForGrid().length > 0}
+          fallback={
+            <div class="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
+              <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
+                <Library size={48} stroke-width={1} />
+              </div>
+              <div>
+                <p class="text-zinc-300 font-medium">Your library is empty</p>
+                <p class="text-zinc-600 text-sm mt-1">
+                  Browse your <button class="text-indigo-400 hover:underline cursor-pointer" onClick={() => navigate("/sources")}>sources</button> and add manga to your library
+                </p>
+              </div>
             </div>
-            <div>
-              <p class="text-zinc-300 font-medium">Your library is empty</p>
-              <p class="text-zinc-600 text-sm mt-1">
-                Browse your <button class="text-indigo-400 hover:underline cursor-pointer" onClick={() => navigate("/sources")}>sources</button> and add manga to your library
-              </p>
-            </div>
-          </div>
-        }
-      >
-        <MangaGrid mangas={mangasForGrid()} />
-      </Show>
+          }
+        >
+          <MangaGrid mangas={mangasForGrid()} />
+        </Show>
+      </div>
     </div>
   );
 }
