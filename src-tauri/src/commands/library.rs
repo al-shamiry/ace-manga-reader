@@ -167,7 +167,7 @@ pub fn list_sources(path: String) -> Result<Vec<Source>, String> {
 
 fn scan_cache_path(app_data_dir: &Path, scan_path: &Path) -> PathBuf {
     let id = path_id(scan_path);
-    app_data_dir.join("scan_cache").join(format!("{}.json", id))
+    app_data_dir.join("cache").join("scans").join(format!("{}.json", id))
 }
 
 fn load_scan_cache(cache_file: &Path) -> Option<Vec<Manga>> {
@@ -208,7 +208,7 @@ pub fn scan_directory(
         }
     }
 
-    let covers_dir = app_data_dir.join("covers");
+    let covers_dir = app_data_dir.join("cache").join("covers");
     fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
 
     let mut mangas = collect_mangas(dir, 1, &covers_dir);

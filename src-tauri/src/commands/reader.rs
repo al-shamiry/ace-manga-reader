@@ -122,7 +122,7 @@ pub fn open_chapter(
             let app_data_dir =
                 app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
             let chapter_id = path_id(path);
-            let extract_dir = app_data_dir.join("pages").join(&chapter_id);
+            let extract_dir = app_data_dir.join("cache").join("pages").join(&chapter_id);
 
             // Return cached extraction if it already exists
             if extract_dir.is_dir() {
