@@ -1,9 +1,11 @@
-import { Show, For, createSignal, createMemo, createEffect, on } from "solid-js";
+import { Show, createSignal, createMemo, createEffect, on } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { Library, Plus, Pencil, Trash2 } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { useLibrary } from "../context/LibraryContext";
 import { MangaGrid } from "../components/MangaGrid";
+import { TabBar } from "../components/TabBar";
+import type { Tab } from "../components/TabBar";
 import type { Category, Manga } from "../types";
 
 export function RootView() {
@@ -55,6 +57,14 @@ export function RootView() {
   function countForCategory(categoryId: string): number {
     return libraryEntries().filter((e) => e.category_ids.includes(categoryId)).length;
   }
+
+  const tabs = createMemo((): Tab[] =>
+    visibleCategories().map((cat) => ({
+      id: cat.id,
+      label: cat.name,
+      count: countForCategory(cat.id),
+    }))
+  );
 
   // ── Category management ──
 
@@ -109,50 +119,25 @@ export function RootView() {
   return (
     <div class="flex flex-col flex-1 overflow-hidden" onClick={closeContextMenu}>
       {/* Category tab bar */}
-      <div class="flex items-center gap-1 px-3 py-2 bg-zinc-900 border-b border-zinc-800 shrink-0 overflow-x-auto">
-        {/* Category tabs */}
-        <For each={visibleCategories()}>
-          {(cat) => {
-            const isRenaming = () => renaming()?.id === cat.id;
-            return (
-              <Show
-                when={!isRenaming()}
-                fallback={
-                  <form
-                    class="flex items-center"
-                    onSubmit={(e) => { e.preventDefault(); handleRenameCategory(); }}
-                  >
-                    <input
-                      autofocus
-                      class="h-7 px-2 bg-zinc-800 border border-indigo-500 text-zinc-100 rounded text-sm outline-none w-28"
-                      value={renaming()!.name}
-                      onInput={(e) => setRenaming({ ...renaming()!, name: e.currentTarget.value })}
-                      onBlur={handleRenameCategory}
-                      onKeyDown={(e) => { if (e.key === "Escape") setRenaming(null); }}
-                    />
-                  </form>
-                }
-              >
-                <button
-                  class="px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer"
-                  classList={{
-                    "bg-indigo-600 text-white": activeTab() === cat.id,
-                    "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200": activeTab() !== cat.id,
-                  }}
-                  onClick={() => setActiveTab(cat.id)}
-                  onContextMenu={(e) => handleContextMenu(e, cat)}
-                >
-                  {cat.name}
-                  <span class="ml-1.5 text-xs opacity-70">{countForCategory(cat.id)}</span>
-                </button>
-              </Show>
-            );
+      <div class="flex items-center gap-0 px-4 bg-zinc-900 shrink-0 overflow-x-auto">
+        <TabBar
+          tabs={tabs()}
+          activeTab={activeTab()}
+          onSelect={setActiveTab}
+          onContextMenu={(e, tab) => {
+            const cat = visibleCategories().find((c) => c.id === tab.id);
+            if (cat) handleContextMenu(e, cat);
           }}
-        </For>
+          renamingId={renaming()?.id}
+          renamingValue={renaming()?.name}
+          onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
+          onRenameSubmit={handleRenameCategory}
+          onRenameCancel={() => setRenaming(null)}
+        />
 
         {/* Add category button */}
         <button
-          class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0"
+          class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0 ml-2"
           onClick={() => setShowCreateDialog(true)}
           title="New category"
         >
