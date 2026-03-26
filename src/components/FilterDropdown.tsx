@@ -1,5 +1,6 @@
 import { Show, For, createSignal } from "solid-js";
 import { SlidersHorizontal } from "lucide-solid";
+import { Checkbox } from "./Checkbox";
 import type { ReadingStatus } from "../types";
 
 export interface FilterState {
@@ -84,15 +85,11 @@ export function FilterDropdown(props: FilterDropdownProps) {
             <p class="text-xs font-medium text-zinc-500 mb-1.5">Reading Status</p>
             <For each={STATUS_OPTIONS}>
               {(opt) => (
-                <label class="flex items-center gap-2 py-1 cursor-pointer text-sm text-zinc-300 hover:text-zinc-100">
-                  <input
-                    type="checkbox"
-                    class="accent-indigo-500"
-                    checked={props.state.readingStatus.includes(opt.value)}
-                    onChange={() => toggleStatus(opt.value)}
-                  />
-                  {opt.label}
-                </label>
+                <Checkbox
+                  checked={props.state.readingStatus.includes(opt.value)}
+                  onChange={() => toggleStatus(opt.value)}
+                  label={opt.label}
+                />
               )}
             </For>
           </div>
@@ -104,15 +101,11 @@ export function FilterDropdown(props: FilterDropdownProps) {
               <div class="max-h-40 overflow-y-auto">
                 <For each={props.availableSources}>
                   {(source) => (
-                    <label class="flex items-center gap-2 py-1 cursor-pointer text-sm text-zinc-300 hover:text-zinc-100">
-                      <input
-                        type="checkbox"
-                        class="accent-indigo-500"
-                        checked={props.state.sources.includes(source)}
-                        onChange={() => toggleSource(source)}
-                      />
-                      <span class="truncate">{source}</span>
-                    </label>
+                    <Checkbox
+                      checked={props.state.sources.includes(source)}
+                      onChange={() => toggleSource(source)}
+                      label={source}
+                    />
                   )}
                 </For>
               </div>
