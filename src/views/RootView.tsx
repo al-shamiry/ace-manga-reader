@@ -31,7 +31,6 @@ export function RootView() {
   // Default to first visible category; update if current tab becomes hidden
   createEffect(on(visibleCategories, (cats) => {
     const current = activeTab();
-    if (current === ALL_TAB_ID) return;
     if (current === "" || !cats.some((c) => c.id === current)) {
       setActiveTab(cats.length > 0 ? cats[0].id : ALL_TAB_ID);
     }
