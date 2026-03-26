@@ -1,14 +1,18 @@
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { Bookmark } from "lucide-solid";
+import { useLibrary } from "../context/LibraryContext";
 import type { Manga } from "../types";
 
 interface Props {
   manga: Manga;
+  showLibraryBadge?: boolean;
 }
 
 export function MangaCard(props: Props) {
   const navigate = useNavigate();
+  const { isInLibrary } = useLibrary();
   const [imgError, setImgError] = createSignal(false);
   const coverSrc = () => convertFileSrc(props.manga.cover_path);
 
@@ -30,6 +34,12 @@ export function MangaCard(props: Props) {
             class="w-full h-full object-cover block"
           />
         )}
+        <Show when={props.showLibraryBadge && isInLibrary(props.manga.id)}>
+          <div class="absolute inset-0 bg-black/70" />
+          <div class="absolute top-1.5 right-1.5 bg-indigo-600 rounded-full p-1 shadow-md">
+            <Bookmark size={12} fill="currentColor" class="text-white" />
+          </div>
+        </Show>
       </div>
       <div class="px-2.5 py-2 shrink-0">
         <p class="text-[0.8rem] font-medium text-zinc-100 truncate">{props.manga.title}</p>

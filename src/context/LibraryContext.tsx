@@ -13,6 +13,7 @@ interface LibraryContextValue {
   getSource: (id: string) => Source | undefined;
   categories: () => Category[];
   libraryEntries: () => LibraryEntry[];
+  isInLibrary: (mangaId: string) => boolean;
   refreshCategories: () => Promise<void>;
   refreshLibrary: () => Promise<void>;
 }
@@ -52,6 +53,10 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     return sources().find((s) => s.id === id);
   }
 
+  function isInLibrary(mangaId: string) {
+    return libraryEntries().some((e) => e.manga_id === mangaId);
+  }
+
   async function refreshCategories() {
     try {
       const cats = await invoke<Category[]>("get_categories");
@@ -73,7 +78,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   return (
     <LibraryContext.Provider value={{
       sources, status, error, loadRoot, getSource,
-      categories, libraryEntries, refreshCategories, refreshLibrary,
+      categories, libraryEntries, isInLibrary, refreshCategories, refreshLibrary,
     }}>
       {props.children}
     </LibraryContext.Provider>

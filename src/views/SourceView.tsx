@@ -74,7 +74,7 @@ export function SourceView() {
         </div>
       </Show>
       <Show when={mangas().length > 0 && status() !== "loading"}>
-        <MangaGrid mangas={mangas()} />
+        <MangaGrid mangas={mangas()} showLibraryBadge />
       </Show>
     </>
   );
