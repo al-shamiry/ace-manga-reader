@@ -42,6 +42,7 @@ export interface LibraryEntry {
   read_chapters: number;
   category_ids: string[];
   added_at: number;
+  last_read_at: number;
 }
 
 export interface LibraryFilters {
@@ -50,6 +51,14 @@ export interface LibraryFilters {
 }
 
 export type ReadingStatus = "unread" | "started" | "completed";
+
+export type SortField = "alphabetical" | "total_chapters" | "last_read" | "date_added";
+export type SortDirection = "asc" | "desc";
+
+export interface SortPreference {
+  field: SortField;
+  direction: SortDirection;
+}
 
 export type FitMode = "fit-screen" | "fit-width" | "fit-height" | "original" | "stretch";
 export type ReadingMode = "paged-ltr" | "paged-rtl" | "paged-vertical" | "webtoon";

@@ -6,9 +6,10 @@ import { useLibrary } from "../context/LibraryContext";
 import { MangaGrid } from "../components/MangaGrid";
 import { SearchToggle } from "../components/SearchToggle";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
+import { SortDropdown } from "../components/SortDropdown";
 import { TabBar } from "../components/TabBar";
 import type { Tab } from "../components/TabBar";
-import type { Category, LibraryEntry, LibraryFilters, Manga, ReadingStatus } from "../types";
+import type { Category, LibraryEntry, LibraryFilters, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function RootView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
@@ -21,6 +22,10 @@ export function RootView() {
   const [renaming, setRenaming] = createSignal<{ id: string; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
   const [filters, setFilters] = createSignal<FilterState>({ sources: [], readingStatus: [] });
+  const [sortPref, setSortPref] = createSignal<SortPreference>({ field: "last_read", direction: "desc" });
+
+  // Refresh library entries on mount (picks up last_read_at changes after reading)
+  onMount(() => { refreshLibrary(); });
 
   // Load persisted state
   onMount(async () => {
@@ -35,6 +40,10 @@ export function RootView() {
       const savedTab = await invoke<string | null>("get_active_category");
       if (savedTab) setActiveTab(savedTab);
     } catch (_) { /* no saved tab */ }
+    try {
+      const pref = await invoke<SortPreference>("get_sort_preference");
+      setSortPref(pref);
+    } catch (_) { /* no saved sort */ }
   });
 
   function handleFilterChange(next: FilterState) {
@@ -42,6 +51,11 @@ export function RootView() {
     invoke("set_library_filters", {
       filters: { sources: next.sources, reading_status: next.readingStatus },
     }).catch(() => {});
+  }
+
+  function handleSortChange(next: SortPreference) {
+    setSortPref(next);
+    invoke("set_sort_preference", { preference: next }).catch(() => {});
   }
 
   // Derive available source names from library entries
@@ -107,9 +121,35 @@ export function RootView() {
     return result;
   }
 
+  function sortEntries(entries: LibraryEntry[]): LibraryEntry[] {
+    const pref = sortPref();
+    const dir = pref.direction === "asc" ? 1 : -1;
+    return [...entries].sort((a, b) => {
+      switch (pref.field) {
+        case "alphabetical":
+          return dir * a.title.localeCompare(b.title);
+        case "total_chapters":
+          return dir * (a.chapter_count - b.chapter_count);
+        case "last_read": {
+          const aRead = a.last_read_at > 0;
+          const bRead = b.last_read_at > 0;
+          // desc: read entries first; asc: unread entries first
+          if (aRead !== bRead) return dir * (aRead ? 1 : -1);
+          // Read entries sorted by last_read_at following direction, unread by added_at inverted
+          if (aRead) return dir * (a.last_read_at - b.last_read_at);
+          return -dir * (a.added_at - b.added_at);
+        }
+        case "date_added":
+          return dir * (a.added_at - b.added_at);
+        default:
+          return 0;
+      }
+    });
+  }
+
   // Convert LibraryEntry to Manga for MangaGrid
   const mangasForGrid = createMemo((): Manga[] =>
-    applyFilters(filteredEntries()).map((e) => ({
+    sortEntries(applyFilters(filteredEntries())).map((e) => ({
       id: e.manga_id,
       title: e.title,
       path: e.path,
@@ -234,9 +274,10 @@ export function RootView() {
           </button>
         </div>
 
-        {/* Search & filter actions */}
+        {/* Search, sort & filter actions */}
         <div class="flex items-center gap-1 shrink-0 ml-3">
           <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
+          <SortDropdown preference={sortPref()} onChange={handleSortChange} />
           <FilterDropdown
             state={filters()}
             availableSources={availableSources()}

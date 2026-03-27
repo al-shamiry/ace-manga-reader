@@ -38,7 +38,7 @@ pub(crate) fn save_library_data(app: &tauri::AppHandle, data: &LibraryData) -> R
     fs::write(path, json).map_err(|e| e.to_string())
 }
 
-fn now_epoch() -> u64 {
+pub(crate) fn now_epoch() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
@@ -163,6 +163,7 @@ pub fn add_to_library(
                 read_chapters,
                 category_ids: ids,
                 added_at: now_epoch(),
+                last_read_at: 0,
             });
         }
     }

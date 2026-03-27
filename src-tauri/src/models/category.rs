@@ -33,6 +33,8 @@ pub struct LibraryEntry {
     pub read_chapters: usize,
     pub category_ids: Vec<String>,
     pub added_at: u64,
+    #[serde(default)]
+    pub last_read_at: u64,
 }
 
 /// Combined library data: categories + bookmarked manga entries.

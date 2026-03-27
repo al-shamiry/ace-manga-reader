@@ -85,6 +85,26 @@ pub fn set_settings(
 
 // ── Unified config.json ──────────────────────────────────────────────────────
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SortPreference {
+    #[serde(default = "default_sort_field")]
+    pub field: String,
+    #[serde(default = "default_sort_direction")]
+    pub direction: String,
+}
+
+fn default_sort_field() -> String { "last_read".to_string() }
+fn default_sort_direction() -> String { "desc".to_string() }
+
+impl Default for SortPreference {
+    fn default() -> Self {
+        Self {
+            field: default_sort_field(),
+            direction: default_sort_direction(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
@@ -97,6 +117,8 @@ pub struct Config {
     pub library_filters: LibraryFilters,
     #[serde(default)]
     pub active_category: Option<String>,
+    #[serde(default)]
+    pub sort_preference: SortPreference,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -170,5 +192,22 @@ pub fn get_active_category(app: tauri::AppHandle) -> Option<String> {
 pub fn set_active_category(app: tauri::AppHandle, category_id: String) -> Result<(), String> {
     let mut config = load_config(&app);
     config.active_category = Some(category_id);
+    save_config(&app, &config)
+}
+
+// ── Sort preference ─────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_sort_preference(app: tauri::AppHandle) -> SortPreference {
+    load_config(&app).sort_preference
+}
+
+#[tauri::command]
+pub fn set_sort_preference(
+    app: tauri::AppHandle,
+    preference: SortPreference,
+) -> Result<(), String> {
+    let mut config = load_config(&app);
+    config.sort_preference = preference;
     save_config(&app, &config)
 }

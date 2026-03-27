@@ -66,6 +66,7 @@ pub fn run() {
                     reading_mode: settings.reading_mode,
                     library_filters: old_filters.unwrap_or_default(),
                     active_category: None,
+                    sort_preference: Default::default(),
                 };
                 let json = serde_json::to_string_pretty(&config)
                     .expect("failed to serialize config");
@@ -103,6 +104,8 @@ pub fn run() {
             commands::settings::set_library_filters,
             commands::settings::get_active_category,
             commands::settings::set_active_category,
+            commands::settings::get_sort_preference,
+            commands::settings::set_sort_preference,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

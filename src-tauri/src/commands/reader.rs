@@ -53,6 +53,7 @@ fn sync_library_read_chapters(app: &tauri::AppHandle, manga_id: &str) {
     let mut data = categories::load_library_data(app);
     if let Some(entry) = data.entries.get_mut(manga_id) {
         entry.read_chapters = count_read_chapters(&app_data_dir, manga_id);
+        entry.last_read_at = categories::now_epoch();
         let _ = categories::save_library_data(app, &data);
     }
 }
