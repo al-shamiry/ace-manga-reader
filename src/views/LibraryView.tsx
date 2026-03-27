@@ -11,7 +11,7 @@ import { TabBar } from "../components/TabBar";
 import type { Tab } from "../components/TabBar";
 import type { Category, LibraryEntry, LibraryFilters, Manga, ReadingStatus, SortPreference } from "../types";
 
-export function RootView() {
+export function LibraryView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal("");
