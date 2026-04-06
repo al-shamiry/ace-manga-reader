@@ -1,4 +1,4 @@
-import { Show, createSignal, createMemo, createEffect, on, onMount } from "solid-js";
+import { Show, createSignal, createMemo, createEffect, on, onMount, onCleanup } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { Library, Plus, Pencil, Trash2 } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
@@ -75,6 +75,44 @@ export function LibraryView() {
     setDisplayOpts(next);
     invoke("set_library_display", { display: next }).catch(() => {});
   }
+
+  function nudgeCardSize(delta: number) {
+    const current = displayOpts();
+    const next = Math.max(1, Math.min(15, current.card_size + delta));
+    if (next === current.card_size) return;
+    handleDisplayChange({ ...current, card_size: next });
+  }
+
+  // Ctrl + (+/-) to resize cards. Also covers numpad +/- and Ctrl+= (the
+  // un-shifted form of Ctrl++ on US layouts).
+  function handleResizeKey(e: KeyboardEvent) {
+    if (!e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.key === "+" || e.key === "=") {
+      e.preventDefault();
+      nudgeCardSize(1);
+    } else if (e.key === "-" || e.key === "_") {
+      e.preventDefault();
+      nudgeCardSize(-1);
+    }
+  }
+
+  // Ctrl + wheel to resize cards. Listener must be non-passive so we can
+  // preventDefault and block the webview's page zoom.
+  function handleResizeWheel(e: WheelEvent) {
+    if (!e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.deltaY === 0) return;
+    e.preventDefault();
+    nudgeCardSize(e.deltaY < 0 ? 1 : -1);
+  }
+
+  onMount(() => {
+    window.addEventListener("keydown", handleResizeKey);
+    window.addEventListener("wheel", handleResizeWheel, { passive: false });
+    onCleanup(() => {
+      window.removeEventListener("keydown", handleResizeKey);
+      window.removeEventListener("wheel", handleResizeWheel);
+    });
+  });
 
   // Derive available source names from library entries
   const availableSources = createMemo(() => {
