@@ -7,9 +7,10 @@ import { MangaGrid } from "../components/MangaGrid";
 import { SearchToggle } from "../components/SearchToggle";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
 import { SortDropdown } from "../components/SortDropdown";
+import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { TabBar } from "../components/TabBar";
 import type { Tab } from "../components/TabBar";
-import type { Category, LibraryEntry, LibraryFilters, Manga, ReadingStatus, SortPreference } from "../types";
+import type { Category, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function LibraryView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
@@ -23,6 +24,14 @@ export function LibraryView() {
   const [searchQuery, setSearchQuery] = createSignal("");
   const [filters, setFilters] = createSignal<FilterState>({ sources: [], readingStatus: [] });
   const [sortPref, setSortPref] = createSignal<SortPreference>({ field: "last_read", direction: "desc" });
+  const [displayOpts, setDisplayOpts] = createSignal<LibraryDisplay>({
+    display_mode: "comfortable",
+    items_per_row: null,
+    show_unread_badge: false,
+    show_continue_button: false,
+    show_category_tabs: true,
+    show_item_count: true,
+  });
 
   // Refresh library entries on mount (picks up last_read_at changes after reading)
   onMount(() => { refreshLibrary(); });
@@ -44,6 +53,10 @@ export function LibraryView() {
       const pref = await invoke<SortPreference>("get_sort_preference");
       setSortPref(pref);
     } catch (_) { /* no saved sort */ }
+    try {
+      const disp = await invoke<LibraryDisplay>("get_library_display");
+      setDisplayOpts(disp);
+    } catch (_) { /* no saved display */ }
   });
 
   function handleFilterChange(next: FilterState) {
@@ -56,6 +69,11 @@ export function LibraryView() {
   function handleSortChange(next: SortPreference) {
     setSortPref(next);
     invoke("set_sort_preference", { preference: next }).catch(() => {});
+  }
+
+  function handleDisplayChange(next: LibraryDisplay) {
+    setDisplayOpts(next);
+    invoke("set_library_display", { display: next }).catch(() => {});
   }
 
   // Derive available source names from library entries
@@ -278,6 +296,7 @@ export function LibraryView() {
         <div class="flex items-center gap-1 shrink-0 ml-3">
           <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
           <SortDropdown preference={sortPref()} onChange={handleSortChange} />
+          <DisplayOptionsPopover display={displayOpts()} onChange={handleDisplayChange} />
           <FilterDropdown
             state={filters()}
             availableSources={availableSources()}
@@ -370,7 +389,7 @@ export function LibraryView() {
             </div>
           }
         >
-          <MangaGrid mangas={mangasForGrid()} />
+          <MangaGrid mangas={mangasForGrid()} displayMode={displayOpts().display_mode} />
         </Show>
       </div>
     </div>

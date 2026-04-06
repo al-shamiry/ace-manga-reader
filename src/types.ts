@@ -60,6 +60,17 @@ export interface SortPreference {
   direction: SortDirection;
 }
 
+export type DisplayMode = "compact" | "comfortable" | "cover-only" | "list";
+
+export interface LibraryDisplay {
+  display_mode: DisplayMode;
+  items_per_row: number | null;
+  show_unread_badge: boolean;
+  show_continue_button: boolean;
+  show_category_tabs: boolean;
+  show_item_count: boolean;
+}
+
 export type FitMode = "fit-screen" | "fit-width" | "fit-height" | "original" | "stretch";
 export type ReadingMode = "paged-ltr" | "paged-rtl" | "paged-vertical" | "webtoon";
 

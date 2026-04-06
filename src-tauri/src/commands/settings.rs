@@ -105,6 +105,38 @@ impl Default for SortPreference {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibraryDisplay {
+    #[serde(default = "default_display_mode")]
+    pub display_mode: String,
+    #[serde(default)]
+    pub items_per_row: Option<u8>,
+    #[serde(default)]
+    pub show_unread_badge: bool,
+    #[serde(default)]
+    pub show_continue_button: bool,
+    #[serde(default = "default_true")]
+    pub show_category_tabs: bool,
+    #[serde(default = "default_true")]
+    pub show_item_count: bool,
+}
+
+fn default_display_mode() -> String { "comfortable".to_string() }
+fn default_true() -> bool { true }
+
+impl Default for LibraryDisplay {
+    fn default() -> Self {
+        Self {
+            display_mode: default_display_mode(),
+            items_per_row: None,
+            show_unread_badge: false,
+            show_continue_button: false,
+            show_category_tabs: true,
+            show_item_count: true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
@@ -119,6 +151,8 @@ pub struct Config {
     pub active_category: Option<String>,
     #[serde(default)]
     pub sort_preference: SortPreference,
+    #[serde(default)]
+    pub library_display: LibraryDisplay,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -209,5 +243,22 @@ pub fn set_sort_preference(
 ) -> Result<(), String> {
     let mut config = load_config(&app);
     config.sort_preference = preference;
+    save_config(&app, &config)
+}
+
+// ── Library display ─────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_library_display(app: tauri::AppHandle) -> LibraryDisplay {
+    load_config(&app).library_display
+}
+
+#[tauri::command]
+pub fn set_library_display(
+    app: tauri::AppHandle,
+    display: LibraryDisplay,
+) -> Result<(), String> {
+    let mut config = load_config(&app);
+    config.library_display = display;
     save_config(&app, &config)
 }

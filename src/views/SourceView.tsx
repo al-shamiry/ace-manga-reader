@@ -42,7 +42,7 @@ export function SourceView() {
   }
 
   return (
-    <>
+    <div class="flex flex-col flex-1 overflow-hidden">
       <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
         <Button variant="ghost" onClick={() => navigate("/sources")}>
           <ArrowLeft size={14} />
@@ -56,26 +56,28 @@ export function SourceView() {
           <RefreshCw size={14} />
         </Button>
       </div>
-      <Show when={status() === "loading"}>
-        <MangaGridSkeleton />
-      </Show>
-      <Show when={status() === "error"}>
-        <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
-      </Show>
-      <Show when={status() === "idle" && mangas().length === 0}>
-        <div class="flex flex-col items-center justify-center flex-1 gap-4 text-center px-8">
-          <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
-            <BookOpen size={48} stroke-width={1} />
+      <div class="flex-1 overflow-y-auto">
+        <Show when={status() === "loading"}>
+          <MangaGridSkeleton />
+        </Show>
+        <Show when={status() === "error"}>
+          <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
+        </Show>
+        <Show when={status() === "idle" && mangas().length === 0}>
+          <div class="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
+            <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
+              <BookOpen size={48} stroke-width={1} />
+            </div>
+            <div>
+              <p class="text-zinc-300 font-medium">No manga found</p>
+              <p class="text-zinc-600 text-sm mt-1">This source doesn't contain any recognised manga</p>
+            </div>
           </div>
-          <div>
-            <p class="text-zinc-300 font-medium">No manga found</p>
-            <p class="text-zinc-600 text-sm mt-1">This source doesn't contain any recognised manga</p>
-          </div>
-        </div>
-      </Show>
-      <Show when={mangas().length > 0 && status() !== "loading"}>
-        <MangaGrid mangas={mangas()} showLibraryBadge />
-      </Show>
-    </>
+        </Show>
+        <Show when={mangas().length > 0 && status() !== "loading"}>
+          <MangaGrid mangas={mangas()} showLibraryBadge />
+        </Show>
+      </div>
+    </div>
   );
 }

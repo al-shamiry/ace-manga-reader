@@ -52,13 +52,37 @@
   and grid-auto-rows are not expressible as single utility classes, so they
   live here. Everything else is handled by Tailwind utilities.
 */
-.manga-grid {
+/* Shared grid base — same cover size (160×240) and spacing for all grid modes */
+.manga-grid,
+.manga-grid-compact,
+.manga-grid-cover {
   display: grid;
   grid-template-columns: repeat(auto-fill, 160px);
-  grid-auto-rows: 280px;
   justify-content: space-evenly;
   gap: 2rem 1rem;
   padding: 1rem;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Comfortable — auto row height so multi-line titles expand the row */
+.manga-grid {
+  grid-auto-rows: auto;
+}
+
+/* Compact & Cover-only — fixed cover height, no extra space below */
+.manga-grid-compact,
+.manga-grid-cover {
+  grid-auto-rows: 240px;
+}
+
+/* List mode — vertical stack of rows */
+.manga-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.5rem;
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

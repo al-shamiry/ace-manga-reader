@@ -4,7 +4,7 @@ import { For } from "solid-js";
 export function MangaCardSkeleton() {
   return (
     <div class="flex flex-col bg-zinc-900 rounded-lg overflow-hidden">
-      <div class="skeleton flex-1 min-h-0" />
+      <div class="skeleton h-60" />
       <div class="px-2.5 py-2 shrink-0 flex flex-col gap-1.5">
         <div class="skeleton h-3 rounded w-4/5" />
         <div class="skeleton h-2.5 rounded w-2/5" />
