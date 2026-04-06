@@ -21,6 +21,10 @@ export function DisplayOptionsPopover(props: Props) {
     props.onChange({ ...props.display, display_mode: mode });
   }
 
+  function setCardSize(size: number) {
+    props.onChange({ ...props.display, card_size: size });
+  }
+
   return (
     <div class="relative">
       <button
@@ -33,9 +37,9 @@ export function DisplayOptionsPopover(props: Props) {
 
       <Show when={open()}>
         <div class="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-        <div class="absolute right-0 top-10 z-50 w-56 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-2">
+        <div class="absolute right-0 top-10 z-50 w-64 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-2">
           {/* Display mode */}
-          <div class="px-3 pb-2">
+          <div class="px-3 pb-3">
             <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Display mode</p>
             <div class="grid grid-cols-2 gap-1.5">
               <For each={DISPLAY_MODES}>
@@ -55,6 +59,24 @@ export function DisplayOptionsPopover(props: Props) {
                   );
                 }}
               </For>
+            </div>
+          </div>
+
+          {/* Card size */}
+          <div class="px-3 pt-1 pb-2 border-t border-zinc-700/60">
+            <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 mt-2">Card size</p>
+            <div class="flex items-center gap-2">
+              <span class="text-[0.7rem] text-zinc-500 shrink-0">Small</span>
+              <input
+                type="range"
+                min={1}
+                max={15}
+                step={1}
+                value={props.display.card_size}
+                class="flex-1 h-1 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                onInput={(e) => setCardSize(parseInt(e.currentTarget.value, 10))}
+              />
+              <span class="text-[0.7rem] text-zinc-500 shrink-0">Large</span>
             </div>
           </div>
         </div>

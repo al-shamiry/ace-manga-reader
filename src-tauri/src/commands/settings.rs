@@ -109,8 +109,8 @@ impl Default for SortPreference {
 pub struct LibraryDisplay {
     #[serde(default = "default_display_mode")]
     pub display_mode: String,
-    #[serde(default)]
-    pub items_per_row: Option<u8>,
+    #[serde(default = "default_card_size")]
+    pub card_size: u8,
     #[serde(default)]
     pub show_unread_badge: bool,
     #[serde(default)]
@@ -122,13 +122,14 @@ pub struct LibraryDisplay {
 }
 
 fn default_display_mode() -> String { "comfortable".to_string() }
+fn default_card_size() -> u8 { 7 }
 fn default_true() -> bool { true }
 
 impl Default for LibraryDisplay {
     fn default() -> Self {
         Self {
             display_mode: default_display_mode(),
-            items_per_row: None,
+            card_size: default_card_size(),
             show_unread_badge: false,
             show_continue_button: false,
             show_category_tabs: true,

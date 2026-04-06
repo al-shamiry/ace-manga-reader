@@ -100,7 +100,7 @@ export function MangaCard(props: Props) {
           class="flex flex-col bg-zinc-900 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
           onClick={goToManga}
         >
-          <div class="relative bg-zinc-800 overflow-hidden h-60">
+          <div class="relative bg-zinc-800 overflow-hidden cover-h">
             <CoverImage class="w-full h-full" />
             <LibraryBadge />
           </div>

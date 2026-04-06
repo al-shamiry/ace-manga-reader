@@ -52,12 +52,12 @@
   and grid-auto-rows are not expressible as single utility classes, so they
   live here. Everything else is handled by Tailwind utilities.
 */
-/* Shared grid base — same cover size (160×240) and spacing for all grid modes */
+/* Shared grid base — cover width is driven by --cover-w (set per card size) */
 .manga-grid,
 .manga-grid-compact,
 .manga-grid-cover {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 160px);
+  grid-template-columns: repeat(auto-fill, var(--cover-w, 160px));
   justify-content: space-evenly;
   gap: 2rem 1rem;
   padding: 1rem;
@@ -71,10 +71,15 @@
   grid-auto-rows: auto;
 }
 
-/* Compact & Cover-only — fixed cover height, no extra space below */
+/* Compact & Cover-only — fixed cover height (3:2 ratio), no extra space below */
 .manga-grid-compact,
 .manga-grid-cover {
-  grid-auto-rows: 240px;
+  grid-auto-rows: calc(var(--cover-w, 160px) * 1.5);
+}
+
+/* Cover height inside MangaCard (comfortable mode) */
+.cover-h {
+  height: calc(var(--cover-w, 160px) * 1.5);
 }
 
 /* List mode — vertical stack of rows */

@@ -64,7 +64,7 @@ export type DisplayMode = "compact" | "comfortable" | "cover-only" | "list";
 
 export interface LibraryDisplay {
   display_mode: DisplayMode;
-  items_per_row: number | null;
+  card_size: number;
   show_unread_badge: boolean;
   show_continue_button: boolean;
   show_category_tabs: boolean;
