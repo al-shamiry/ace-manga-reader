@@ -122,7 +122,7 @@ pub struct LibraryDisplay {
 }
 
 fn default_display_mode() -> String { "comfortable".to_string() }
-fn default_card_size() -> u8 { 7 }
+fn default_card_size() -> u8 { 8 }
 fn default_true() -> bool { true }
 
 impl Default for LibraryDisplay {

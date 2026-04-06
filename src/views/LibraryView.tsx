@@ -26,7 +26,7 @@ export function LibraryView() {
   const [sortPref, setSortPref] = createSignal<SortPreference>({ field: "last_read", direction: "desc" });
   const [displayOpts, setDisplayOpts] = createSignal<LibraryDisplay>({
     display_mode: "comfortable",
-    card_size: 7,
+    card_size: 8,
     show_unread_badge: false,
     show_continue_button: false,
     show_category_tabs: true,
