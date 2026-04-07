@@ -7,11 +7,14 @@
     <link rel="icon" type="image/svg+xml" href="/src/assets/logo.svg" />
 
     <!--
-      Critical inline styles — paint the dark ink-950 background and a
-      centered wordmark on the very first frame, before any JS or bundled
-      CSS loads. Matches the values in src/styles/global.css so there is
-      no color jump when the app mounts. Solid's render() replaces
-      #root's children, so the loader disappears automatically.
+      Critical inline styles — paint the dark ink-950 background and an
+      editorial wordmark on the very first frame, before any JS or
+      bundled CSS loads. Colors mirror src/styles/global.css (ink-950
+      ground, ink-200 display, ink-600 micro caps, jade-500 accent) so
+      there is no color jump when the app mounts. The display glyph uses
+      Newsreader when it arrives and a serif fallback in the meantime —
+      both read as editorial, so FOUT is acceptable. Solid's render()
+      replaces #root's children, so the loader disappears automatically.
     -->
     <style>
       html,
@@ -34,20 +37,84 @@
         height: 100%;
         width: 100%;
       }
+      .app-loader__stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.125rem;
+        /* Nudge the optical center up — the serif wordmark weights the
+           composition toward the top, so a neutral flex center would
+           read as "low on the page". */
+        transform: translateY(-4%);
+      }
+      .app-loader__title {
+        font-family: "Newsreader", "Iowan Old Style", Georgia, serif;
+        font-style: italic;
+        font-weight: 500;
+        font-size: 3.75rem; /* 60px */
+        line-height: 1;
+        letter-spacing: -0.022em;
+        color: oklch(85% 0.010 215); /* ink-200 */
+        font-feature-settings: "calt", "liga", "kern";
+        font-optical-sizing: auto;
+        font-variation-settings: "opsz" 72;
+        animation: app-loader-breath 2.6s ease-in-out infinite;
+      }
+      .app-loader__rule {
+        position: relative;
+        width: 152px;
+        height: 1px;
+        background-color: oklch(29% 0.015 215); /* ink-700 hairline */
+        overflow: hidden;
+      }
+      .app-loader__rule::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 44%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          oklch(66% 0.14 175) 50%, /* jade-500 */
+          transparent 100%
+        );
+        animation: app-loader-scan 1.8s ease-in-out infinite;
+      }
       .app-loader__mark {
         font-size: 0.6875rem;
         font-weight: 500;
-        letter-spacing: 0.24em;
+        letter-spacing: 0.34em;
         text-transform: uppercase;
-        color: oklch(40% 0.014 215);
-        animation: app-loader-pulse 1.6s ease-in-out infinite;
+        color: oklch(40% 0.014 215); /* ink-600 */
+        /* Right-side tracking leaves the glyph visually shifted left;
+           pad the leading edge by one tracking unit to re-center. */
+        padding-left: 0.34em;
       }
-      @keyframes app-loader-pulse {
+      @keyframes app-loader-breath {
         0%,
         100% {
-          opacity: 0.35;
+          opacity: 0.72;
         }
         50% {
+          opacity: 1;
+        }
+      }
+      @keyframes app-loader-scan {
+        0% {
+          transform: translateX(-120%);
+        }
+        100% {
+          transform: translateX(350%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-loader__title,
+        .app-loader__rule::before {
+          animation: none;
+        }
+        .app-loader__title {
           opacity: 0.9;
         }
       }
@@ -78,7 +145,11 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root">
       <div class="app-loader" data-tauri-drag-region>
-        <div class="app-loader__mark" data-tauri-drag-region>Ace Manga Reader</div>
+        <div class="app-loader__stack" data-tauri-drag-region>
+          <div class="app-loader__title" data-tauri-drag-region>Ace</div>
+          <div class="app-loader__rule" data-tauri-drag-region></div>
+          <div class="app-loader__mark" data-tauri-drag-region>Manga Reader</div>
+        </div>
       </div>
     </div>
 
