@@ -84,7 +84,7 @@ const DropdownMenuSeparator = <T extends ValidComponent = "hr">(
   const [, rest] = splitProps(props as DropdownMenuSeparatorProps, ["class"])
   return (
     <DropdownMenuPrimitive.Separator
-      class={cn("-mx-1 my-1 h-px bg-muted", props.class)}
+      class={cn("-mx-1 my-1 h-px border-0 bg-border", props.class)}
       {...rest}
     />
   )
@@ -195,7 +195,10 @@ const DropdownMenuGroupLabel = <T extends ValidComponent = "span">(
   const [, rest] = splitProps(props as DropdownMenuGroupLabelProps, ["class"])
   return (
     <DropdownMenuPrimitive.GroupLabel
-      class={cn("px-2 py-1.5 text-sm font-semibold", props.class)}
+      class={cn(
+        "block px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+        props.class,
+      )}
       {...rest}
     />
   )

@@ -1,8 +1,15 @@
 import { For } from "solid-js";
 import { LayoutGrid } from "lucide-solid";
-import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuGroupLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from "./ui/dropdown-menu";
 import { Slider, SliderTrack, SliderFill, SliderThumb } from "./ui/slider";
-import { Checkbox } from "./ui/checkbox";
 import type { DisplayMode, LibraryDisplay } from "../types";
 
 interface Props {
@@ -31,30 +38,33 @@ export function DisplayOptionsPopover(props: Props) {
   }
 
   return (
-    <Popover>
-      <PopoverTrigger
-        class="flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer"
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         title="Display options"
       >
         <LayoutGrid size={16} />
-      </PopoverTrigger>
+      </DropdownMenuTrigger>
 
-      <PopoverContent class="w-64 py-2">
-        {/* Display mode */}
-        <div class="px-3 pb-3">
-          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">
-            Display mode
-          </p>
-          <div class="grid grid-cols-2 gap-1.5">
+      <DropdownMenuContent class="w-64">
+        <div class="px-2 pb-1 pt-2 text-sm font-semibold text-foreground">
+          Display
+        </div>
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuGroupLabel>Display mode</DropdownMenuGroupLabel>
+          <div class="grid grid-cols-2 gap-1.5 px-2 pb-2 pt-1">
             <For each={DISPLAY_MODES}>
               {(mode) => {
                 const isActive = () => props.display.display_mode === mode.value;
                 return (
                   <button
-                    class="px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer"
+                    class="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
                     classList={{
-                      "bg-indigo-600 text-white": isActive(),
-                      "bg-zinc-700 text-zinc-300 hover:bg-zinc-600": !isActive(),
+                      "bg-primary text-primary-foreground": isActive(),
+                      "bg-secondary text-secondary-foreground hover:bg-accent":
+                        !isActive(),
                     }}
                     onClick={() => setMode(mode.value)}
                   >
@@ -64,15 +74,13 @@ export function DisplayOptionsPopover(props: Props) {
               }}
             </For>
           </div>
-        </div>
+        </DropdownMenuGroup>
 
-        {/* Card size */}
-        <div class="px-3 pt-1 pb-2 border-t border-zinc-700/60">
-          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 mt-2">
-            Card size
-          </p>
-          <div class="flex items-center gap-2">
-            <span class="text-[0.7rem] text-zinc-500 shrink-0">Small</span>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuGroupLabel>Card size</DropdownMenuGroupLabel>
+          <div class="flex items-center gap-2 px-2 pb-2 pt-1">
+            <span class="shrink-0 text-[0.7rem] text-muted-foreground">Small</span>
             <Slider
               minValue={1}
               maxValue={15}
@@ -86,44 +94,48 @@ export function DisplayOptionsPopover(props: Props) {
                 <SliderThumb />
               </SliderTrack>
             </Slider>
-            <span class="text-[0.7rem] text-zinc-500 shrink-0">Large</span>
+            <span class="shrink-0 text-[0.7rem] text-muted-foreground">Large</span>
           </div>
-        </div>
+        </DropdownMenuGroup>
 
-        {/* Badges */}
-        <div class="px-3 pt-1 pb-2 border-t border-zinc-700/60">
-          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1 mt-2">
-            Badges
-          </p>
-          <Checkbox
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuGroupLabel>Badges</DropdownMenuGroupLabel>
+          <DropdownMenuCheckboxItem
             checked={props.display.show_unread_badge}
             onChange={() => toggle("show_unread_badge")}
-            label="Unread chapters"
-          />
-          <Checkbox
+            closeOnSelect={false}
+          >
+            Unread chapters
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
             checked={props.display.show_continue_button}
             onChange={() => toggle("show_continue_button")}
-            label="Continue reading button"
-          />
-        </div>
+            closeOnSelect={false}
+          >
+            Continue reading button
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuGroup>
 
-        {/* Tabs */}
-        <div class="px-3 pt-1 pb-2 border-t border-zinc-700/60">
-          <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1 mt-2">
-            Tabs
-          </p>
-          <Checkbox
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuGroupLabel>Tabs</DropdownMenuGroupLabel>
+          <DropdownMenuCheckboxItem
             checked={props.display.show_category_tabs}
             onChange={() => toggle("show_category_tabs")}
-            label="Show category tabs"
-          />
-          <Checkbox
+            closeOnSelect={false}
+          >
+            Show category tabs
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
             checked={props.display.show_item_count}
             onChange={() => toggle("show_item_count")}
-            label="Show number of items"
-          />
-        </div>
-      </PopoverContent>
-    </Popover>
+            closeOnSelect={false}
+          >
+            Show number of items
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

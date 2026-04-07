@@ -1,7 +1,14 @@
 import { Show, For } from "solid-js";
 import { SlidersHorizontal } from "lucide-solid";
-import { Checkbox } from "./ui/checkbox";
-import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuGroupLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from "./ui/dropdown-menu";
 import type { ReadingStatus } from "../types";
 
 export interface FilterState {
@@ -49,67 +56,68 @@ export function FilterDropdown(props: FilterDropdownProps) {
   const activeCount = () => filterCount(props.state);
 
   return (
-    <Popover>
-      <PopoverTrigger
-        class="flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer relative"
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        class="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         title="Filters"
       >
         <SlidersHorizontal size={16} />
         <Show when={activeCount() > 0}>
-          <span class="absolute -top-0.5 -right-0.5 min-w-4 h-4 flex items-center justify-center rounded-full bg-indigo-500 text-white text-[10px] font-bold px-1">
+          <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
             {activeCount()}
           </span>
         </Show>
-      </PopoverTrigger>
+      </DropdownMenuTrigger>
 
-      <PopoverContent class="w-56 py-2">
-        {/* Header */}
-        <div class="flex items-center justify-between px-3 pb-2 border-b border-border">
-          <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
-            Filters
-          </span>
+      <DropdownMenuContent class="w-56">
+        <div class="flex items-center justify-between px-2 pb-1 pt-2">
+          <span class="text-sm font-semibold text-foreground">Filters</span>
           <Show when={activeCount() > 0}>
             <button
-              class="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer"
+              class="cursor-pointer text-xs text-primary hover:text-primary-hover"
               onClick={clearAll}
             >
               Clear all
             </button>
           </Show>
         </div>
+        <DropdownMenuSeparator />
 
-        {/* Reading Status */}
-        <div class="px-3 pt-2">
-          <p class="text-xs font-medium text-zinc-500 mb-1.5">Reading Status</p>
+        <DropdownMenuGroup>
+          <DropdownMenuGroupLabel>Reading status</DropdownMenuGroupLabel>
           <For each={STATUS_OPTIONS}>
             {(opt) => (
-              <Checkbox
+              <DropdownMenuCheckboxItem
                 checked={props.state.readingStatus.includes(opt.value)}
                 onChange={() => toggleStatus(opt.value)}
-                label={opt.label}
-              />
+                closeOnSelect={false}
+              >
+                {opt.label}
+              </DropdownMenuCheckboxItem>
             )}
           </For>
-        </div>
+        </DropdownMenuGroup>
 
-        {/* Sources */}
         <Show when={props.availableSources.length > 1}>
-          <div class="px-3 pt-2 mt-1 border-t border-border">
-            <p class="text-xs font-medium text-zinc-500 mb-1.5">Source</p>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuGroupLabel>Source</DropdownMenuGroupLabel>
             <div class="max-h-40 overflow-y-auto">
               <For each={props.availableSources}>
                 {(source) => (
-                  <Checkbox
+                  <DropdownMenuCheckboxItem
                     checked={props.state.sources.includes(source)}
                     onChange={() => toggleSource(source)}
-                    label={source}
-                  />
+                    closeOnSelect={false}
+                  >
+                    {source}
+                  </DropdownMenuCheckboxItem>
                 )}
               </For>
             </div>
-          </div>
+          </DropdownMenuGroup>
         </Show>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -32,13 +32,11 @@ function isNonDefault(pref: SortPreference): boolean {
 export function SortDropdown(props: SortDropdownProps) {
   function selectField(field: SortField) {
     if (props.preference.field === field) {
-      // Same field — toggle direction
       props.onChange({
         field,
         direction: props.preference.direction === "asc" ? "desc" : "asc",
       });
     } else {
-      // Different field — keep current direction
       props.onChange({ field, direction: props.preference.direction });
     }
   }
@@ -46,28 +44,29 @@ export function SortDropdown(props: SortDropdownProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        class="flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer relative"
+        class="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         title="Sort"
       >
         <ArrowUpDown size={16} />
         <Show when={isNonDefault(props.preference)}>
-          <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-indigo-500" />
+          <span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
         </Show>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent class="w-48 py-1">
+      <DropdownMenuContent class="w-48">
         <DropdownMenuGroup>
-          <DropdownMenuGroupLabel class="px-3 py-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">
-            Sort by
-          </DropdownMenuGroupLabel>
-          <DropdownMenuSeparator class="my-1 h-px bg-border" />
+          <div class="px-2 pb-1 pt-2 text-sm font-semibold text-foreground">
+            Sort By
+          </div>
+          <DropdownMenuSeparator />
           <For each={SORT_OPTIONS}>
             {(option) => {
               const isActive = () => props.preference.field === option.value;
               return (
                 <DropdownMenuItem
-                  class="flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer text-zinc-300 focus:bg-zinc-700 data-highlighted:bg-zinc-700 data-highlighted:text-zinc-100"
-                  classList={{ "text-indigo-400! focus:text-indigo-400!": isActive() }}
+                  class="flex justify-between"
+                  classList={{ "text-primary! focus:text-primary!": isActive() }}
+                  closeOnSelect={false}
                   onSelect={() => selectField(option.value)}
                 >
                   <span>{option.label}</span>
