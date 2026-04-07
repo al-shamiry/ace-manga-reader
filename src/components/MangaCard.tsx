@@ -29,7 +29,7 @@ export function MangaCard(props: Props) {
 
   function CoverImage(p: { class?: string }) {
     return imgError() ? (
-      <div class={`flex items-center justify-center text-zinc-600 text-xs bg-zinc-800 ${p.class ?? ""}`}>
+      <div class={`flex items-center justify-center text-ink-600 text-xs bg-ink-800 ${p.class ?? ""}`}>
         No Cover
       </div>
     ) : (
@@ -46,7 +46,7 @@ export function MangaCard(props: Props) {
     return (
       <Show when={props.showLibraryBadge && isInLibrary(props.manga.id)}>
         <div class="absolute inset-0 bg-black/70" />
-        <div class="absolute top-1.5 right-1.5 bg-indigo-600 rounded-full p-1 shadow-md">
+        <div class="absolute top-1.5 right-1.5 bg-jade-600 rounded-full p-1 shadow-md">
           <Bookmark size={12} fill="currentColor" class="text-white" />
         </div>
       </Show>
@@ -56,7 +56,7 @@ export function MangaCard(props: Props) {
   function UnreadBadge() {
     return (
       <Show when={(props.unreadCount ?? 0) > 0}>
-        <div class="absolute top-1.5 left-1.5 bg-indigo-600 text-white text-[0.65rem] font-semibold leading-none px-1.5 py-1 rounded-md shadow-md min-w-5 text-center">
+        <div class="absolute top-1.5 left-1.5 bg-jade-600 text-white text-[0.65rem] font-semibold leading-none px-1.5 py-1 rounded-md shadow-md min-w-5 text-center">
           {props.unreadCount}
         </div>
       </Show>
@@ -87,17 +87,17 @@ export function MangaCard(props: Props) {
       {/* ── List mode ── */}
       <Match when={mode() === "list"}>
         <div
-          class="relative flex items-center gap-3 px-3 py-2 bg-zinc-900 rounded-lg cursor-pointer transition-colors hover:bg-zinc-800"
+          class="relative flex items-center gap-3 px-3 py-2 bg-ink-900 rounded-lg cursor-pointer transition-colors hover:bg-ink-800"
           onClick={goToManga}
         >
-          <div class="relative w-12 h-16 rounded overflow-hidden shrink-0 bg-zinc-800">
+          <div class="relative w-12 h-16 rounded overflow-hidden shrink-0 bg-ink-800">
             <CoverImage class="w-full h-full" />
             <LibraryBadge />
             <UnreadBadge />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-zinc-100 truncate">{props.manga.title}</p>
-            <p class="text-xs text-zinc-500 mt-0.5">{chapterText()}</p>
+            <p class="text-sm font-medium text-ink-100 truncate">{props.manga.title}</p>
+            <p class="text-xs text-ink-500 mt-0.5">{chapterText()}</p>
           </div>
           <ContinueButton />
         </div>
@@ -106,7 +106,7 @@ export function MangaCard(props: Props) {
       {/* ── Cover-only mode — same as compact without text ── */}
       <Match when={mode() === "cover-only"}>
         <div
-          class="relative bg-zinc-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
+          class="relative bg-ink-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
           onClick={goToManga}
         >
           <CoverImage class="w-full h-full" />
@@ -119,7 +119,7 @@ export function MangaCard(props: Props) {
       {/* ── Compact mode — title overlaid on cover with gradient ── */}
       <Match when={mode() === "compact"}>
         <div
-          class="relative bg-zinc-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
+          class="relative bg-ink-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
           onClick={goToManga}
         >
           <CoverImage class="w-full h-full" />
@@ -135,17 +135,17 @@ export function MangaCard(props: Props) {
       {/* ── Comfortable mode (default) — title below cover, wraps ── */}
       <Match when={true}>
         <div
-          class="flex flex-col bg-zinc-900 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
+          class="flex flex-col bg-ink-900 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
           onClick={goToManga}
         >
-          <div class="relative bg-zinc-800 overflow-hidden cover-h">
+          <div class="relative bg-ink-800 overflow-hidden cover-h">
             <CoverImage class="w-full h-full" />
             <LibraryBadge />
             <UnreadBadge />
             <ContinueButton />
           </div>
           <div class="px-2 py-1.5 shrink-0">
-            <p class="text-[0.8rem] font-medium text-zinc-100 leading-tight line-clamp-2">{props.manga.title}</p>
+            <p class="text-[0.8rem] font-medium text-ink-100 leading-tight line-clamp-2">{props.manga.title}</p>
           </div>
         </div>
       </Match>

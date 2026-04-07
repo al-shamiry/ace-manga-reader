@@ -18,7 +18,7 @@ const Checkbox = (props: CheckboxProps) => {
       checked={props.checked}
       onChange={() => props.onChange()}
       class={cn(
-        "flex items-center gap-2 py-1 cursor-pointer text-sm text-zinc-300 hover:text-foreground group",
+        "flex items-center gap-2 py-1 cursor-pointer text-sm text-ink-300 hover:text-foreground group",
         props.class,
       )}
     >
@@ -26,8 +26,8 @@ const Checkbox = (props: CheckboxProps) => {
       <CheckboxPrimitive.Control
         class={cn(
           "flex items-center justify-center w-4 h-4 rounded shrink-0 border transition-all duration-150",
-          "border-zinc-600 bg-zinc-900 group-hover:border-zinc-500",
-          "data-checked:bg-indigo-500 data-checked:border-indigo-500",
+          "border-ink-600 bg-ink-900 group-hover:border-ink-500",
+          "data-checked:bg-jade-500 data-checked:border-jade-500",
           "peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-background",
         )}
       >

@@ -3,7 +3,7 @@ import { For } from "solid-js";
 /** Skeleton that matches a MangaCard in the grid */
 export function MangaCardSkeleton() {
   return (
-    <div class="flex flex-col bg-zinc-900 rounded-lg overflow-hidden">
+    <div class="flex flex-col bg-ink-900 rounded-lg overflow-hidden">
       <div class="skeleton h-60" />
       <div class="px-2.5 py-2 shrink-0 flex flex-col gap-1.5">
         <div class="skeleton h-3 rounded w-4/5" />
@@ -27,7 +27,7 @@ export function MangaGridSkeleton(props: { count?: number }) {
 /** Skeleton that matches a chapter list row in MangaDetailView */
 export function ChapterRowSkeleton() {
   return (
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/50">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-ink-800/50">
       <div class="skeleton h-3 rounded flex-1" />
       <div class="skeleton h-3 rounded w-6 shrink-0" />
       <div class="skeleton h-5 rounded w-10 shrink-0" />

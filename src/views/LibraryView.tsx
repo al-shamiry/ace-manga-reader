@@ -374,7 +374,7 @@ export function LibraryView() {
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
       {/* Library toolbar: tabs + actions */}
-      <div class="flex items-center gap-0 px-4 bg-zinc-900 shrink-0">
+      <div class="flex items-center gap-0 px-4 bg-ink-900 shrink-0">
         <div class="flex items-center overflow-x-auto flex-1 min-w-0">
           <Show when={displayOpts().show_category_tabs}>
             <TabBar
@@ -406,7 +406,7 @@ export function LibraryView() {
                   <input
                     autofocus
                     placeholder="Category name"
-                    class="h-7 px-2 bg-zinc-800 border border-indigo-500 text-zinc-100 placeholder:text-zinc-600 rounded text-sm outline-none w-32"
+                    class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-32"
                     value={newCategoryName()}
                     onInput={(e) => setNewCategoryName(e.currentTarget.value)}
                     onBlur={() => submitCreateCategory()}
@@ -418,7 +418,7 @@ export function LibraryView() {
               }
             >
               <button
-                class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0 ml-2"
+                class="flex items-center justify-center w-7 h-7 rounded-md text-ink-500 hover:bg-ink-800 hover:text-ink-300 transition-colors cursor-pointer shrink-0 ml-2"
                 onClick={startCreateCategory}
                 title="New category"
               >
@@ -471,27 +471,27 @@ export function LibraryView() {
 function FirstRunWelcome(props: { onChooseFolder: () => void }) {
   return (
     <div class="flex flex-col items-start justify-center h-full max-w-xl mx-auto px-10 gap-6">
-      <p class="text-xs uppercase tracking-[0.2em] text-indigo-400 font-medium">
+      <p class="text-xs uppercase tracking-[0.2em] text-jade-400 font-medium">
         Ace Manga Reader
       </p>
-      <h1 class="font-display text-display text-zinc-100">
+      <h1 class="font-display text-display text-ink-100">
         Point us at your manga.
       </h1>
-      <p class="text-base text-zinc-400 leading-relaxed max-w-md">
+      <p class="text-base text-ink-400 leading-relaxed max-w-md">
         Pick the folder where your collection lives. We'll scan it once,
         cache the covers, and stay out of the way after that.
       </p>
       <button
         onClick={props.onChooseFolder}
-        class="mt-2 px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-indigo-950/40"
+        class="mt-2 px-5 py-2.5 rounded-md bg-jade-600 hover:bg-jade-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-jade-950/40"
       >
         Choose library folder
       </button>
-      <div class="mt-6 pt-6 border-t border-zinc-800/80 w-full max-w-md">
-        <p class="text-[0.7rem] uppercase tracking-wider text-zinc-600 font-medium mb-3">
+      <div class="mt-6 pt-6 border-t border-ink-800/80 w-full max-w-md">
+        <p class="text-[0.7rem] uppercase tracking-wider text-ink-600 font-medium mb-3">
           Expected layout
         </p>
-        <pre class="text-xs text-zinc-500 leading-relaxed font-mono">
+        <pre class="text-xs text-ink-500 leading-relaxed font-mono">
 {`root/
   source/
     Manga Title/
@@ -511,19 +511,19 @@ function FirstRunWelcome(props: { onChooseFolder: () => void }) {
 function LibraryEmptyState(props: { onBrowse: () => void }) {
   return (
     <div class="flex flex-col items-start justify-center h-full max-w-xl mx-auto px-10 gap-5">
-      <p class="text-xs uppercase tracking-[0.2em] text-zinc-600 font-medium">
+      <p class="text-xs uppercase tracking-[0.2em] text-ink-600 font-medium">
         Library
       </p>
-      <h2 class="font-display text-display text-zinc-100">
+      <h2 class="font-display text-display text-ink-100">
         Nothing pinned yet.
       </h2>
-      <p class="text-base text-zinc-400 leading-relaxed max-w-md">
+      <p class="text-base text-ink-400 leading-relaxed max-w-md">
         Your library is where you keep the manga you're actively reading.
         Browse your sources, open a manga, and add it here to track progress.
       </p>
       <button
         onClick={props.onBrowse}
-        class="mt-2 px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-indigo-950/40"
+        class="mt-2 px-5 py-2.5 rounded-md bg-jade-600 hover:bg-jade-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-jade-950/40"
       >
         Browse sources →
       </button>

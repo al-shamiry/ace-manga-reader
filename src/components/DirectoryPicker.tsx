@@ -26,7 +26,7 @@ export function DirectoryPicker(props: Props) {
   }
 
   return (
-    <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
+    <div class="flex items-center gap-2 px-4 py-2.5 bg-ink-900 border-b border-ink-800 shrink-0">
       <Button variant="primary" onClick={pickFolder}>
         Select Folder
       </Button>
@@ -36,7 +36,7 @@ export function DirectoryPicker(props: Props) {
           placeholder="Or paste a path..."
           value={manualPath()}
           onInput={(e) => setManualPath(e.currentTarget.value)}
-          class="flex-1 min-w-0 h-8 px-3 bg-zinc-800 border border-zinc-700 focus:border-indigo-500 text-zinc-100 placeholder:text-zinc-500 rounded-md text-sm outline-none transition-colors"
+          class="flex-1 min-w-0 h-8 px-3 bg-ink-800 border border-ink-700 focus:border-jade-500 text-ink-100 placeholder:text-ink-500 rounded-md text-sm outline-none transition-colors"
         />
         <Button variant="primary" type="submit">
           Go

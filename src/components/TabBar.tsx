@@ -70,7 +70,7 @@ export function TabBar(props: Props) {
                   >
                     <input
                       autofocus
-                      class="h-7 px-2 bg-zinc-800 border border-indigo-500 text-zinc-100 rounded text-sm outline-none w-28"
+                      class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 rounded text-sm outline-none w-28"
                       value={props.renamingValue ?? ""}
                       onInput={(e) => props.onRenameInput?.(e.currentTarget.value)}
                       onBlur={() => props.onRenameSubmit?.()}
@@ -90,8 +90,8 @@ export function TabBar(props: Props) {
                     <span
                       class="text-xs px-1.5 py-0.5 rounded-full"
                       classList={{
-                        "bg-zinc-700 text-zinc-300": props.activeTab === tab.id,
-                        "bg-zinc-800 text-zinc-500": props.activeTab !== tab.id,
+                        "bg-ink-700 text-ink-300": props.activeTab === tab.id,
+                        "bg-ink-800 text-ink-500": props.activeTab !== tab.id,
                       }}
                     >
                       {tab.count}
@@ -113,7 +113,7 @@ export function TabBar(props: Props) {
         <DropdownMenuPortal>
           <DropdownMenuContent class="py-1 min-w-36">
             <DropdownMenuItem
-              class="flex items-center gap-2 px-3 py-1.5 text-sm text-zinc-300 cursor-pointer outline-none data-highlighted:bg-zinc-700 data-highlighted:text-zinc-100"
+              class="flex items-center gap-2 px-3 py-1.5 text-sm text-ink-300 cursor-pointer outline-none data-highlighted:bg-ink-700 data-highlighted:text-ink-100"
               onSelect={() => {
                 const t = menuTab();
                 if (t) props.onRenameStart?.(t);
@@ -124,7 +124,7 @@ export function TabBar(props: Props) {
             </DropdownMenuItem>
             <Show when={menuTab()?.deletable !== false}>
               <DropdownMenuItem
-                class="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 cursor-pointer outline-none data-highlighted:bg-zinc-700"
+                class="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 cursor-pointer outline-none data-highlighted:bg-ink-700"
                 onSelect={() => {
                   const t = menuTab();
                   if (t) props.onDelete?.(t);

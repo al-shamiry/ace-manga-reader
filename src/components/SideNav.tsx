@@ -26,12 +26,12 @@ export function SideNav() {
 
   return (
     <nav
-      class="side-nav flex flex-col shrink-0 bg-zinc-900 border-r border-zinc-800 h-full select-none"
+      class="side-nav flex flex-col shrink-0 bg-ink-900 border-r border-ink-800 h-full select-none"
       classList={{ expanded: expanded() }}
     >
       {/* Toggle button */}
       <button
-        class="flex items-center justify-center h-11 hover:bg-zinc-800 transition-colors cursor-pointer text-zinc-500 hover:text-zinc-300"
+        class="flex items-center justify-center h-11 hover:bg-ink-800 transition-colors cursor-pointer text-ink-500 hover:text-ink-300"
         onClick={() => setExpanded(!expanded())}
         title={expanded() ? "Collapse sidebar" : "Expand sidebar"}
       >
@@ -44,8 +44,8 @@ export function SideNav() {
           <button
             class="side-nav-item flex items-center gap-3 rounded-md transition-colors cursor-pointer"
             classList={{
-              "bg-zinc-800 text-zinc-100": isActive(item.path),
-              "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-300": !isActive(item.path),
+              "bg-ink-800 text-ink-100": isActive(item.path),
+              "text-ink-500 hover:bg-ink-800/60 hover:text-ink-300": !isActive(item.path),
             }}
             onClick={() => navigate(item.path)}
             title={item.label}

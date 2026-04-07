@@ -6,73 +6,71 @@
 /*
  * Ace Manga Reader palette — tinted ink neutrals + jade accent.
  *
- * Tailwind v4 CSS-first: overriding the built-in --color-zinc-* and
- * --color-indigo-* scales here means every existing `bg-zinc-900`,
- * `text-indigo-400`, etc. across the app instantly picks up the new
- * values without touching component files. Class names stay; pigments
- * change.
+ * Defined as first-class color scales so Tailwind v4 generates
+ * `bg-ink-900`, `text-jade-500`, etc. — no overrides of the stock
+ * zinc/indigo scales.
  *
  * Hue choices:
- *   - Neutrals: 215° (cool ink, slight blue-green) — never pure gray.
+ *   - Ink (neutrals): 215° (cool, slight blue-green) — never pure gray.
  *     Tinted to feel like sumi ink rather than #1a1a1a slop.
- *   - Accent (formerly indigo): 175° jade/teal — distinctive, calm,
- *     reads as "ink on paper" rather than the AI cyan-on-dark default.
+ *   - Jade (accent): 175° teal/jade — distinctive, calm, reads as
+ *     "ink on paper" rather than the AI cyan-on-dark default.
  *
  * All values in OKLCH for perceptual uniformity. Dark-only for now;
  * light mode can be layered later under [data-theme="light"].
  */
 @theme {
-  /* ── Tinted ink neutrals (override Tailwind zinc) ───────────────── */
-  --color-zinc-50:  oklch(97% 0.006 215);
-  --color-zinc-100: oklch(93% 0.008 215);
-  --color-zinc-200: oklch(85% 0.010 215);
-  --color-zinc-300: oklch(76% 0.011 215);
-  --color-zinc-400: oklch(65% 0.012 215);
-  --color-zinc-500: oklch(53% 0.013 215);
-  --color-zinc-600: oklch(40% 0.014 215);
-  --color-zinc-700: oklch(29% 0.015 215);
-  --color-zinc-800: oklch(21% 0.014 215);
-  --color-zinc-900: oklch(16% 0.013 215);
-  --color-zinc-950: oklch(12% 0.012 215);
+  /* ── Tinted ink neutrals ────────────────────────────────────────── */
+  --color-ink-50:  oklch(97% 0.006 215);
+  --color-ink-100: oklch(93% 0.008 215);
+  --color-ink-200: oklch(85% 0.010 215);
+  --color-ink-300: oklch(76% 0.011 215);
+  --color-ink-400: oklch(65% 0.012 215);
+  --color-ink-500: oklch(53% 0.013 215);
+  --color-ink-600: oklch(40% 0.014 215);
+  --color-ink-700: oklch(29% 0.015 215);
+  --color-ink-800: oklch(21% 0.014 215);
+  --color-ink-900: oklch(16% 0.013 215);
+  --color-ink-950: oklch(12% 0.012 215);
 
-  /* ── Jade accent (override Tailwind indigo) ─────────────────────── */
-  --color-indigo-300: oklch(82% 0.11  175);
-  --color-indigo-400: oklch(74% 0.13  175);
-  --color-indigo-500: oklch(66% 0.14  175);
-  --color-indigo-600: oklch(58% 0.13  175);
-  --color-indigo-700: oklch(48% 0.11  175);
-  --color-indigo-900: oklch(28% 0.06  175);
-  --color-indigo-950: oklch(20% 0.04  175);
+  /* ── Jade accent ────────────────────────────────────────────────── */
+  --color-jade-300: oklch(82% 0.11  175);
+  --color-jade-400: oklch(74% 0.13  175);
+  --color-jade-500: oklch(66% 0.14  175);
+  --color-jade-600: oklch(58% 0.13  175);
+  --color-jade-700: oklch(48% 0.11  175);
+  --color-jade-900: oklch(28% 0.06  175);
+  --color-jade-950: oklch(20% 0.04  175);
 
   /* ── Semantic tokens (Kobalte + shared components) ──────────────── */
-  --color-background: var(--color-zinc-950);
-  --color-foreground: var(--color-zinc-100);
+  --color-background: var(--color-ink-950);
+  --color-foreground: var(--color-ink-100);
 
-  --color-card: var(--color-zinc-900);
-  --color-card-foreground: var(--color-zinc-100);
+  --color-card: var(--color-ink-900);
+  --color-card-foreground: var(--color-ink-100);
 
-  --color-popover: var(--color-zinc-800);
-  --color-popover-foreground: var(--color-zinc-100);
+  --color-popover: var(--color-ink-800);
+  --color-popover-foreground: var(--color-ink-100);
 
-  --color-primary: var(--color-indigo-600);
-  --color-primary-hover: var(--color-indigo-500);
+  --color-primary: var(--color-jade-600);
+  --color-primary-hover: var(--color-jade-500);
   --color-primary-foreground: oklch(98% 0.005 215);
 
-  --color-secondary: var(--color-zinc-800);
-  --color-secondary-foreground: var(--color-zinc-100);
+  --color-secondary: var(--color-ink-800);
+  --color-secondary-foreground: var(--color-ink-100);
 
-  --color-accent: var(--color-zinc-800);
-  --color-accent-foreground: var(--color-zinc-100);
+  --color-accent: var(--color-ink-800);
+  --color-accent-foreground: var(--color-ink-100);
 
-  --color-muted: var(--color-zinc-800);
-  --color-muted-foreground: var(--color-zinc-500);
+  --color-muted: var(--color-ink-800);
+  --color-muted-foreground: var(--color-ink-500);
 
   --color-destructive: var(--color-red-600);
-  --color-destructive-foreground: var(--color-zinc-100);
+  --color-destructive-foreground: var(--color-ink-100);
 
-  --color-border: var(--color-zinc-700);
-  --color-input: var(--color-zinc-700);
-  --color-ring: var(--color-indigo-500);
+  --color-border: var(--color-ink-700);
+  --color-input: var(--color-ink-700);
+  --color-ring: var(--color-jade-500);
 
   --radius: 0.5rem;
 
@@ -117,7 +115,7 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  /* Tinted ink at rest — slightly warmer than the surrounding zinc-700
+  /* Tinted ink at rest — slightly warmer than the surrounding ink-700
      so the thumb reads as a *thing*, not a hole in the page. */
   background: oklch(32% 0.018 200);
   border-radius: 9999px;
@@ -139,9 +137,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-zinc-800) 25%,
-    var(--color-zinc-700) 50%,
-    var(--color-zinc-800) 75%
+    var(--color-ink-800) 25%,
+    var(--color-ink-700) 50%,
+    var(--color-ink-800) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite linear;
@@ -153,8 +151,8 @@
   #root {
     height: 100%;
     overflow: hidden;
-    background-color: theme(--color-zinc-950);
-    color: theme(--color-zinc-100);
+    background-color: theme(--color-ink-950);
+    color: theme(--color-ink-100);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11"; /* Hanken stylistic alts */
     font-kerning: normal;

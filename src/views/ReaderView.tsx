@@ -406,7 +406,7 @@ export function ReaderView() {
     <Show
       when={state()}
       fallback={
-        <div class="flex flex-col items-center justify-center flex-1 gap-4 text-zinc-500">
+        <div class="flex flex-col items-center justify-center flex-1 gap-4 text-ink-500">
           <p class="text-sm">No chapter data — navigate here from the chapter list.</p>
           <Button variant="ghost" onClick={goBack}>
             <ArrowLeft size={14} /> Back
@@ -415,14 +415,14 @@ export function ReaderView() {
       }
     >
       {(s) => (
-        <div class="flex flex-col flex-1 overflow-hidden bg-zinc-950">
+        <div class="flex flex-col flex-1 overflow-hidden bg-ink-950">
           {/* Toolbar */}
-          <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
+          <div class="flex items-center gap-2 px-4 py-2.5 bg-ink-900 border-b border-ink-800 shrink-0">
             <Button variant="ghost" onClick={goBack}>
               <ArrowLeft size={14} />
               Back
             </Button>
-            <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
+            <span class="flex-1 text-sm font-semibold text-ink-100 truncate">
               {s().manga.title} — {s().chapter.title}
             </span>
             <Button variant="ghost" onClick={cycleReadingMode} title={READING_LABELS[readingMode()]}>
@@ -450,7 +450,7 @@ export function ReaderView() {
           {/* Page area */}
           <Show when={loading()}>
             <div class="flex-1 flex items-center justify-center">
-              <div class="text-zinc-500 text-sm">Loading pages…</div>
+              <div class="text-ink-500 text-sm">Loading pages…</div>
             </div>
           </Show>
 
@@ -541,7 +541,7 @@ export function ReaderView() {
           </Show>
 
           {/* Bottom nav */}
-          <div class="flex items-center justify-center gap-4 px-4 py-2.5 bg-zinc-900 border-t border-zinc-800 shrink-0">
+          <div class="flex items-center justify-center gap-4 px-4 py-2.5 bg-ink-900 border-t border-ink-800 shrink-0">
             <Button variant="ghost" iconOnly onClick={goFirstChapter} disabled={firstChapterDisabled()} title={isRtl() ? "Next chapter" : "Previous chapter"}>
               <ChevronFirst size={16} />
             </Button>
@@ -552,7 +552,7 @@ export function ReaderView() {
               when={jumping()}
               fallback={
                 <button
-                  class="text-sm text-zinc-400 tabular-nums hover:text-zinc-100 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-zinc-800"
+                  class="text-sm text-ink-400 tabular-nums hover:text-ink-100 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-ink-800"
                   onClick={startJump}
                 >
                   {pageIndex() + 1} / {pages().length}
@@ -571,9 +571,9 @@ export function ReaderView() {
                   onInput={(e) => setJumpInput(e.currentTarget.value)}
                   onKeyDown={jumpKeyDown}
                   ref={focusJumpInput}
-                  class="w-14 text-center text-sm bg-zinc-800 text-zinc-100 rounded px-1.5 py-0.5 outline-none border border-zinc-600 focus:border-indigo-500 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  class="w-14 text-center text-sm bg-ink-800 text-ink-100 rounded px-1.5 py-0.5 outline-none border border-ink-600 focus:border-jade-500 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
-                <span class="text-sm text-zinc-500">/ {pages().length}</span>
+                <span class="text-sm text-ink-500">/ {pages().length}</span>
               </form>
             </Show>
             <Button variant="ghost" iconOnly onClick={navNext} disabled={navNextDisabled()}>

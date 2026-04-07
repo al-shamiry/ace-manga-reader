@@ -21,26 +21,26 @@ function StatusBadge(props: { status: ChapterStatus }) {
   switch (props.status.type) {
     case "read":
       return (
-        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500">
+        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-ink-800 text-ink-500">
           Done
         </span>
       );
     case "ongoing":
       if (props.status.page === 0) {
         return (
-          <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-100">
+          <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-ink-800 text-ink-100">
             New
           </span>
         );
       }
       return (
-        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-indigo-900/50 text-indigo-400">
+        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-jade-900/50 text-jade-400">
           Page {props.status.page + 1}
         </span>
       );
     default:
       return (
-        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-100">
+        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-ink-800 text-ink-100">
           New
         </span>
       );
@@ -148,7 +148,7 @@ export function MangaDetailView() {
 
   if (!manga) {
     return (
-      <div class="flex flex-col items-center justify-center flex-1 gap-4 text-zinc-500">
+      <div class="flex flex-col items-center justify-center flex-1 gap-4 text-ink-500">
         <p class="text-sm">No manga data — navigate here from the library.</p>
         <Button variant="ghost" onClick={() => navigate(-1)}>
           <ArrowLeft size={14} /> Back
@@ -160,7 +160,7 @@ export function MangaDetailView() {
   return (
     <>
       {/* Toolbar */}
-      <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
+      <div class="flex items-center gap-2 px-4 py-2.5 bg-ink-900 border-b border-ink-800 shrink-0">
         <Button variant="ghost" onClick={() => navigate(-1)}>
           <ArrowLeft size={14} />
           Back
@@ -168,17 +168,17 @@ export function MangaDetailView() {
       </div>
 
       {/* Header */}
-      <div class="flex gap-5 p-5 border-b border-zinc-800 shrink-0">
+      <div class="flex gap-5 p-5 border-b border-ink-800 shrink-0">
         <img
           src={convertFileSrc(manga.cover_path)}
           alt={manga.title}
-          class="w-28 rounded-lg object-cover shrink-0 bg-zinc-800 shadow-lg shadow-black/40"
+          class="w-28 rounded-lg object-cover shrink-0 bg-ink-800 shadow-lg shadow-black/40"
         />
         <div class="flex flex-col gap-3 flex-1 min-w-0 justify-center">
-          <h1 class="font-display text-display text-zinc-100 line-clamp-2">
+          <h1 class="font-display text-display text-ink-100 line-clamp-2">
             {manga.title}
           </h1>
-          <p class="text-xs uppercase tracking-wider text-zinc-500 font-medium">
+          <p class="text-xs uppercase tracking-wider text-ink-500 font-medium">
             {manga.chapter_count} {manga.chapter_count === 1 ? "chapter" : "chapters"}
           </p>
           <div class="flex items-center gap-2 mt-1">
@@ -208,7 +208,7 @@ export function MangaDetailView() {
                 {isInLibrary() ? "In Library" : "Add to Library"}
               </DropdownMenuTrigger>
               <DropdownMenuContent class="w-56">
-                <div class="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <div class="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
                   {isInLibrary() ? "Categories" : "Add to category"}
                 </div>
                 <DropdownMenuSeparator />
@@ -242,7 +242,7 @@ export function MangaDetailView() {
       </div>
 
       {/* Chapter count */}
-      <div class="px-4 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 shrink-0">
+      <div class="px-4 py-2 text-xs font-semibold text-ink-500 uppercase tracking-wider border-b border-ink-800 shrink-0">
         <Show when={!loading()} fallback="…">
           {chapters().length} {chapters().length === 1 ? "chapter" : "chapters"}
         </Show>
@@ -260,15 +260,15 @@ export function MangaDetailView() {
 
         <Show when={!loading() && chapters().length === 0 && !error()}>
           <div class="flex flex-col items-start justify-center max-w-md mx-auto py-20 px-10 gap-3">
-            <p class="text-xs uppercase tracking-[0.2em] text-zinc-600 font-medium">
+            <p class="text-xs uppercase tracking-[0.2em] text-ink-600 font-medium">
               Nothing here
             </p>
-            <h2 class="font-display text-xl text-zinc-100">
+            <h2 class="font-display text-xl text-ink-100">
               No chapters found in this folder.
             </h2>
-            <p class="text-sm text-zinc-500 leading-relaxed">
+            <p class="text-sm text-ink-500 leading-relaxed">
               Ace expects this manga to contain either chapter subfolders
-              (each with images inside) or <span class="font-mono text-zinc-400">.cbz</span> archives.
+              (each with images inside) or <span class="font-mono text-ink-400">.cbz</span> archives.
               Check the folder contents and try refreshing.
             </p>
           </div>
@@ -277,13 +277,13 @@ export function MangaDetailView() {
         <For each={chapters()}>
           {(chapter) => (
             <button
-              class="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/60 transition-colors border-b border-zinc-800/50 text-left"
+              class="w-full flex items-center gap-3 px-4 py-3 hover:bg-ink-800/60 transition-colors border-b border-ink-800/50 text-left"
               onClick={() => openChapter(chapter)}
             >
-              <span class="flex-1 text-sm text-zinc-200 truncate">
+              <span class="flex-1 text-sm text-ink-200 truncate">
                 {chapter.title}
               </span>
-              <span class="text-xs text-zinc-600 shrink-0 mr-2">
+              <span class="text-xs text-ink-600 shrink-0 mr-2">
                 {chapter.page_count}p
               </span>
               <StatusBadge status={chapter.status} />

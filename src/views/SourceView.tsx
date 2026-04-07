@@ -43,13 +43,13 @@ export function SourceView() {
 
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
-      <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
+      <div class="flex items-center gap-2 px-4 py-2.5 bg-ink-900 border-b border-ink-800 shrink-0">
         <Button variant="ghost" onClick={() => navigate("/sources")}>
           <ArrowLeft size={14} />
           Sources
         </Button>
-        <span class="text-zinc-600 text-sm">/</span>
-        <span class="flex-1 text-sm font-semibold text-zinc-100 truncate">
+        <span class="text-ink-600 text-sm">/</span>
+        <span class="flex-1 text-sm font-semibold text-ink-100 truncate">
           {source()?.name}
         </span>
         <Button variant="ghost" iconOnly onClick={() => { const s = source(); if (s) loadMangas(s.path, true); }} title="Re-scan folder">
@@ -65,12 +65,12 @@ export function SourceView() {
         </Show>
         <Show when={status() === "idle" && mangas().length === 0}>
           <div class="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
-            <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
+            <div class="p-5 bg-ink-900 rounded-2xl text-ink-600">
               <BookOpen size={48} stroke-width={1} />
             </div>
             <div>
-              <p class="text-zinc-300 font-medium">No manga found</p>
-              <p class="text-zinc-600 text-sm mt-1">This source doesn't contain any recognised manga</p>
+              <p class="text-ink-300 font-medium">No manga found</p>
+              <p class="text-ink-600 text-sm mt-1">This source doesn't contain any recognised manga</p>
             </div>
           </div>
         </Show>
