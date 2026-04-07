@@ -48,17 +48,12 @@
            read as "low on the page". */
         transform: translateY(-4%);
       }
-      .app-loader__title {
-        font-family: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
-        font-style: italic;
-        font-weight: 500;
-        font-size: 3.75rem; /* 60px */
-        line-height: 1;
-        letter-spacing: -0.022em;
-        color: oklch(85% 0.010 215); /* ink-200 */
-        font-feature-settings: "calt", "liga", "kern";
-        font-optical-sizing: auto;
-        font-variation-settings: "opsz" 72;
+      .app-loader__logo {
+        width: 224px;
+        height: auto;
+        display: block;
+        /* Source asset is ~1351x1468 — render at ~224px so the mark leads
+           the composition and the wordmark below acts as a caption. */
         animation: app-loader-breath 2.6s ease-in-out infinite;
       }
       .app-loader__rule {
@@ -83,20 +78,30 @@
         );
         animation: app-loader-scan 1.8s ease-in-out infinite;
       }
-      .app-loader__mark {
-        font-size: 0.6875rem;
+      .app-loader__title {
+        font-family: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
+        font-style: italic;
+        font-size: 1.5rem;
         font-weight: 500;
-        letter-spacing: 0.34em;
-        text-transform: uppercase;
-        color: oklch(40% 0.014 215); /* ink-600 */
+        line-height: 1;
+        letter-spacing: -0.018em;
+        color: oklch(85% 0.010 215); /* ink-200 */
+        font-feature-settings: "calt", "liga", "kern";
+        font-optical-sizing: auto;
+        font-variation-settings: "opsz" 72;
+        animation: app-loader-breath 2.6s ease-in-out infinite;
+        /* text-transform: uppercase; */
         /* Right-side tracking leaves the glyph visually shifted left;
            pad the leading edge by one tracking unit to re-center. */
         padding-left: 0.34em;
       }
+      .app-loader__title-accent {
+        color: oklch(82% 0.11 175); /* jade — ties to scan rule */
+      }
       @keyframes app-loader-breath {
         0%,
         100% {
-          opacity: 0.72;
+          opacity: 0.78;
         }
         50% {
           opacity: 1;
@@ -111,10 +116,12 @@
         }
       }
       @media (prefers-reduced-motion: reduce) {
+        .app-loader__logo,
         .app-loader__title,
         .app-loader__rule::before {
           animation: none;
         }
+        .app-loader__logo,
         .app-loader__title {
           opacity: 0.9;
         }
@@ -129,9 +136,17 @@
     <div id="root">
       <div class="app-loader" data-tauri-drag-region>
         <div class="app-loader__stack" data-tauri-drag-region>
-          <div class="app-loader__title" data-tauri-drag-region>Ace</div>
+          <img
+            class="app-loader__logo"
+            src="/loader-logo.png"
+            alt=""
+            draggable="false"
+            data-tauri-drag-region
+          />
           <div class="app-loader__rule" data-tauri-drag-region></div>
-          <div class="app-loader__mark" data-tauri-drag-region>Manga Reader</div>
+          <div class="app-loader__title" data-tauri-drag-region>
+            <span class="app-loader__title-accent">Ace</span> Manga Reader
+          </div>
         </div>
       </div>
     </div>
