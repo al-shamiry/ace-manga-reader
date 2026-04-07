@@ -13,8 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "../components/ui/dropdown-menu";
-import { ChapterListSkeleton } from "../components/Skeleton";
 import { useLibrary } from "../context/LibraryContext";
+import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Manga, Chapter, ChapterStatus } from "../types";
 
 function StatusBadge(props: { status: ChapterStatus }) {
@@ -52,13 +52,20 @@ export function MangaDetailView() {
   const location = useLocation();
   const manga = location.state as Manga | undefined;
   const { categories, libraryEntries, refreshLibrary, refreshCategories } = useLibrary();
+  const view = useViewLoading();
+  // Mark busy synchronously so the overlay paints on the first frame.
+  // The "no manga" branch below short-circuits to ready() in onMount.
+  const loadToken = view.busy();
 
   const [chapters, setChapters] = createSignal<Chapter[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal("");
 
   onMount(async () => {
-    if (!manga) return;
+    if (!manga) {
+      view.ready(loadToken);
+      return;
+    }
     getCurrentWindow().setTitle(`Ace Manga Reader — ${manga.title}`);
     try {
       const result = await invoke<Chapter[]>("get_chapters", {
@@ -69,6 +76,7 @@ export function MangaDetailView() {
       setError(String(e));
     } finally {
       setLoading(false);
+      view.ready(loadToken);
     }
   });
 
@@ -250,10 +258,6 @@ export function MangaDetailView() {
 
       {/* Chapter list */}
       <div class="overflow-y-auto flex-1">
-        <Show when={loading()}>
-          <ChapterListSkeleton />
-        </Show>
-
         <Show when={error()}>
           <p class="px-4 py-3 text-sm text-red-400">{error()}</p>
         </Show>

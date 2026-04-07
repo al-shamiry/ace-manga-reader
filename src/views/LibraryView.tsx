@@ -4,6 +4,7 @@ import { Plus } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useLibrary } from "../context/LibraryContext";
+import { useViewLoading } from "../context/ViewLoadingContext";
 import { MangaGrid } from "../components/MangaGrid";
 import { SearchToggle } from "../components/SearchToggle";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
@@ -14,7 +15,10 @@ import type { Tab } from "../components/TabBar";
 import type { Chapter, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function LibraryView() {
-  const { categories, libraryEntries, sources, loadRoot, refreshCategories, refreshLibrary } = useLibrary();
+  const { categories, libraryEntries, sources, loadRoot, refreshCategories, refreshLibrary, initialLoad } = useLibrary();
+  const view = useViewLoading();
+  // Mark busy synchronously so the overlay paints on the first frame.
+  const loadToken = view.busy();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal("");
   const [slideClass, setSlideClass] = createSignal("");
@@ -33,30 +37,37 @@ export function LibraryView() {
     show_item_count: true,
   });
 
-  // Refresh library entries on mount (picks up last_read_at changes after reading)
-  onMount(() => { refreshLibrary(); });
-
-  // Load persisted state
+  // Wait on every async source the view depends on, then declare ready.
+  // Order: provider's initial onMount (categories/library/root), local
+  // refreshLibrary (picks up last_read_at), and the 4 persisted-state
+  // invokes. Persisted-state failures are non-fatal (defaults are used)
+  // so we swallow errors per-call and resolve them all together.
   onMount(async () => {
-    try {
-      const saved = await invoke<LibraryFilters>("get_library_filters");
-      setFilters({
+    const persistedFilters = invoke<LibraryFilters>("get_library_filters")
+      .then((saved) => setFilters({
         sources: saved.sources,
         readingStatus: saved.reading_status as ReadingStatus[],
-      });
-    } catch (_) { /* no saved filters */ }
-    try {
-      const savedTab = await invoke<string | null>("get_active_category");
-      if (savedTab) setActiveTab(savedTab);
-    } catch (_) { /* no saved tab */ }
-    try {
-      const pref = await invoke<SortPreference>("get_sort_preference");
-      setSortPref(pref);
-    } catch (_) { /* no saved sort */ }
-    try {
-      const disp = await invoke<LibraryDisplay>("get_library_display");
-      setDisplayOpts(disp);
-    } catch (_) { /* no saved display */ }
+      }))
+      .catch(() => { /* no saved filters */ });
+    const persistedTab = invoke<string | null>("get_active_category")
+      .then((savedTab) => { if (savedTab) setActiveTab(savedTab); })
+      .catch(() => { /* no saved tab */ });
+    const persistedSort = invoke<SortPreference>("get_sort_preference")
+      .then((pref) => setSortPref(pref))
+      .catch(() => { /* no saved sort */ });
+    const persistedDisplay = invoke<LibraryDisplay>("get_library_display")
+      .then((disp) => setDisplayOpts(disp))
+      .catch(() => { /* no saved display */ });
+
+    await Promise.all([
+      initialLoad(),
+      refreshLibrary(),
+      persistedFilters,
+      persistedTab,
+      persistedSort,
+      persistedDisplay,
+    ]);
+    view.ready(loadToken);
   });
 
   function handleFilterChange(next: FilterState) {

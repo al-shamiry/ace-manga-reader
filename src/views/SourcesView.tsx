@@ -1,13 +1,24 @@
-import { Show } from "solid-js";
+import { Show, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { DirectoryPicker } from "../components/DirectoryPicker";
 import { SourceGrid } from "../components/SourceGrid";
 import { useLibrary } from "../context/LibraryContext";
+import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, loadRoot } = useLibrary();
+  const { sources, status, error, loadRoot, initialLoad } = useLibrary();
+  const view = useViewLoading();
+  // Mark busy synchronously so the overlay paints on the first frame.
+  const loadToken = view.busy();
   const navigate = useNavigate();
+
+  // SourcesView reads everything from LibraryContext — wait on its initial
+  // load and then declare ready. No local async work to coordinate.
+  onMount(async () => {
+    await initialLoad();
+    view.ready(loadToken);
+  });
 
   function openSource(source: Source) {
     navigate(`/source/${source.id}`);

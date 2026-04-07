@@ -16,6 +16,10 @@ interface LibraryContextValue {
   isInLibrary: (mangaId: string) => boolean;
   refreshCategories: () => Promise<void>;
   refreshLibrary: () => Promise<void>;
+  /** Resolves once the provider's initial onMount load (root directory,
+   *  categories, library entries) has finished. Views that depend on this
+   *  data should `await initialLoad()` before calling `view.ready()`. */
+  initialLoad: () => Promise<void>;
 }
 
 const LibraryContext = createContext<LibraryContextValue>();
@@ -27,11 +31,23 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   const [categories, setCategories] = createSignal<Category[]>([]);
   const [libraryEntries, setLibraryEntries] = createSignal<LibraryEntry[]>([]);
 
+  // Promise consumers can await — resolves when the initial root + categories
+  // + library load completes. Held in a closure so multiple awaiters share
+  // the same resolution rather than each kicking off duplicate work.
+  let resolveInitial!: () => void;
+  const initialLoadPromise = new Promise<void>((resolve) => {
+    resolveInitial = resolve;
+  });
+
   onMount(async () => {
-    const root = await invoke<string | null>("get_root_directory");
-    if (root) await loadRoot(root);
-    await refreshCategories();
-    await refreshLibrary();
+    try {
+      const root = await invoke<string | null>("get_root_directory");
+      if (root) await loadRoot(root);
+      await refreshCategories();
+      await refreshLibrary();
+    } finally {
+      resolveInitial();
+    }
   });
 
   async function loadRoot(path: string) {
@@ -79,6 +95,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     <LibraryContext.Provider value={{
       sources, status, error, loadRoot, getSource,
       categories, libraryEntries, isInLibrary, refreshCategories, refreshLibrary,
+      initialLoad: () => initialLoadPromise,
     }}>
       {props.children}
     </LibraryContext.Provider>

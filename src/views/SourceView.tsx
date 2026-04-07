@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { MangaGrid } from "../components/MangaGrid";
 import { MangaGridSkeleton } from "../components/Skeleton";
 import { useLibrary } from "../context/LibraryContext";
+import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Manga } from "../types";
 
 type Status = "idle" | "loading" | "error";
@@ -14,7 +15,10 @@ type Status = "idle" | "loading" | "error";
 export function SourceView() {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSource } = useLibrary();
+  const { getSource, initialLoad } = useLibrary();
+  const view = useViewLoading();
+  // Mark busy synchronously so the overlay paints on the first frame.
+  const loadToken = view.busy();
 
   const source = () => getSource(params.id);
 
@@ -22,11 +26,20 @@ export function SourceView() {
   const [status, setStatus] = createSignal<Status>("idle");
   const [error, setError] = createSignal("");
 
-  onMount(() => {
+  onMount(async () => {
+    // Wait for the provider to populate `sources` before resolving the
+    // current source — otherwise direct-navigation (cold start) would see
+    // `source()` undefined and the overlay would never dismiss.
+    await initialLoad();
     const s = source();
-    if (s) loadMangas(s.path);
+    if (s) await loadMangas(s.path);
+    view.ready(loadToken);
   });
 
+  // The refresh button calls loadMangas directly without touching
+  // view.busy(), so it stays on the in-place skeleton path — we don't
+  // want a full-screen overlay for a button click. Only initial mount
+  // (above) drives the overlay.
   async function loadMangas(path: string, forceRefresh = false) {
     setStatus("loading");
     setError("");

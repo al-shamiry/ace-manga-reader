@@ -2,11 +2,15 @@ import { createSignal, createMemo, onMount, For, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
+import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Chapter, HistoryEntry, Manga } from "../types";
 import { formatRelativeDay, formatTime } from "../lib/date";
 
 export function HistoryView() {
   const navigate = useNavigate();
+  const view = useViewLoading();
+  // Mark busy synchronously so the overlay paints on the first frame.
+  const loadToken = view.busy();
   const [entries, setEntries] = createSignal<HistoryEntry[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [confirmingClear, setConfirmingClear] = createSignal(false);
@@ -19,6 +23,7 @@ export function HistoryView() {
       console.error("Failed to load history:", e);
     } finally {
       setLoading(false);
+      view.ready(loadToken);
     }
   });
 
