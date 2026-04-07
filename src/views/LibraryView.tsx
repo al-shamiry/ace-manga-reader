@@ -10,7 +10,7 @@ import { SortDropdown } from "../components/SortDropdown";
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { TabBar } from "../components/TabBar";
 import type { Tab } from "../components/TabBar";
-import type { LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
+import type { Chapter, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function LibraryView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
@@ -122,6 +122,48 @@ export function LibraryView() {
     }
     return [...names].sort();
   });
+
+  // Map manga_id → unread count for the badge overlay
+  const unreadByMangaId = createMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of libraryEntries()) {
+      map.set(e.manga_id, Math.max(0, e.chapter_count - e.read_chapters));
+    }
+    return map;
+  });
+
+  function getUnreadCount(manga: Manga): number {
+    return unreadByMangaId().get(manga.id) ?? 0;
+  }
+
+  // Continue button: fetch chapters, jump to first non-read (or first unread).
+  // Mirrors MangaDetailView's `primaryChapter` logic so behavior is identical.
+  async function handleContinue(manga: Manga) {
+    try {
+      const list = await invoke<Chapter[]>("get_chapters", { mangaPath: manga.path });
+      if (list.length === 0) return;
+      const allUnread = list.every((c) => c.status.type === "unread");
+      const target = allUnread ? list[0] : list.find((c) => c.status.type !== "read");
+      if (!target) {
+        // All chapters read — fall through to manga detail
+        navigate("/manga/" + manga.id, { state: manga });
+        return;
+      }
+      const idx = list.findIndex((c) => c.id === target.id);
+      const initialPage = target.status.type === "ongoing" ? target.status.page : 0;
+      navigate("/reader/" + target.id, {
+        state: {
+          chapter: target,
+          manga,
+          prevChapter: list[idx - 1],
+          nextChapter: list[idx + 1],
+          initialPage,
+        },
+      });
+    } catch (e) {
+      console.error("Failed to continue reading:", e);
+    }
+  }
 
   function readingStatus(e: LibraryEntry): ReadingStatus {
     if (e.read_chapters === 0) return "unread";
@@ -245,7 +287,7 @@ export function LibraryView() {
     visibleCategories().map((cat) => ({
       id: cat.id,
       label: cat.name,
-      count: countForCategory(cat.id),
+      count: displayOpts().show_item_count ? countForCategory(cat.id) : undefined,
       deletable: cat.id !== "default",
     }))
   );
@@ -296,27 +338,29 @@ export function LibraryView() {
       {/* Library toolbar: tabs + actions */}
       <div class="flex items-center gap-0 px-4 bg-zinc-900 shrink-0">
         <div class="flex items-center overflow-x-auto flex-1 min-w-0">
-          <TabBar
-            tabs={tabs()}
-            activeTab={activeTab()}
-            onSelect={switchTab}
-            onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
-            onDelete={(tab) => handleDeleteCategory(tab.id)}
-            renamingId={renaming()?.id}
-            renamingValue={renaming()?.name}
-            onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
-            onRenameSubmit={handleRenameCategory}
-            onRenameCancel={() => setRenaming(null)}
-          />
+          <Show when={displayOpts().show_category_tabs}>
+            <TabBar
+              tabs={tabs()}
+              activeTab={activeTab()}
+              onSelect={switchTab}
+              onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
+              onDelete={(tab) => handleDeleteCategory(tab.id)}
+              renamingId={renaming()?.id}
+              renamingValue={renaming()?.name}
+              onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
+              onRenameSubmit={handleRenameCategory}
+              onRenameCancel={() => setRenaming(null)}
+            />
 
-          {/* Add category button */}
-          <button
-            class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0 ml-2"
-            onClick={() => setShowCreateDialog(true)}
-            title="New category"
-          >
-            <Plus size={16} />
-          </button>
+            {/* Add category button */}
+            <button
+              class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0 ml-2"
+              onClick={() => setShowCreateDialog(true)}
+              title="New category"
+            >
+              <Plus size={16} />
+            </button>
+          </Show>
         </div>
 
         {/* Search, sort & filter actions */}
@@ -387,6 +431,8 @@ export function LibraryView() {
             mangas={mangasForGrid()}
             displayMode={displayOpts().display_mode}
             cardSize={displayOpts().card_size}
+            getUnreadCount={displayOpts().show_unread_badge ? getUnreadCount : undefined}
+            onContinue={displayOpts().show_continue_button ? handleContinue : undefined}
           />
         </Show>
       </div>

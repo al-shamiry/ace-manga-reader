@@ -7,6 +7,8 @@ interface Props {
   showLibraryBadge?: boolean;
   displayMode?: DisplayMode;
   cardSize?: number;
+  getUnreadCount?: (manga: Manga) => number;
+  onContinue?: (manga: Manga) => void;
 }
 
 const GRID_CLASS: Record<DisplayMode, string> = {
@@ -37,6 +39,8 @@ export function MangaGrid(props: Props) {
             manga={manga}
             showLibraryBadge={props.showLibraryBadge}
             displayMode={mode()}
+            unreadCount={props.getUnreadCount?.(manga)}
+            onContinue={props.onContinue ? () => props.onContinue!(manga) : undefined}
           />
         )}
       </For>

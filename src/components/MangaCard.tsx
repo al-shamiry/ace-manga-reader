@@ -1,14 +1,17 @@
 import { createSignal, Show, Switch, Match } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { Bookmark } from "lucide-solid";
+import { Bookmark, Play } from "lucide-solid";
 import { useLibrary } from "../context/LibraryContext";
+import { Button } from "./ui/button";
 import type { DisplayMode, Manga } from "../types";
 
 interface Props {
   manga: Manga;
   showLibraryBadge?: boolean;
   displayMode?: DisplayMode;
+  unreadCount?: number;
+  onContinue?: () => void;
 }
 
 export function MangaCard(props: Props) {
@@ -50,22 +53,53 @@ export function MangaCard(props: Props) {
     );
   }
 
+  function UnreadBadge() {
+    return (
+      <Show when={(props.unreadCount ?? 0) > 0}>
+        <div class="absolute top-1.5 left-1.5 bg-indigo-600 text-white text-[0.65rem] font-semibold leading-none px-1.5 py-1 rounded-md shadow-md min-w-5 text-center">
+          {props.unreadCount}
+        </div>
+      </Show>
+    );
+  }
+
+  function ContinueButton() {
+    return (
+      <Show when={props.onContinue}>
+        <Button
+          variant="primary"
+          iconOnly
+          class="absolute bottom-1.5 right-1.5 shadow-md"
+          title="Continue reading"
+          onClick={(e: MouseEvent) => {
+            e.stopPropagation();
+            props.onContinue?.();
+          }}
+        >
+          <Play size={14} fill="currentColor" />
+        </Button>
+      </Show>
+    );
+  }
+
   return (
     <Switch>
       {/* ── List mode ── */}
       <Match when={mode() === "list"}>
         <div
-          class="flex items-center gap-3 px-3 py-2 bg-zinc-900 rounded-lg cursor-pointer transition-colors hover:bg-zinc-800"
+          class="relative flex items-center gap-3 px-3 py-2 bg-zinc-900 rounded-lg cursor-pointer transition-colors hover:bg-zinc-800"
           onClick={goToManga}
         >
           <div class="relative w-12 h-16 rounded overflow-hidden shrink-0 bg-zinc-800">
             <CoverImage class="w-full h-full" />
             <LibraryBadge />
+            <UnreadBadge />
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-zinc-100 truncate">{props.manga.title}</p>
             <p class="text-xs text-zinc-500 mt-0.5">{chapterText()}</p>
           </div>
+          <ContinueButton />
         </div>
       </Match>
 
@@ -77,6 +111,8 @@ export function MangaCard(props: Props) {
         >
           <CoverImage class="w-full h-full" />
           <LibraryBadge />
+          <UnreadBadge />
+          <ContinueButton />
         </div>
       </Match>
 
@@ -88,9 +124,11 @@ export function MangaCard(props: Props) {
         >
           <CoverImage class="w-full h-full" />
           <LibraryBadge />
-          <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-1.5 pt-6">
+          <UnreadBadge />
+          <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2 pb-1.5 pt-6">
             <p class="text-[0.75rem] font-medium text-white truncate">{props.manga.title}</p>
           </div>
+          <ContinueButton />
         </div>
       </Match>
 
@@ -103,6 +141,8 @@ export function MangaCard(props: Props) {
           <div class="relative bg-zinc-800 overflow-hidden cover-h">
             <CoverImage class="w-full h-full" />
             <LibraryBadge />
+            <UnreadBadge />
+            <ContinueButton />
           </div>
           <div class="px-2 py-1.5 shrink-0">
             <p class="text-[0.8rem] font-medium text-zinc-100 leading-tight line-clamp-2">{props.manga.title}</p>
