@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "@solidjs/router";
 import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronFirst, ChevronLast, Maximize, Maximize2, Minimize2, MoveHorizontal, MoveVertical, ScanEye, Fullscreen, BookOpen, BookOpenCheck, ArrowDownUp, Scroll } from "lucide-solid";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Button } from "../components/Button";
+import { Button } from "../components/ui/button";
 import type { Chapter, Manga, FitMode, ReadingMode, Settings } from "../types";
 
 const FIT_MODES: FitMode[] = ["fit-screen", "fit-width", "fit-height", "original", "stretch"];

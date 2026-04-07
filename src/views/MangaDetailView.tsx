@@ -4,7 +4,7 @@ import { ArrowLeft, BookOpen, Play, Bookmark, Check } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Button } from "../components/Button";
+import { Button } from "../components/ui/button";
 import { ChapterListSkeleton } from "../components/Skeleton";
 import { useLibrary } from "../context/LibraryContext";
 import type { Manga, Chapter, ChapterStatus } from "../types";

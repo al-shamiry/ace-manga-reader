@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "@solidjs/router";
 import { ArrowLeft, RefreshCw, BookOpen } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Button } from "../components/Button";
+import { Button } from "../components/ui/button";
 import { MangaGrid } from "../components/MangaGrid";
 import { MangaGridSkeleton } from "../components/Skeleton";
 import { useLibrary } from "../context/LibraryContext";

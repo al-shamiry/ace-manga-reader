@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import { open } from "@tauri-apps/plugin-dialog";
 import { RefreshCw } from "lucide-solid";
-import { Button } from "./Button";
+import { Button } from "./ui/button";
 
 interface Props {
   onSelect: (path: string) => void;

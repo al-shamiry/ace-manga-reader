@@ -1,6 +1,6 @@
 import { Show, createSignal, createMemo, createEffect, on, onMount, onCleanup } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Library, Plus, Pencil, Trash2 } from "lucide-solid";
+import { Library, Plus } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { useLibrary } from "../context/LibraryContext";
 import { MangaGrid } from "../components/MangaGrid";
@@ -10,7 +10,7 @@ import { SortDropdown } from "../components/SortDropdown";
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { TabBar } from "../components/TabBar";
 import type { Tab } from "../components/TabBar";
-import type { Category, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
+import type { LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function LibraryView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
@@ -19,7 +19,6 @@ export function LibraryView() {
   const [slideClass, setSlideClass] = createSignal("");
   const [showCreateDialog, setShowCreateDialog] = createSignal(false);
   const [newCategoryName, setNewCategoryName] = createSignal("");
-  const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number; category: Category } | null>(null);
   const [renaming, setRenaming] = createSignal<{ id: string; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
   const [filters, setFilters] = createSignal<FilterState>({ sources: [], readingStatus: [] });
@@ -247,6 +246,7 @@ export function LibraryView() {
       id: cat.id,
       label: cat.name,
       count: countForCategory(cat.id),
+      deletable: cat.id !== "default",
     }))
   );
 
@@ -291,17 +291,8 @@ export function LibraryView() {
     }
   }
 
-  function handleContextMenu(e: MouseEvent, category: Category) {
-    e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, category });
-  }
-
-  function closeContextMenu() {
-    setContextMenu(null);
-  }
-
   return (
-    <div class="flex flex-col flex-1 overflow-hidden" onClick={closeContextMenu}>
+    <div class="flex flex-col flex-1 overflow-hidden">
       {/* Library toolbar: tabs + actions */}
       <div class="flex items-center gap-0 px-4 bg-zinc-900 shrink-0">
         <div class="flex items-center overflow-x-auto flex-1 min-w-0">
@@ -309,10 +300,8 @@ export function LibraryView() {
             tabs={tabs()}
             activeTab={activeTab()}
             onSelect={switchTab}
-            onContextMenu={(e, tab) => {
-              const cat = visibleCategories().find((c) => c.id === tab.id);
-              if (cat) handleContextMenu(e, cat);
-            }}
+            onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
+            onDelete={(tab) => handleDeleteCategory(tab.id)}
             renamingId={renaming()?.id}
             renamingValue={renaming()?.name}
             onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
@@ -374,39 +363,6 @@ export function LibraryView() {
             </form>
           </div>
         </div>
-      </Show>
-
-      {/* Context menu */}
-      <Show when={contextMenu()}>
-        {(menu) => (
-          <div
-            class="fixed z-50 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-36"
-            style={{ left: `${menu().x}px`, top: `${menu().y}px` }}
-          >
-            <button
-              class="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
-              onClick={() => {
-                setRenaming({ id: menu().category.id, name: menu().category.name });
-                closeContextMenu();
-              }}
-            >
-              <Pencil size={14} />
-              Rename
-            </button>
-            <Show when={menu().category.id !== "default"}>
-              <button
-                class="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-red-400 hover:bg-zinc-700 transition-colors cursor-pointer"
-                onClick={() => {
-                  handleDeleteCategory(menu().category.id);
-                  closeContextMenu();
-                }}
-              >
-                <Trash2 size={14} />
-                Delete
-              </button>
-            </Show>
-          </div>
-        )}
       </Show>
 
       {/* Manga grid or empty state */}

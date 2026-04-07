@@ -1,5 +1,6 @@
 import { Show, createSignal } from "solid-js";
 import { Search, X } from "lucide-solid";
+import { TextField, TextFieldInput } from "./ui/text-field";
 
 interface SearchToggleProps {
   query: string;
@@ -29,19 +30,28 @@ export function SearchToggle(props: SearchToggleProps) {
         }
       >
         <div class="flex items-center">
-          <Search size={15} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-          <input
-            ref={(el) => setTimeout(() => el.focus(), 0)}
-            type="text"
-            placeholder="Search..."
-            class="w-44 h-8 pl-8 pr-8 bg-zinc-800 border border-zinc-700 focus:border-indigo-500 text-zinc-100 placeholder:text-zinc-500 rounded-md text-sm outline-none transition-colors"
-            value={props.query}
-            onInput={(e) => props.onQueryChange(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") close();
-            }}
-            onBlur={() => { if (!props.query) setOpen(false); }}
+          <Search
+            size={15}
+            class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10"
           />
+          <TextField
+            value={props.query}
+            onChange={(value) => props.onQueryChange(value)}
+            class="w-44"
+          >
+            <TextFieldInput
+              ref={(el: HTMLInputElement) => setTimeout(() => el.focus(), 0)}
+              type="text"
+              placeholder="Search..."
+              class="pl-8 pr-8"
+              onKeyDown={(e: KeyboardEvent) => {
+                if (e.key === "Escape") close();
+              }}
+              onBlur={() => {
+                if (!props.query) setOpen(false);
+              }}
+            />
+          </TextField>
           <Show when={props.query}>
             <button
               class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 cursor-pointer"
