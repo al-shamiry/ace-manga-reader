@@ -22,7 +22,7 @@ const FIT_CLASSES: Record<FitMode, string> = {
   "stretch": "w-full h-full object-fill",
 };
 
-const READING_MODES: ReadingMode[] = ["paged-ltr", "paged-rtl", "paged-vertical", "webtoon"];
+const READING_MODES: ReadingMode[] = ["paged-rtl", "paged-ltr", "paged-vertical", "webtoon"];
 const READING_LABELS: Record<ReadingMode, string> = {
   "paged-ltr": "Paged LTR",
   "paged-rtl": "Paged RTL",
