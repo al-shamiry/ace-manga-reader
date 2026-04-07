@@ -179,6 +179,21 @@ export function ReaderView() {
       } else if (s.chapter.status.type === "ongoing") {
         setPageIndex(Math.min(s.chapter.status.page, result.length - 1));
       }
+      // Record this chapter open in history (fire-and-forget). Backend overwrites last_read_at.
+      invoke("record_history", {
+        entry: {
+          manga_id: s.manga.id,
+          manga_title: s.manga.title,
+          manga_path: s.manga.path,
+          manga_cover_path: s.manga.cover_path,
+          manga_chapter_count: s.manga.chapter_count,
+          chapter_id: s.chapter.id,
+          chapter_title: s.chapter.title,
+          chapter_path: s.chapter.path,
+          chapter_file_type: s.chapter.file_type,
+          last_read_at: 0,
+        },
+      }).catch(console.error);
     }).catch((e) => {
       setError(String(e));
     }).finally(() => {

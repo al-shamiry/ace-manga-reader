@@ -110,6 +110,10 @@ pub fn run() {
             commands::settings::set_sort_preference,
             commands::settings::get_library_display,
             commands::settings::set_library_display,
+            commands::history::get_history,
+            commands::history::record_history,
+            commands::history::delete_history_entry,
+            commands::history::clear_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
