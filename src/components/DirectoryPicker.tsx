@@ -28,7 +28,7 @@ export function DirectoryPicker(props: Props) {
   return (
     <div class="flex items-center gap-2 px-4 py-2.5 bg-ink-900 border-b border-ink-800 shrink-0">
       <Button variant="primary" onClick={pickFolder}>
-        Select Folder
+        Select Root Folder
       </Button>
       <form onSubmit={submitManual} class="flex items-center flex-1 gap-2 min-w-0">
         <input

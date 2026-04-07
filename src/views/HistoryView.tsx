@@ -3,6 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
 import { useViewLoading } from "../context/ViewLoadingContext";
+import { EmptyState } from "../components/EmptyState";
 import type { Chapter, HistoryEntry, Manga } from "../types";
 import { formatRelativeDay, formatTime } from "../lib/date";
 
@@ -132,10 +133,11 @@ export function HistoryView() {
         </Show>
       </div>
 
-      {/* Body */}
+      {/* Body — single scroll container so the empty state inherits the
+          same sized parent as the populated list (EmptyState uses h-full). */}
       <Show when={!loading()}>
-        <Show when={entries().length > 0} fallback={<HistoryEmptyState />}>
-          <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto">
+          <Show when={entries().length > 0} fallback={<HistoryEmptyState />}>
             <div class="max-w-3xl mx-auto px-8 pb-12">
               <For each={groups()}>
                 {(group, i) => (
@@ -156,8 +158,8 @@ export function HistoryView() {
                 )}
               </For>
             </div>
-          </div>
-        </Show>
+          </Show>
+        </div>
       </Show>
     </div>
   );
@@ -204,12 +206,10 @@ function HistoryRow(props: {
 
 function HistoryEmptyState() {
   return (
-    <div class="flex flex-col items-start justify-center flex-1 max-w-xl mx-auto px-10 gap-5 w-full">
-      <p class="text-xs uppercase tracking-[0.2em] text-ink-600 font-medium">History</p>
-      <h2 class="font-display text-display text-ink-100">Nothing to look back on yet.</h2>
-      <p class="text-base text-ink-400 leading-relaxed max-w-md">
-        Open a chapter and it'll appear here so you can pick up exactly where you left off.
-      </p>
-    </div>
+    <EmptyState
+      eyebrow="History"
+      title="Nothing to look back on yet."
+      description="Open a chapter and it'll appear here so you can pick up exactly where you left off."
+    />
   );
 }

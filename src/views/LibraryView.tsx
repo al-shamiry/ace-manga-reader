@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useLibrary } from "../context/LibraryContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
+import { EmptyState } from "../components/EmptyState";
 import { MangaGrid } from "../components/MangaGrid";
 import { SearchToggle } from "../components/SearchToggle";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
@@ -476,68 +477,47 @@ export function LibraryView() {
 }
 
 // ── Empty states ────────────────────────────────────────────────────────────
-// First-run welcome — no root configured. Single editorial CTA that opens
-// the folder picker directly. No rounded-icon template, no chained navigation.
+// All empty surfaces share the EmptyState primitive so the eyebrow / display
+// title / body / CTA rhythm is identical across the app.
 
+// First-run welcome — no root configured. Accent eyebrow + the only place we
+// teach the on-disk layout, since the user has nothing else to go on yet.
 function FirstRunWelcome(props: { onChooseFolder: () => void }) {
   return (
-    <div class="flex flex-col items-start justify-center h-full max-w-xl mx-auto px-10 gap-6">
-      <p class="text-xs uppercase tracking-[0.2em] text-jade-400 font-medium">
-        Ace Manga Reader
-      </p>
-      <h1 class="font-display text-display text-ink-100">
-        Point us at your manga.
-      </h1>
-      <p class="text-base text-ink-400 leading-relaxed max-w-md">
-        Pick the folder where your collection lives. We'll scan it once,
-        cache the covers, and stay out of the way after that.
-      </p>
-      <button
-        onClick={props.onChooseFolder}
-        class="mt-2 px-5 py-2.5 rounded-md bg-jade-600 hover:bg-jade-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-jade-950/40"
-      >
-        Choose library folder
-      </button>
+    <EmptyState
+      accent
+      eyebrow="Ace Manga Reader"
+      title="Point us at your manga."
+      description="Pick the folder where your collection lives. We'll scan it once, cache the covers, and stay out of the way after that."
+      action={{ label: "Choose library folder", onClick: props.onChooseFolder }}
+    >
       <div class="mt-6 pt-6 border-t border-ink-800/80 w-full max-w-md">
         <p class="text-[0.7rem] uppercase tracking-wider text-ink-600 font-medium mb-3">
           Expected layout
         </p>
         <pre class="text-xs text-ink-500 leading-relaxed font-mono">
-{`root/
-  source/
-    Manga Title/
-      Chapter 01/  ← folders of images
+{`root/               ← the folder you are going to pick
+  source/           ← each subfolder is a source (a collection of manga)
+    Manga Title/    ← the manga
+      Chapter 01/   ← folders that contain images (pages)
       Chapter 02/
     Another Manga/
-      vol01.cbz    ← or .cbz files`}
+      vol01.cbz     ← you can also have .cbz files instead of folders`}
         </pre>
       </div>
-    </div>
+    </EmptyState>
   );
 }
 
 // Library is empty but sources exist — user has a root, just hasn't pinned
 // anything yet. Direct them to the source grid where they can star manga.
-
 function LibraryEmptyState(props: { onBrowse: () => void }) {
   return (
-    <div class="flex flex-col items-start justify-center h-full max-w-xl mx-auto px-10 gap-5">
-      <p class="text-xs uppercase tracking-[0.2em] text-ink-600 font-medium">
-        Library
-      </p>
-      <h2 class="font-display text-display text-ink-100">
-        Nothing pinned yet.
-      </h2>
-      <p class="text-base text-ink-400 leading-relaxed max-w-md">
-        Your library is where you keep the manga you're actively reading.
-        Browse your sources, open a manga, and add it here to track progress.
-      </p>
-      <button
-        onClick={props.onBrowse}
-        class="mt-2 px-5 py-2.5 rounded-md bg-jade-600 hover:bg-jade-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-jade-950/40"
-      >
-        Browse sources →
-      </button>
-    </div>
+    <EmptyState
+      eyebrow="Library"
+      title="Nothing pinned yet."
+      description="Your library is where you keep the manga you're actively reading. Browse your sources, open a manga, and add it here to track progress."
+      action={{ label: "Browse sources", onClick: props.onBrowse }}
+    />
   );
 }

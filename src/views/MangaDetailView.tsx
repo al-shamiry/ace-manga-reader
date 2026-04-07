@@ -15,6 +15,7 @@ import {
 } from "../components/ui/dropdown-menu";
 import { useLibrary } from "../context/LibraryContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
+import { EmptyState } from "../components/EmptyState";
 import type { Manga, Chapter, ChapterStatus } from "../types";
 
 function StatusBadge(props: { status: ChapterStatus }) {
@@ -263,19 +264,17 @@ export function MangaDetailView() {
         </Show>
 
         <Show when={!loading() && chapters().length === 0 && !error()}>
-          <div class="flex flex-col items-start justify-center max-w-md mx-auto py-20 px-10 gap-3">
-            <p class="text-xs uppercase tracking-[0.2em] text-ink-600 font-medium">
-              Nothing here
-            </p>
-            <h2 class="font-display text-xl text-ink-100">
-              No chapters found in this folder.
-            </h2>
-            <p class="text-sm text-ink-500 leading-relaxed">
-              Ace expects this manga to contain either chapter subfolders
-              (each with images inside) or <span class="font-mono text-ink-400">.cbz</span> archives.
-              Check the folder contents and try refreshing.
-            </p>
-          </div>
+          <EmptyState
+            eyebrow="Chapters"
+            title="No chapters in this folder."
+            description={
+              <>
+                Ace expects this manga to contain either chapter subfolders
+                (each with images inside) or <span class="font-mono text-ink-300">.cbz</span> archives.
+                Check the folder contents and try refreshing.
+              </>
+            }
+          />
         </Show>
 
         <For each={chapters()}>

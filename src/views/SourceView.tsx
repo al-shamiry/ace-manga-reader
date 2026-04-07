@@ -1,9 +1,10 @@
 import { Show, createSignal, onMount } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
-import { ArrowLeft, RefreshCw, BookOpen } from "lucide-solid";
+import { ArrowLeft, RefreshCw } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/ui/button";
+import { EmptyState } from "../components/EmptyState";
 import { MangaGrid } from "../components/MangaGrid";
 import { MangaGridSkeleton } from "../components/Skeleton";
 import { useLibrary } from "../context/LibraryContext";
@@ -77,15 +78,17 @@ export function SourceView() {
           <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
         </Show>
         <Show when={status() === "idle" && mangas().length === 0}>
-          <div class="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
-            <div class="p-5 bg-ink-900 rounded-2xl text-ink-600">
-              <BookOpen size={48} stroke-width={1} />
-            </div>
-            <div>
-              <p class="text-ink-300 font-medium">No manga found</p>
-              <p class="text-ink-600 text-sm mt-1">This source doesn't contain any recognised manga</p>
-            </div>
-          </div>
+          <EmptyState
+            eyebrow={source()?.name ?? "Source"}
+            title="No manga in this source."
+            description={
+              <>
+                Ace expects each manga to live in its own subfolder containing
+                chapter folders or <span class="font-mono text-ink-300">.cbz</span> archives.
+                Add some, or re-scan if you just dropped files in.
+              </>
+            }
+          />
         </Show>
         <Show when={mangas().length > 0 && status() !== "loading"}>
           <MangaGrid mangas={mangas()} showLibraryBadge />
