@@ -364,21 +364,30 @@ export function LibraryView() {
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
       {/* Library toolbar: tabs + actions */}
-      <div class="flex items-center gap-0 px-4 bg-ink-900 shrink-0">
+      <div class="flex items-center gap-0 px-4 bg-ink-900 border-b border-ink-800 shrink-0">
         <div class="flex items-center overflow-x-auto flex-1 min-w-0">
           <Show when={displayOpts().show_category_tabs}>
-            <TabBar
-              tabs={tabs()}
-              activeTab={activeTab()}
-              onSelect={switchTab}
-              onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
-              onDelete={(tab) => handleDeleteCategory(tab.id)}
-              renamingId={renaming()?.id}
-              renamingValue={renaming()?.name}
-              onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
-              onRenameSubmit={handleRenameCategory}
-              onRenameCancel={() => setRenaming(null)}
-            />
+            {/* Keyed remount on show_item_count toggle — Kobalte's TabsIndicator
+                only observes the selected tab's resize and reads offsetLeft
+                synchronously, so reflows from other tabs widening leave the
+                indicator misaligned. Remounting forces its onMount path which
+                waits a microtask for layout to settle. */}
+            <Show when={displayOpts().show_item_count ? "with" : "without"} keyed>
+              {(_key) => (
+                <TabBar
+                  tabs={tabs()}
+                  activeTab={activeTab()}
+                  onSelect={switchTab}
+                  onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
+                  onDelete={(tab) => handleDeleteCategory(tab.id)}
+                  renamingId={renaming()?.id}
+                  renamingValue={renaming()?.name}
+                  onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
+                  onRenameSubmit={handleRenameCategory}
+                  onRenameCancel={() => setRenaming(null)}
+                />
+              )}
+            </Show>
 
             {/* Inline category create — replaces a modal. Commit only on
                 Enter; Escape or focus loss cancels without creating. This

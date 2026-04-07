@@ -18,7 +18,7 @@ const TabsList = <T extends ValidComponent = "div">(
   return (
     <TabsPrimitive.List
       class={cn(
-        "relative flex items-center gap-6 shrink-0 overflow-x-auto border-b border-ink-800",
+        "relative flex items-center gap-6 shrink-0",
         local.class,
       )}
       {...others}
