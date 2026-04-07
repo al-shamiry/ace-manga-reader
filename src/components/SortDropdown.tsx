@@ -6,7 +6,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuGroup,
-  DropdownMenuGroupLabel,
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 import type { SortField, SortPreference } from "../types";
