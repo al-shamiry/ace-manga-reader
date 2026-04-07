@@ -18,7 +18,7 @@ export function LibraryView() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal("");
   const [slideClass, setSlideClass] = createSignal("");
-  const [showCreateDialog, setShowCreateDialog] = createSignal(false);
+  const [creatingCategory, setCreatingCategory] = createSignal(false);
   const [newCategoryName, setNewCategoryName] = createSignal("");
   const [renaming, setRenaming] = createSignal<{ id: string; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
@@ -295,16 +295,38 @@ export function LibraryView() {
 
   // ── Category management ──
 
-  async function handleCreateCategory() {
+  // Guards against double-submit. The inline create input has both an
+  // onSubmit (Enter) and an onBlur (focus loss from unmount), and the await
+  // on `create_category` yields control between them — without this flag the
+  // blur handler would fire a second invoke before the first completes.
+  let creatingInFlight = false;
+
+  function startCreateCategory() {
+    setNewCategoryName("");
+    setCreatingCategory(true);
+  }
+
+  function cancelCreateCategory() {
+    setCreatingCategory(false);
+    setNewCategoryName("");
+  }
+
+  async function submitCreateCategory() {
+    if (creatingInFlight) return;
     const name = newCategoryName().trim();
-    if (!name) return;
+    if (!name) {
+      cancelCreateCategory();
+      return;
+    }
+    creatingInFlight = true;
     try {
       await invoke("create_category", { name });
-      setNewCategoryName("");
-      setShowCreateDialog(false);
       await refreshCategories();
     } catch (e) {
       console.error("Failed to create category:", e);
+    } finally {
+      creatingInFlight = false;
+      cancelCreateCategory();
     }
   }
 
@@ -368,14 +390,41 @@ export function LibraryView() {
               onRenameCancel={() => setRenaming(null)}
             />
 
-            {/* Add category button */}
-            <button
-              class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0 ml-2"
-              onClick={() => setShowCreateDialog(true)}
-              title="New category"
+            {/* Inline category create — replaces a modal. Submit on Enter
+                or blur, cancel on Escape. Mirrors TabBar's rename pattern
+                so the create/rename interactions feel symmetrical. */}
+            <Show
+              when={!creatingCategory()}
+              fallback={
+                <form
+                  class="flex items-center pb-2.5 pt-3 ml-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    submitCreateCategory();
+                  }}
+                >
+                  <input
+                    autofocus
+                    placeholder="Category name"
+                    class="h-7 px-2 bg-zinc-800 border border-indigo-500 text-zinc-100 placeholder:text-zinc-600 rounded text-sm outline-none w-32"
+                    value={newCategoryName()}
+                    onInput={(e) => setNewCategoryName(e.currentTarget.value)}
+                    onBlur={() => submitCreateCategory()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") cancelCreateCategory();
+                    }}
+                  />
+                </form>
+              }
             >
-              <Plus size={16} />
-            </button>
+              <button
+                class="flex items-center justify-center w-7 h-7 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition-colors cursor-pointer shrink-0 ml-2"
+                onClick={startCreateCategory}
+                title="New category"
+              >
+                <Plus size={16} />
+              </button>
+            </Show>
           </Show>
         </div>
 
@@ -391,39 +440,6 @@ export function LibraryView() {
           />
         </div>
       </div>
-
-      {/* Create category dialog */}
-      <Show when={showCreateDialog()}>
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowCreateDialog(false)}>
-          <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-80 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 class="text-sm font-semibold text-zinc-100 mb-3">New Category</h3>
-            <form onSubmit={(e) => { e.preventDefault(); handleCreateCategory(); }}>
-              <input
-                autofocus
-                class="w-full h-9 px-3 bg-zinc-800 border border-zinc-700 focus:border-indigo-500 text-zinc-100 placeholder:text-zinc-500 rounded-md text-sm outline-none transition-colors"
-                placeholder="Category name"
-                value={newCategoryName()}
-                onInput={(e) => setNewCategoryName(e.currentTarget.value)}
-              />
-              <div class="flex justify-end gap-2 mt-4">
-                <button
-                  type="button"
-                  class="px-3 py-1.5 rounded-md text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors cursor-pointer"
-                  onClick={() => setShowCreateDialog(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  class="px-3 py-1.5 rounded-md text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer"
-                >
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Show>
 
       {/* Manga grid or empty state */}
       <div class={`flex-1 overflow-y-auto ${slideClass()}`}>

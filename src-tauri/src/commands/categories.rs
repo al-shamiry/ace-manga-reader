@@ -45,6 +45,16 @@ pub(crate) fn now_epoch() -> u64 {
         .as_secs()
 }
 
+/// Millisecond-resolution timestamp. Used for category ids so rapid
+/// creates don't collide the way they did with the seconds-resolution
+/// `now_epoch`.
+fn now_epoch_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+}
+
 // ── Category commands ────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -57,7 +67,15 @@ pub fn get_categories(app: tauri::AppHandle) -> Vec<Category> {
 #[tauri::command]
 pub fn create_category(app: tauri::AppHandle, name: String) -> Result<Category, String> {
     let mut data = load_library_data(&app);
-    let id = format!("cat_{}", now_epoch());
+    // Millisecond resolution + a collision-avoidance loop. The frontend
+    // already guards against double-submit, but if a user genuinely creates
+    // two categories in the same millisecond we still don't want to stomp.
+    let mut id = format!("cat_{}", now_epoch_millis());
+    let mut suffix = 1u32;
+    while data.categories.iter().any(|c| c.id == id) {
+        id = format!("cat_{}_{}", now_epoch_millis(), suffix);
+        suffix += 1;
+    }
     let sort_order = data.categories.iter().map(|c| c.sort_order).max().unwrap_or(0) + 1;
     let cat = Category { id, name, sort_order };
     data.categories.push(cat.clone());

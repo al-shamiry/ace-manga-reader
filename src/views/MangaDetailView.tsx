@@ -1,10 +1,18 @@
 import { For, Show, createSignal, onMount } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
-import { ArrowLeft, Play, Bookmark, Check } from "lucide-solid";
+import { ArrowLeft, Play, Bookmark, Trash2 } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "../components/ui/dropdown-menu";
 import { ChapterListSkeleton } from "../components/Skeleton";
 import { useLibrary } from "../context/LibraryContext";
 import type { Manga, Chapter, ChapterStatus } from "../types";
@@ -48,8 +56,6 @@ export function MangaDetailView() {
   const [chapters, setChapters] = createSignal<Chapter[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal("");
-  const [showCategoryPicker, setShowCategoryPicker] = createSignal(false);
-  const [selectedCategoryIds, setSelectedCategoryIds] = createSignal<string[]>([]);
 
   onMount(async () => {
     if (!manga) return;
@@ -88,66 +94,43 @@ export function MangaDetailView() {
 
   const libraryEntry = () => libraryEntries().find((e) => e.manga_id === manga?.id);
   const isInLibrary = () => !!libraryEntry();
+  const currentCategoryIds = () => libraryEntry()?.category_ids ?? [];
 
-  async function handleAddToLibrary() {
+  // Refresh categories the first time the menu opens, so newly created
+  // categories show up without forcing a navigation cycle.
+  function handleMenuOpenChange(open: boolean) {
+    if (open) refreshCategories();
+  }
+
+  // Toggle a category membership. Each toggle is an immediate commit:
+  // - If the manga is not in the library, the first checked category adds it.
+  // - If unchecking the last category, the manga is removed from the library.
+  // - Otherwise, the new set of categories is persisted.
+  async function toggleCategory(catId: string) {
     if (!manga) return;
-    const cats = categories();
-    // Already in library → always open picker (to edit categories or remove)
-    if (isInLibrary()) {
-      setSelectedCategoryIds(libraryEntry()!.category_ids);
-      await refreshCategories();
-      setShowCategoryPicker(true);
-      return;
-    }
-    // Quick action: only one category → add directly
-    if (cats.length === 1) {
+    const current = currentCategoryIds();
+    const next = current.includes(catId)
+      ? current.filter((id) => id !== catId)
+      : [...current, catId];
+
+    if (next.length === 0) {
+      await invoke("remove_from_library", { mangaId: manga.id });
+    } else {
       await invoke("add_to_library", {
         mangaId: manga.id,
         title: manga.title,
         path: manga.path,
         coverPath: manga.cover_path,
         chapterCount: manga.chapter_count,
-        categoryIds: [cats[0].id],
+        categoryIds: next,
       });
-      await refreshLibrary();
-      return;
     }
-    // Multiple categories → open picker
-    setSelectedCategoryIds([cats[0].id]);
-    await refreshCategories();
-    setShowCategoryPicker(true);
-  }
-
-  function toggleCategory(catId: string) {
-    const current = selectedCategoryIds();
-    if (current.includes(catId)) {
-      // Don't allow deselecting all
-      if (current.length > 1) {
-        setSelectedCategoryIds(current.filter((id) => id !== catId));
-      }
-    } else {
-      setSelectedCategoryIds([...current, catId]);
-    }
-  }
-
-  async function confirmCategoryPicker() {
-    if (!manga) return;
-    await invoke("add_to_library", {
-      mangaId: manga.id,
-      title: manga.title,
-      path: manga.path,
-      coverPath: manga.cover_path,
-      chapterCount: manga.chapter_count,
-      categoryIds: selectedCategoryIds(),
-    });
-    setShowCategoryPicker(false);
     await refreshLibrary();
   }
 
   async function handleRemoveFromLibrary() {
     if (!manga) return;
     await invoke("remove_from_library", { mangaId: manga.id });
-    setShowCategoryPicker(false);
     await refreshLibrary();
   }
 
@@ -211,79 +194,52 @@ export function MangaDetailView() {
                 {primaryLabel()}
               </Button>
             </Show>
-            <Button
-              variant={isInLibrary() ? "primary" : "ghost"}
-              onClick={handleAddToLibrary}
-              title={isInLibrary() ? "Edit library categories" : "Add to library"}
-            >
-              <Bookmark size={14} fill={isInLibrary() ? "currentColor" : "none"} />
-              {isInLibrary() ? "In Library" : "Add to Library"}
-            </Button>
+            {/* Category picker — anchored dropdown, not a centered modal.
+                Toggling a checkbox commits immediately; clearing the last
+                category removes the manga from the library. The explicit
+                Remove item is kept for users who want a one-click bail. */}
+            <DropdownMenu onOpenChange={handleMenuOpenChange}>
+              <DropdownMenuTrigger
+                as={Button}
+                variant={isInLibrary() ? "primary" : "ghost"}
+                title={isInLibrary() ? "Edit library categories" : "Add to library"}
+              >
+                <Bookmark size={14} fill={isInLibrary() ? "currentColor" : "none"} />
+                {isInLibrary() ? "In Library" : "Add to Library"}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent class="w-56">
+                <div class="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  {isInLibrary() ? "Categories" : "Add to category"}
+                </div>
+                <DropdownMenuSeparator />
+                <div class="max-h-60 overflow-y-auto">
+                  <For each={categories()}>
+                    {(cat) => (
+                      <DropdownMenuCheckboxItem
+                        checked={currentCategoryIds().includes(cat.id)}
+                        onChange={() => toggleCategory(cat.id)}
+                        closeOnSelect={false}
+                      >
+                        {cat.name}
+                      </DropdownMenuCheckboxItem>
+                    )}
+                  </For>
+                </div>
+                <Show when={isInLibrary()}>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    class="gap-2 text-red-400 focus:bg-red-950/40 focus:text-red-300"
+                    onSelect={handleRemoveFromLibrary}
+                  >
+                    <Trash2 size={14} />
+                    Remove from library
+                  </DropdownMenuItem>
+                </Show>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
-
-      {/* Category picker dialog */}
-      <Show when={showCategoryPicker()}>
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowCategoryPicker(false)}>
-          <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-80 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 class="text-sm font-semibold text-zinc-100 mb-3">
-              {isInLibrary() ? "Edit Categories" : "Add to Library"}
-            </h3>
-            <div class="flex flex-col gap-1 max-h-60 overflow-y-auto">
-              <For each={categories()}>
-                {(cat) => (
-                  <button
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer hover:bg-zinc-800"
-                    classList={{
-                      "text-zinc-100": selectedCategoryIds().includes(cat.id),
-                      "text-zinc-400": !selectedCategoryIds().includes(cat.id),
-                    }}
-                    onClick={() => toggleCategory(cat.id)}
-                  >
-                    <div
-                      class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
-                      classList={{
-                        "bg-indigo-600 border-indigo-600": selectedCategoryIds().includes(cat.id),
-                        "border-zinc-600": !selectedCategoryIds().includes(cat.id),
-                      }}
-                    >
-                      <Show when={selectedCategoryIds().includes(cat.id)}>
-                        <Check size={12} stroke-width={3} />
-                      </Show>
-                    </div>
-                    {cat.name}
-                  </button>
-                )}
-              </For>
-            </div>
-            <div class="flex justify-between mt-4">
-              <Show when={isInLibrary()}>
-                <button
-                  class="px-3 py-1.5 rounded-md text-sm text-red-400 hover:bg-zinc-800 transition-colors cursor-pointer"
-                  onClick={handleRemoveFromLibrary}
-                >
-                  Remove
-                </button>
-              </Show>
-              <div class="flex gap-2 ml-auto">
-                <button
-                  class="px-3 py-1.5 rounded-md text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors cursor-pointer"
-                  onClick={() => setShowCategoryPicker(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  class="px-3 py-1.5 rounded-md text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer"
-                  onClick={confirmCategoryPicker}
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Show>
 
       {/* Chapter count */}
       <div class="px-4 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 shrink-0">
