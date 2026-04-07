@@ -295,12 +295,6 @@ export function LibraryView() {
 
   // ── Category management ──
 
-  // Guards against double-submit. The inline create input has both an
-  // onSubmit (Enter) and an onBlur (focus loss from unmount), and the await
-  // on `create_category` yields control between them — without this flag the
-  // blur handler would fire a second invoke before the first completes.
-  let creatingInFlight = false;
-
   function startCreateCategory() {
     setNewCategoryName("");
     setCreatingCategory(true);
@@ -312,22 +306,18 @@ export function LibraryView() {
   }
 
   async function submitCreateCategory() {
-    if (creatingInFlight) return;
     const name = newCategoryName().trim();
     if (!name) {
       cancelCreateCategory();
       return;
     }
-    creatingInFlight = true;
     try {
       await invoke("create_category", { name });
       await refreshCategories();
     } catch (e) {
       console.error("Failed to create category:", e);
-    } finally {
-      creatingInFlight = false;
-      cancelCreateCategory();
     }
+    cancelCreateCategory();
   }
 
   async function handleRenameCategory() {
@@ -390,9 +380,10 @@ export function LibraryView() {
               onRenameCancel={() => setRenaming(null)}
             />
 
-            {/* Inline category create — replaces a modal. Submit on Enter
-                or blur, cancel on Escape. Mirrors TabBar's rename pattern
-                so the create/rename interactions feel symmetrical. */}
+            {/* Inline category create — replaces a modal. Commit only on
+                Enter; Escape or focus loss cancels without creating. This
+                keeps the commit path single-entry so there's nothing to
+                race against. */}
             <Show
               when={!creatingCategory()}
               fallback={
@@ -409,7 +400,7 @@ export function LibraryView() {
                     class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-32"
                     value={newCategoryName()}
                     onInput={(e) => setNewCategoryName(e.currentTarget.value)}
-                    onBlur={() => submitCreateCategory()}
+                    onBlur={cancelCreateCategory}
                     onKeyDown={(e) => {
                       if (e.key === "Escape") cancelCreateCategory();
                     }}
