@@ -75,6 +75,35 @@
   --color-ring: var(--color-indigo-500);
 
   --radius: 0.5rem;
+
+  /* ── Type pairing ────────────────────────────────────────────────
+   * Display: Newsreader — variable serif with an optical-size axis
+   *   tuned for editorial / book contexts. Conventional letterforms
+   *   (no looped f/j descenders). Used for hero titles only.
+   * UI: Hanken Grotesk — refined humanist sans, slightly tighter than
+   *   Inter, with real personality. Used for everything else.
+   * Mono: ui-monospace fallback chain — only used for the page-counter
+   *   tabular numerals via `font-variant-numeric: tabular-nums`.
+   *
+   * Generates `font-display`, `font-sans`, `font-mono` utilities.
+   * ──────────────────────────────────────────────────────────────── */
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Hanken Grotesk", -apple-system, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono",
+    Consolas, monospace;
+
+  /* ── Type scale (fixed rem — desktop UI density) ─────────────────
+   * Dense desktop app: 14px is the dominant UI size, 16px is body
+   * prose. Hero display is the only fluid element so the manga title
+   * grows on a wide window without breaking the rest of the chrome.
+   * ──────────────────────────────────────────────────────────────── */
+  --text-2xs: 0.6875rem;   /* 11px — micro-badges (Done/New/Page N) */
+  --text-xs:  0.75rem;     /* 12px — captions, secondary metadata    */
+  --text-sm:  0.875rem;    /* 14px — toolbar labels, list items, UI  */
+  --text-base: 1rem;       /* 16px — body / readable prose           */
+  --text-lg:  1.125rem;    /* 18px — subheadings                     */
+  --text-xl:  1.5rem;      /* 24px — section headings                */
+  --text-display: clamp(1.75rem, 1.4rem + 1.2vw, 2.375rem); /* hero  */
 }
 
 ::-webkit-scrollbar {
@@ -126,8 +155,29 @@
     overflow: hidden;
     background-color: theme(--color-zinc-950);
     color: theme(--color-zinc-100);
-    font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11"; /* Hanken stylistic alts */
+    font-kerning: normal;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Display face — dialed in for hero titles. Tighter tracking and
+     Newsreader's optical-size axis pinned to its display end (72) so
+     hairlines stay refined at large sizes. */
+  .font-display {
+    font-family: var(--font-display);
+    font-feature-settings: "calt", "liga", "kern";
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+    font-variation-settings: "opsz" 72;
+  }
+
+  /* Hero display size for view-level titles (manga title, etc.) */
+  .text-display {
+    font-size: var(--text-display);
+    line-height: 1.1;
   }
 }
 

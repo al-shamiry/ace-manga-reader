@@ -185,20 +185,20 @@ export function MangaDetailView() {
       </div>
 
       {/* Header */}
-      <div class="flex gap-4 p-4 border-b border-zinc-800 shrink-0">
+      <div class="flex gap-5 p-5 border-b border-zinc-800 shrink-0">
         <img
           src={convertFileSrc(manga.cover_path)}
           alt={manga.title}
-          class="w-24 rounded-lg object-cover shrink-0 bg-zinc-800"
+          class="w-28 rounded-lg object-cover shrink-0 bg-zinc-800 shadow-lg shadow-black/40"
         />
-        <div class="flex flex-col gap-2 flex-1 min-w-0 justify-center">
-          <h1 class="text-base font-bold text-zinc-100 leading-snug">
+        <div class="flex flex-col gap-3 flex-1 min-w-0 justify-center">
+          <h1 class="font-display text-display text-zinc-100 line-clamp-2">
             {manga.title}
           </h1>
-          <p class="text-xs text-zinc-500">
+          <p class="text-xs uppercase tracking-wider text-zinc-500 font-medium">
             {manga.chapter_count} {manga.chapter_count === 1 ? "chapter" : "chapters"}
           </p>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 mt-1">
             <Show when={primaryLabel()}>
               <Button
                 variant="primary"

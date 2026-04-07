@@ -5,7 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <link rel="icon" type="image/svg+xml" href="/src/assets/logo.svg" />
-    <title>Tauri + Solid + Typescript App</title>
+
+    <!-- Type pairing: Newsreader (display serif) + Hanken Grotesk (UI sans).
+         Both variable, single request each. Newsreader has the opsz axis
+         for display-grade rendering at hero sizes. font-display: swap on
+         the link prevents FOIT during Tauri webview cold-start. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400..700&family=Hanken+Grotesk:wght@400..700&display=swap"
+    />
+
+    <title>Ace Manga Reader</title>
   </head>
 
   <body>
