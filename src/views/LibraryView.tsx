@@ -1,7 +1,8 @@
 import { Show, createSignal, createMemo, createEffect, on, onMount, onCleanup } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Library, Plus } from "lucide-solid";
+import { Plus } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useLibrary } from "../context/LibraryContext";
 import { MangaGrid } from "../components/MangaGrid";
 import { SearchToggle } from "../components/SearchToggle";
@@ -13,7 +14,7 @@ import type { Tab } from "../components/TabBar";
 import type { Chapter, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function LibraryView() {
-  const { categories, libraryEntries, refreshCategories, refreshLibrary } = useLibrary();
+  const { categories, libraryEntries, sources, loadRoot, refreshCategories, refreshLibrary } = useLibrary();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal("");
   const [slideClass, setSlideClass] = createSignal("");
@@ -319,6 +320,21 @@ export function LibraryView() {
     }
   }
 
+  // First-run flow: open the Tauri folder picker, load it, route to sources.
+  // No root configured = `sources().length === 0` AND `libraryEntries().length === 0`.
+  // The root is the only piece of state that distinguishes "fresh install" from
+  // "user has a library but cleared it" — we treat both as empty-with-root if
+  // sources is non-empty, and as first-run otherwise.
+  const isFirstRun = () => sources().length === 0 && libraryEntries().length === 0;
+
+  async function handleChooseFolder() {
+    const selected = await open({ directory: true, multiple: false });
+    if (typeof selected === "string" && selected) {
+      await loadRoot(selected);
+      navigate("/sources");
+    }
+  }
+
   async function handleDeleteCategory(categoryId: string) {
     try {
       await invoke("delete_category", { categoryId });
@@ -414,17 +430,9 @@ export function LibraryView() {
         <Show
           when={mangasForGrid().length > 0}
           fallback={
-            <div class="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
-              <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
-                <Library size={48} stroke-width={1} />
-              </div>
-              <div>
-                <p class="text-zinc-300 font-medium">Your library is empty</p>
-                <p class="text-zinc-600 text-sm mt-1">
-                  Browse your <button class="text-indigo-400 hover:underline cursor-pointer" onClick={() => navigate("/sources")}>sources</button> and add manga to your library
-                </p>
-              </div>
-            </div>
+            <Show when={isFirstRun()} fallback={<LibraryEmptyState onBrowse={() => navigate("/sources")} />}>
+              <FirstRunWelcome onChooseFolder={handleChooseFolder} />
+            </Show>
           }
         >
           <MangaGrid
@@ -436,6 +444,73 @@ export function LibraryView() {
           />
         </Show>
       </div>
+    </div>
+  );
+}
+
+// ── Empty states ────────────────────────────────────────────────────────────
+// First-run welcome — no root configured. Single editorial CTA that opens
+// the folder picker directly. No rounded-icon template, no chained navigation.
+
+function FirstRunWelcome(props: { onChooseFolder: () => void }) {
+  return (
+    <div class="flex flex-col items-start justify-center h-full max-w-xl mx-auto px-10 gap-6">
+      <p class="text-xs uppercase tracking-[0.2em] text-indigo-400 font-medium">
+        Ace Manga Reader
+      </p>
+      <h1 class="font-display text-display text-zinc-100">
+        Point us at your manga.
+      </h1>
+      <p class="text-base text-zinc-400 leading-relaxed max-w-md">
+        Pick the folder where your collection lives. We'll scan it once,
+        cache the covers, and stay out of the way after that.
+      </p>
+      <button
+        onClick={props.onChooseFolder}
+        class="mt-2 px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-indigo-950/40"
+      >
+        Choose library folder
+      </button>
+      <div class="mt-6 pt-6 border-t border-zinc-800/80 w-full max-w-md">
+        <p class="text-[0.7rem] uppercase tracking-wider text-zinc-600 font-medium mb-3">
+          Expected layout
+        </p>
+        <pre class="text-xs text-zinc-500 leading-relaxed font-mono">
+{`root/
+  source/
+    Manga Title/
+      Chapter 01/  ← folders of images
+      Chapter 02/
+    Another Manga/
+      vol01.cbz    ← or .cbz files`}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+// Library is empty but sources exist — user has a root, just hasn't pinned
+// anything yet. Direct them to the source grid where they can star manga.
+
+function LibraryEmptyState(props: { onBrowse: () => void }) {
+  return (
+    <div class="flex flex-col items-start justify-center h-full max-w-xl mx-auto px-10 gap-5">
+      <p class="text-xs uppercase tracking-[0.2em] text-zinc-600 font-medium">
+        Library
+      </p>
+      <h2 class="font-display text-display text-zinc-100">
+        Nothing pinned yet.
+      </h2>
+      <p class="text-base text-zinc-400 leading-relaxed max-w-md">
+        Your library is where you keep the manga you're actively reading.
+        Browse your sources, open a manga, and add it here to track progress.
+      </p>
+      <button
+        onClick={props.onBrowse}
+        class="mt-2 px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-indigo-950/40"
+      >
+        Browse sources →
+      </button>
     </div>
   );
 }

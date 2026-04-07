@@ -1,6 +1,6 @@
 import { For, Show, createSignal, onMount } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
-import { ArrowLeft, BookOpen, Play, Bookmark, Check } from "lucide-solid";
+import { ArrowLeft, Play, Bookmark, Check } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -303,11 +303,18 @@ export function MangaDetailView() {
         </Show>
 
         <Show when={!loading() && chapters().length === 0 && !error()}>
-          <div class="flex flex-col items-center justify-center flex-1 gap-4 py-16 text-center px-8">
-            <div class="p-5 bg-zinc-900 rounded-2xl text-zinc-600">
-              <BookOpen size={48} stroke-width={1} />
-            </div>
-            <p class="text-zinc-500 text-sm">No chapters found</p>
+          <div class="flex flex-col items-start justify-center max-w-md mx-auto py-20 px-10 gap-3">
+            <p class="text-xs uppercase tracking-[0.2em] text-zinc-600 font-medium">
+              Nothing here
+            </p>
+            <h2 class="font-display text-xl text-zinc-100">
+              No chapters found in this folder.
+            </h2>
+            <p class="text-sm text-zinc-500 leading-relaxed">
+              Ace expects this manga to contain either chapter subfolders
+              (each with images inside) or <span class="font-mono text-zinc-400">.cbz</span> archives.
+              Check the folder contents and try refreshing.
+            </p>
           </div>
         </Show>
 
