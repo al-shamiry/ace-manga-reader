@@ -3,26 +3,84 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#0d1114" />
     <link rel="icon" type="image/svg+xml" href="/src/assets/logo.svg" />
 
+    <!--
+      Critical inline styles — paint the dark ink-950 background and a
+      centered wordmark on the very first frame, before any JS or bundled
+      CSS loads. Matches the values in src/styles/global.css so there is
+      no color jump when the app mounts. Solid's render() replaces
+      #root's children, so the loader disappears automatically.
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background-color: oklch(12% 0.012 215);
+        color: oklch(53% 0.013 215);
+        font-family: "Hanken Grotesk", -apple-system, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      #root {
+        height: 100%;
+      }
+      .app-loader {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        width: 100%;
+      }
+      .app-loader__mark {
+        font-size: 0.6875rem;
+        font-weight: 500;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: oklch(40% 0.014 215);
+        animation: app-loader-pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes app-loader-pulse {
+        0%,
+        100% {
+          opacity: 0.35;
+        }
+        50% {
+          opacity: 0.9;
+        }
+      }
+    </style>
+
     <!-- Type pairing: Newsreader (display serif) + Hanken Grotesk (UI sans).
-         Both variable, single request each. Newsreader has the opsz axis
-         for display-grade rendering at hero sizes. font-display: swap on
-         the link prevents FOIT during Tauri webview cold-start. -->
+         Loaded non-blocking via preload + onload swap so the webview can
+         paint the loader immediately instead of stalling on the network. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="stylesheet"
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400..700&family=Hanken+Grotesk:wght@400..700&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400..700&family=Hanken+Grotesk:wght@400..700&display=swap"
+      />
+    </noscript>
 
     <title>Ace Manga Reader</title>
   </head>
 
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <div id="root">
+      <div class="app-loader" data-tauri-drag-region>
+        <div class="app-loader__mark" data-tauri-drag-region>Ace Manga Reader</div>
+      </div>
+    </div>
 
     <script src="/src/index.tsx" type="module"></script>
   </body>

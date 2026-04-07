@@ -10,6 +10,11 @@ import { HistoryView } from "./views/HistoryView";
 import { SourcesView } from "./views/SourcesView";
 import { SettingsView } from "./views/SettingsView";
 
+// Clear the inline loader from index.html before Solid mounts — render()
+// appends to the target, it does not replace its children.
+const root = document.getElementById("root") as HTMLElement;
+root.replaceChildren();
+
 render(
   () => (
     <Router root={App}>
@@ -22,5 +27,5 @@ render(
       <Route path="/settings" component={SettingsView} />
     </Router>
   ),
-  document.getElementById("root") as HTMLElement
+  root
 );
