@@ -23,7 +23,8 @@
         height: 100%;
         background-color: oklch(12% 0.012 215);
         color: oklch(53% 0.013 215);
-        font-family: "Hanken Grotesk", -apple-system, system-ui, sans-serif;
+        font-family: "Hanken Grotesk Variable", -apple-system, system-ui,
+          sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
@@ -48,7 +49,7 @@
         transform: translateY(-4%);
       }
       .app-loader__title {
-        font-family: "Newsreader", "Iowan Old Style", Georgia, serif;
+        font-family: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
         font-style: italic;
         font-weight: 500;
         font-size: 3.75rem; /* 60px */
@@ -119,24 +120,6 @@
         }
       }
     </style>
-
-    <!-- Type pairing: Newsreader (display serif) + Hanken Grotesk (UI sans).
-         Loaded non-blocking via preload + onload swap so the webview can
-         paint the loader immediately instead of stalling on the network. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="preload"
-      as="style"
-      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400..700&family=Hanken+Grotesk:wght@400..700&display=swap"
-      onload="this.onload=null;this.rel='stylesheet'"
-    />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400..700&family=Hanken+Grotesk:wght@400..700&display=swap"
-      />
-    </noscript>
 
     <title>Ace Manga Reader</title>
   </head>

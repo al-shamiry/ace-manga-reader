@@ -12,6 +12,8 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@fontsource-variable/hanken-grotesk": "^5.2.8",
+    "@fontsource-variable/newsreader": "^5.2.10",
     "@kobalte/core": "^0.13.11",
     "@solidjs/router": "^0.15.4",
     "@tailwindcss/vite": "^4.2.1",

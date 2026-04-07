@@ -3,6 +3,13 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities);
 
+/* Local variable fonts — bundled by Vite, no CDN, no network.
+   Newsreader: opsz+wght axes (upright + italic) so the display face can
+   ride the optical-size axis up to 72. Hanken Grotesk: wght axis. */
+@import "@fontsource-variable/newsreader/opsz.css";
+@import "@fontsource-variable/newsreader/opsz-italic.css";
+@import "@fontsource-variable/hanken-grotesk";
+
 /*
  * Ace Manga Reader palette — tinted ink neutrals + jade accent.
  *
@@ -85,8 +92,8 @@
    *
    * Generates `font-display`, `font-sans`, `font-mono` utilities.
    * ──────────────────────────────────────────────────────────────── */
-  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
-  --font-sans: "Hanken Grotesk", -apple-system, system-ui, sans-serif;
+  --font-display: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Hanken Grotesk Variable", -apple-system, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono",
     Consolas, monospace;
 
