@@ -1,12 +1,12 @@
-import { For, Show } from "solid-js";
+import { For, Show, createSignal } from "solid-js";
 import { Pencil, Trash2 } from "lucide-solid";
 import { Tabs, TabsList, TabsTrigger, TabsIndicator } from "./ui/tabs";
 import {
-  ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
-} from "./ui/context-menu";
+  DropdownMenu,
+  DropdownMenuPortal,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "./ui/dropdown-menu";
 
 interface Tab {
   id: string;
@@ -31,6 +31,22 @@ interface Props {
 export type { Tab };
 
 export function TabBar(props: Props) {
+  // Single shared context-menu state. Tabs sit inside Kobalte Tabs (which uses
+  // its own DomCollection); wrapping each TabsTrigger in a Menu provider would
+  // re-route the trigger registration into the menu's collection and break tab
+  // selection. Instead, render one menu as a sibling of TabsList and anchor it
+  // to the cursor on right-click.
+  const [menuOpen, setMenuOpen] = createSignal(false);
+  const [menuTab, setMenuTab] = createSignal<Tab | null>(null);
+  const [anchor, setAnchor] = createSignal({ x: 0, y: 0, width: 0, height: 0 });
+
+  function openMenu(e: MouseEvent, tab: Tab) {
+    e.preventDefault();
+    setMenuTab(tab);
+    setAnchor({ x: e.clientX, y: e.clientY, width: 0, height: 0 });
+    setMenuOpen(true);
+  }
+
   return (
     <Tabs
       value={props.activeTab}
@@ -65,46 +81,62 @@ export function TabBar(props: Props) {
                   </form>
                 }
               >
-                <ContextMenu>
-                  <ContextMenuTrigger as={TabsTrigger} value={tab.id}>
-                    {tab.label}
-                    {tab.count !== undefined && (
-                      <span
-                        class="text-xs px-1.5 py-0.5 rounded-full"
-                        classList={{
-                          "bg-zinc-700 text-zinc-300": props.activeTab === tab.id,
-                          "bg-zinc-800 text-zinc-500": props.activeTab !== tab.id,
-                        }}
-                      >
-                        {tab.count}
-                      </span>
-                    )}
-                  </ContextMenuTrigger>
-                  <ContextMenuContent class="py-1 min-w-36">
-                    <ContextMenuItem
-                      class="flex items-center gap-2 px-3 py-1.5 text-sm text-zinc-300 cursor-pointer outline-none data-highlighted:bg-zinc-700 data-highlighted:text-zinc-100"
-                      onSelect={() => props.onRenameStart?.(tab)}
+                <TabsTrigger
+                  value={tab.id}
+                  onContextMenu={(e: MouseEvent) => openMenu(e, tab)}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span
+                      class="text-xs px-1.5 py-0.5 rounded-full"
+                      classList={{
+                        "bg-zinc-700 text-zinc-300": props.activeTab === tab.id,
+                        "bg-zinc-800 text-zinc-500": props.activeTab !== tab.id,
+                      }}
                     >
-                      <Pencil size={14} />
-                      Rename
-                    </ContextMenuItem>
-                    <Show when={tab.deletable !== false}>
-                      <ContextMenuItem
-                        class="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 cursor-pointer outline-none data-highlighted:bg-zinc-700"
-                        onSelect={() => props.onDelete?.(tab)}
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </ContextMenuItem>
-                    </Show>
-                  </ContextMenuContent>
-                </ContextMenu>
+                      {tab.count}
+                    </span>
+                  )}
+                </TabsTrigger>
               </Show>
             );
           }}
         </For>
         <TabsIndicator />
       </TabsList>
+
+      <DropdownMenu
+        open={menuOpen()}
+        onOpenChange={setMenuOpen}
+        getAnchorRect={() => anchor()}
+      >
+        <DropdownMenuPortal>
+          <DropdownMenuContent class="py-1 min-w-36">
+            <DropdownMenuItem
+              class="flex items-center gap-2 px-3 py-1.5 text-sm text-zinc-300 cursor-pointer outline-none data-highlighted:bg-zinc-700 data-highlighted:text-zinc-100"
+              onSelect={() => {
+                const t = menuTab();
+                if (t) props.onRenameStart?.(t);
+              }}
+            >
+              <Pencil size={14} />
+              Rename
+            </DropdownMenuItem>
+            <Show when={menuTab()?.deletable !== false}>
+              <DropdownMenuItem
+                class="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 cursor-pointer outline-none data-highlighted:bg-zinc-700"
+                onSelect={() => {
+                  const t = menuTab();
+                  if (t) props.onDelete?.(t);
+                }}
+              >
+                <Trash2 size={14} />
+                Delete
+              </DropdownMenuItem>
+            </Show>
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </DropdownMenu>
     </Tabs>
   );
 }

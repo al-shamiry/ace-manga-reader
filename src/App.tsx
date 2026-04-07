@@ -4,7 +4,6 @@ import { useLocation } from "@solidjs/router";
 import { LibraryProvider } from "./context/LibraryContext";
 import { SideNav } from "./components/SideNav";
 import "./styles/global.css";
-import "./app.css";
 
 function App(props: RouteSectionProps) {
   const location = useLocation();

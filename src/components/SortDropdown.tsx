@@ -5,6 +5,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuGroupLabel,
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
@@ -55,31 +56,33 @@ export function SortDropdown(props: SortDropdownProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent class="w-48 py-1">
-        <DropdownMenuGroupLabel class="px-3 py-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">
-          Sort by
-        </DropdownMenuGroupLabel>
-        <DropdownMenuSeparator class="my-1 h-px bg-border" />
-        <For each={SORT_OPTIONS}>
-          {(option) => {
-            const isActive = () => props.preference.field === option.value;
-            return (
-              <DropdownMenuItem
-                class="flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer text-zinc-300 focus:bg-zinc-700 data-highlighted:bg-zinc-700 data-highlighted:text-zinc-100"
-                classList={{ "text-indigo-400! focus:text-indigo-400!": isActive() }}
-                onSelect={() => selectField(option.value)}
-              >
-                <span>{option.label}</span>
-                <Show when={isActive()}>
-                  {props.preference.direction === "asc" ? (
-                    <ArrowUp size={14} />
-                  ) : (
-                    <ArrowDown size={14} />
-                  )}
-                </Show>
-              </DropdownMenuItem>
-            );
-          }}
-        </For>
+        <DropdownMenuGroup>
+          <DropdownMenuGroupLabel class="px-3 py-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">
+            Sort by
+          </DropdownMenuGroupLabel>
+          <DropdownMenuSeparator class="my-1 h-px bg-border" />
+          <For each={SORT_OPTIONS}>
+            {(option) => {
+              const isActive = () => props.preference.field === option.value;
+              return (
+                <DropdownMenuItem
+                  class="flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer text-zinc-300 focus:bg-zinc-700 data-highlighted:bg-zinc-700 data-highlighted:text-zinc-100"
+                  classList={{ "text-indigo-400! focus:text-indigo-400!": isActive() }}
+                  onSelect={() => selectField(option.value)}
+                >
+                  <span>{option.label}</span>
+                  <Show when={isActive()}>
+                    {props.preference.direction === "asc" ? (
+                      <ArrowUp size={14} />
+                    ) : (
+                      <ArrowDown size={14} />
+                    )}
+                  </Show>
+                </DropdownMenuItem>
+              );
+            }}
+          </For>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

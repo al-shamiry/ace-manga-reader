@@ -3,6 +3,48 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities);
 
+/*
+ * Semantic theme tokens for Kobalte + solid-ui generated components.
+ * Tailwind v4 CSS-first: defining --color-* inside @theme auto-generates
+ * the matching utility classes (bg-popover, text-foreground, etc.).
+ *
+ * Mapped to the existing zinc/indigo palette so nothing visually changes.
+ * Dark-only for now; light mode can be added later by overriding under
+ * a [data-kb-theme="light"] selector.
+ */
+@theme {
+  --color-background: var(--color-zinc-950);
+  --color-foreground: var(--color-zinc-100);
+
+  --color-card: var(--color-zinc-900);
+  --color-card-foreground: var(--color-zinc-100);
+
+  --color-popover: var(--color-zinc-800);
+  --color-popover-foreground: var(--color-zinc-100);
+
+  --color-primary: var(--color-indigo-600);
+  --color-primary-hover: var(--color-indigo-500);
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: var(--color-zinc-800);
+  --color-secondary-foreground: var(--color-zinc-100);
+
+  --color-accent: var(--color-zinc-800);
+  --color-accent-foreground: var(--color-zinc-100);
+
+  --color-muted: var(--color-zinc-800);
+  --color-muted-foreground: var(--color-zinc-500);
+
+  --color-destructive: var(--color-red-600);
+  --color-destructive-foreground: var(--color-zinc-100);
+
+  --color-border: var(--color-zinc-700);
+  --color-input: var(--color-zinc-700);
+  --color-ring: var(--color-indigo-500);
+
+  --radius: 0.5rem;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
