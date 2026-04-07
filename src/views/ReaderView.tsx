@@ -415,7 +415,7 @@ export function ReaderView() {
       }
     >
       {(s) => (
-        <div class="flex flex-col flex-1 overflow-hidden bg-black">
+        <div class="flex flex-col flex-1 overflow-hidden bg-zinc-950">
           {/* Toolbar */}
           <div class="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
             <Button variant="ghost" onClick={goBack}>

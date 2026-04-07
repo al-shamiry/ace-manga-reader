@@ -4,15 +4,47 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 
 /*
- * Semantic theme tokens for Kobalte + solid-ui generated components.
- * Tailwind v4 CSS-first: defining --color-* inside @theme auto-generates
- * the matching utility classes (bg-popover, text-foreground, etc.).
+ * Ace Manga Reader palette — tinted ink neutrals + jade accent.
  *
- * Mapped to the existing zinc/indigo palette so nothing visually changes.
- * Dark-only for now; light mode can be added later by overriding under
- * a [data-kb-theme="light"] selector.
+ * Tailwind v4 CSS-first: overriding the built-in --color-zinc-* and
+ * --color-indigo-* scales here means every existing `bg-zinc-900`,
+ * `text-indigo-400`, etc. across the app instantly picks up the new
+ * values without touching component files. Class names stay; pigments
+ * change.
+ *
+ * Hue choices:
+ *   - Neutrals: 215° (cool ink, slight blue-green) — never pure gray.
+ *     Tinted to feel like sumi ink rather than #1a1a1a slop.
+ *   - Accent (formerly indigo): 175° jade/teal — distinctive, calm,
+ *     reads as "ink on paper" rather than the AI cyan-on-dark default.
+ *
+ * All values in OKLCH for perceptual uniformity. Dark-only for now;
+ * light mode can be layered later under [data-theme="light"].
  */
 @theme {
+  /* ── Tinted ink neutrals (override Tailwind zinc) ───────────────── */
+  --color-zinc-50:  oklch(97% 0.006 215);
+  --color-zinc-100: oklch(93% 0.008 215);
+  --color-zinc-200: oklch(85% 0.010 215);
+  --color-zinc-300: oklch(76% 0.011 215);
+  --color-zinc-400: oklch(65% 0.012 215);
+  --color-zinc-500: oklch(53% 0.013 215);
+  --color-zinc-600: oklch(40% 0.014 215);
+  --color-zinc-700: oklch(29% 0.015 215);
+  --color-zinc-800: oklch(21% 0.014 215);
+  --color-zinc-900: oklch(16% 0.013 215);
+  --color-zinc-950: oklch(12% 0.012 215);
+
+  /* ── Jade accent (override Tailwind indigo) ─────────────────────── */
+  --color-indigo-300: oklch(82% 0.11  175);
+  --color-indigo-400: oklch(74% 0.13  175);
+  --color-indigo-500: oklch(66% 0.14  175);
+  --color-indigo-600: oklch(58% 0.13  175);
+  --color-indigo-700: oklch(48% 0.11  175);
+  --color-indigo-900: oklch(28% 0.06  175);
+  --color-indigo-950: oklch(20% 0.04  175);
+
+  /* ── Semantic tokens (Kobalte + shared components) ──────────────── */
   --color-background: var(--color-zinc-950);
   --color-foreground: var(--color-zinc-100);
 
@@ -24,7 +56,7 @@
 
   --color-primary: var(--color-indigo-600);
   --color-primary-hover: var(--color-indigo-500);
-  --color-primary-foreground: #ffffff;
+  --color-primary-foreground: oklch(98% 0.005 215);
 
   --color-secondary: var(--color-zinc-800);
   --color-secondary-foreground: var(--color-zinc-100);
@@ -56,13 +88,18 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: theme(--color-zinc-700);
+  /* Tinted ink at rest — slightly warmer than the surrounding zinc-700
+     so the thumb reads as a *thing*, not a hole in the page. */
+  background: oklch(32% 0.018 200);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
+  transition: background 150ms ease;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: theme(--color-zinc-500);
+  /* Hover picks up a whisper of the jade accent (hue 175) without
+     becoming a colored bar — keeps the surface calm but alive. */
+  background: oklch(46% 0.045 185);
 }
 
 @keyframes shimmer {
@@ -71,7 +108,12 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-zinc-800) 25%,
+    var(--color-zinc-700) 50%,
+    var(--color-zinc-800) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite linear;
 }
