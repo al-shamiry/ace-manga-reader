@@ -40,16 +40,6 @@ pub(crate) fn normalize(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
-/// Returns sorted subdirectories of a path.
-pub(crate) fn subdirs(path: &Path) -> Vec<PathBuf> {
-    let mut dirs: Vec<PathBuf> = match fs::read_dir(path) {
-        Ok(rd) => rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect(),
-        Err(_) => return Vec::new(),
-    };
-    dirs.sort();
-    dirs
-}
-
 /// Returns sorted image files directly inside a directory.
 pub(crate) fn images_in(path: &Path) -> Vec<PathBuf> {
     let mut imgs: Vec<PathBuf> = match fs::read_dir(path) {

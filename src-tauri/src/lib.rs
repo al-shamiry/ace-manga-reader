@@ -18,49 +18,6 @@ pub fn run() {
             // Load the manga_db cache into managed state
             app.manage(Mutex::new(commands::manga_db::MangaDbCache::load(app.handle())));
 
-            // Migrate settings.json + root_directory.txt + library_filters.json → config.json
-            let config_path = data_dir.join("config.json");
-            if !config_path.exists() {
-                let old_settings_path = data_dir.join("settings.json");
-                let old_root_path = data_dir.join("root_directory.txt");
-                let old_filters_path = data_dir.join("library_filters.json");
-
-                let old_settings: Option<commands::settings::Settings> =
-                    std::fs::read_to_string(&old_settings_path)
-                        .ok()
-                        .and_then(|s| serde_json::from_str(&s).ok());
-                let old_root: Option<String> = std::fs::read_to_string(&old_root_path)
-                    .ok()
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty());
-                let old_filters: Option<commands::settings::LibraryFilters> =
-                    std::fs::read_to_string(&old_filters_path)
-                        .ok()
-                        .and_then(|s| serde_json::from_str(&s).ok());
-
-                let defaults = commands::settings::Settings::default();
-                let settings = old_settings.unwrap_or(defaults);
-
-                let config = commands::settings::Config {
-                    root_directory: old_root,
-                    fit_mode: settings.fit_mode,
-                    reading_mode: settings.reading_mode,
-                    library_filters: old_filters.unwrap_or_default(),
-                    active_category: None,
-                    sort_preference: Default::default(),
-                    library_display: Default::default(),
-                    categories: vec![models::category::Category::default_category()],
-                };
-                let json = serde_json::to_string_pretty(&config)
-                    .expect("failed to serialize config");
-                std::fs::write(&config_path, json)?;
-
-                // Clean up old files
-                let _ = std::fs::remove_file(&old_settings_path);
-                let _ = std::fs::remove_file(&old_root_path);
-                let _ = std::fs::remove_file(&old_filters_path);
-            }
-
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
