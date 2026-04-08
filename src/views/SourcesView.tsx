@@ -63,6 +63,7 @@ export function SourcesView() {
             eyebrow="Sources"
             title="No source folders here."
             description="Ace looks one level inside the folder you picked and treats each subfolder as a source. Pick a parent that contains your source folders, or add a source folder to the current path."
+            action={{ label: "Choose library folder", onClick: pickRoot }}
           >
             <div class="mt-6 pt-6 border-t border-ink-800/80 w-full max-w-md">
               <p class="text-[0.7rem] uppercase tracking-wider text-ink-600 font-medium mb-3">
