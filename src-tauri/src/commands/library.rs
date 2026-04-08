@@ -99,6 +99,8 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Manga, String>> {
         path: normalize(path),
         cover_path,
         chapter_count,
+        read_chapters: 0,
+        last_read_at: 0,
     }))
 }
 
@@ -184,6 +186,8 @@ pub fn scan_directory(
                     path: m.path.clone(),
                     cover_path: m.cover_path.clone(),
                     chapter_count: m.chapter_count,
+                    read_chapters: m.read_chapters,
+                    last_read_at: m.last_read_at,
                 })
                 .collect();
             mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
@@ -242,5 +246,18 @@ pub fn scan_directory(
         }
     })?;
 
-    Ok(mangas)
+    // Enrich the returned mangas with read state from the db
+    let guard = cache.lock().map_err(|e| e.to_string())?;
+    let enriched: Vec<Manga> = mangas
+        .into_iter()
+        .map(|mut m| {
+            if let Some(state) = guard.db.mangas.get(&m.id) {
+                m.read_chapters = state.read_chapters;
+                m.last_read_at = state.last_read_at;
+            }
+            m
+        })
+        .collect();
+
+    Ok(enriched)
 }

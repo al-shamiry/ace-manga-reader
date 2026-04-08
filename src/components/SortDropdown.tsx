@@ -14,6 +14,8 @@ import type { SortField, SortPreference } from "../types";
 interface SortDropdownProps {
   preference: SortPreference;
   onChange: (pref: SortPreference) => void;
+  excludeFields?: SortField[];
+  defaultPref?: SortPreference;
 }
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
@@ -25,11 +27,16 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
 
 const DEFAULT_PREF: SortPreference = { field: "last_read", direction: "desc" };
 
-function isNonDefault(pref: SortPreference): boolean {
-  return pref.field !== DEFAULT_PREF.field || pref.direction !== DEFAULT_PREF.direction;
-}
-
 export function SortDropdown(props: SortDropdownProps) {
+  const effectiveDefault = () => props.defaultPref ?? DEFAULT_PREF;
+  const isNonDefault = () => {
+    const d = effectiveDefault();
+    return props.preference.field !== d.field || props.preference.direction !== d.direction;
+  };
+  const visibleOptions = () =>
+    props.excludeFields?.length
+      ? SORT_OPTIONS.filter((o) => !props.excludeFields!.includes(o.value))
+      : SORT_OPTIONS;
   function selectField(field: SortField) {
     if (props.preference.field === field) {
       props.onChange({
@@ -45,7 +52,7 @@ export function SortDropdown(props: SortDropdownProps) {
     <DropdownMenu>
       <DropdownMenuTrigger class={toolbarIconButtonClass} title="Sort">
         <ArrowUpDown size={16} />
-        <Show when={isNonDefault(props.preference)}>
+        <Show when={isNonDefault()}>
           <span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-jade-500" />
         </Show>
       </DropdownMenuTrigger>
@@ -56,7 +63,7 @@ export function SortDropdown(props: SortDropdownProps) {
             Sort By
           </div>
           <DropdownMenuSeparator />
-          <For each={SORT_OPTIONS}>
+          <For each={visibleOptions()}>
             {(option) => {
               const isActive = () => props.preference.field === option.value;
               return (

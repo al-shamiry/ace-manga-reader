@@ -140,6 +140,44 @@ fn default_categories() -> Vec<Category> {
     vec![Category::default_category()]
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceDisplay {
+    #[serde(default = "default_display_mode")]
+    pub display_mode: String,
+    #[serde(default = "default_card_size")]
+    pub card_size: u8,
+    #[serde(default)]
+    pub show_unread_badge: bool,
+    #[serde(default)]
+    pub show_continue_button: bool,
+}
+
+impl Default for SourceDisplay {
+    fn default() -> Self {
+        Self {
+            display_mode: default_display_mode(),
+            card_size: default_card_size(),
+            show_unread_badge: false,
+            show_continue_button: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SourceFilters {
+    #[serde(default)]
+    pub reading_status: Vec<String>,
+}
+
+fn default_source_sort_field() -> String { "alphabetical".to_string() }
+
+fn default_source_sort_preference() -> SortPreference {
+    SortPreference {
+        field: default_source_sort_field(),
+        direction: default_sort_direction(),
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
@@ -152,10 +190,16 @@ pub struct Config {
     pub library_filters: LibraryFilters,
     #[serde(default)]
     pub active_category: Option<String>,
-    #[serde(default)]
-    pub sort_preference: SortPreference,
+    #[serde(default, alias = "sort_preference")]
+    pub library_sort_preference: SortPreference,
+    #[serde(default = "default_source_sort_preference")]
+    pub source_sort_preference: SortPreference,
     #[serde(default)]
     pub library_display: LibraryDisplay,
+    #[serde(default)]
+    pub source_display: SourceDisplay,
+    #[serde(default)]
+    pub source_filters: SourceFilters,
     #[serde(default = "default_categories")]
     pub categories: Vec<Category>,
 }
@@ -237,20 +281,65 @@ pub fn set_active_category(app: tauri::AppHandle, category_id: String) -> Result
     save_config(&app, &config)
 }
 
-// ── Sort preference ─────────────────────────────────────────────────────────
+// ── Library sort preference ──────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_sort_preference(app: tauri::AppHandle) -> SortPreference {
-    load_config(&app).sort_preference
+pub fn get_library_sort_preference(app: tauri::AppHandle) -> SortPreference {
+    load_config(&app).library_sort_preference
 }
 
 #[tauri::command]
-pub fn set_sort_preference(
+pub fn set_library_sort_preference(
     app: tauri::AppHandle,
     preference: SortPreference,
 ) -> Result<(), String> {
     let mut config = load_config(&app);
-    config.sort_preference = preference;
+    config.library_sort_preference = preference;
+    save_config(&app, &config)
+}
+
+// ── Source sort preference ───────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_source_sort_preference(app: tauri::AppHandle) -> SortPreference {
+    load_config(&app).source_sort_preference
+}
+
+#[tauri::command]
+pub fn set_source_sort_preference(
+    app: tauri::AppHandle,
+    preference: SortPreference,
+) -> Result<(), String> {
+    let mut config = load_config(&app);
+    config.source_sort_preference = preference;
+    save_config(&app, &config)
+}
+
+// ── Source display ───────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_source_display(app: tauri::AppHandle) -> SourceDisplay {
+    load_config(&app).source_display
+}
+
+#[tauri::command]
+pub fn set_source_display(app: tauri::AppHandle, display: SourceDisplay) -> Result<(), String> {
+    let mut config = load_config(&app);
+    config.source_display = display;
+    save_config(&app, &config)
+}
+
+// ── Source filters ───────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_source_filters(app: tauri::AppHandle) -> SourceFilters {
+    load_config(&app).source_filters
+}
+
+#[tauri::command]
+pub fn set_source_filters(app: tauri::AppHandle, filters: SourceFilters) -> Result<(), String> {
+    let mut config = load_config(&app);
+    config.source_filters = filters;
     save_config(&app, &config)
 }
 

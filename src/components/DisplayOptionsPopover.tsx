@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import { LayoutGrid } from "lucide-solid";
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ import type { DisplayMode, LibraryDisplay } from "../types";
 interface Props {
   display: LibraryDisplay;
   onChange: (display: LibraryDisplay) => void;
+  showTabsSection?: boolean;
 }
 
 const DISPLAY_MODES: { value: DisplayMode; label: string }[] = [
@@ -115,24 +116,26 @@ export function DisplayOptionsPopover(props: Props) {
           </DropdownMenuCheckboxItem>
         </DropdownMenuGroup>
 
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuGroupLabel>Tabs</DropdownMenuGroupLabel>
-          <DropdownMenuCheckboxItem
-            checked={props.display.show_category_tabs}
-            onChange={() => toggle("show_category_tabs")}
-            closeOnSelect={false}
-          >
-            Show category tabs
-          </DropdownMenuCheckboxItem>
-          <DropdownMenuCheckboxItem
-            checked={props.display.show_item_count}
-            onChange={() => toggle("show_item_count")}
-            closeOnSelect={false}
-          >
-            Show number of items
-          </DropdownMenuCheckboxItem>
-        </DropdownMenuGroup>
+        <Show when={props.showTabsSection ?? true}>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuGroupLabel>Tabs</DropdownMenuGroupLabel>
+            <DropdownMenuCheckboxItem
+              checked={props.display.show_category_tabs}
+              onChange={() => toggle("show_category_tabs")}
+              closeOnSelect={false}
+            >
+              Show category tabs
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={props.display.show_item_count}
+              onChange={() => toggle("show_item_count")}
+              closeOnSelect={false}
+            >
+              Show number of items
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuGroup>
+        </Show>
       </DropdownMenuContent>
     </DropdownMenu>
   );

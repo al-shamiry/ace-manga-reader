@@ -54,7 +54,7 @@ export function LibraryView() {
     const persistedTab = invoke<string | null>("get_active_category")
       .then((savedTab) => { if (savedTab) setActiveTab(savedTab); })
       .catch(() => { /* no saved tab */ });
-    const persistedSort = invoke<SortPreference>("get_sort_preference")
+    const persistedSort = invoke<SortPreference>("get_library_sort_preference")
       .then((pref) => setSortPref(pref))
       .catch(() => { /* no saved sort */ });
     const persistedDisplay = invoke<LibraryDisplay>("get_library_display")
@@ -81,7 +81,7 @@ export function LibraryView() {
 
   function handleSortChange(next: SortPreference) {
     setSortPref(next);
-    invoke("set_sort_preference", { preference: next }).catch(() => {});
+    invoke("set_library_sort_preference", { preference: next }).catch(() => {});
   }
 
   function handleDisplayChange(next: LibraryDisplay) {

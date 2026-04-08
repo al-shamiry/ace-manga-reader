@@ -4,6 +4,8 @@ export interface Manga {
   path: string;
   cover_path: string;
   chapter_count: number;
+  read_chapters?: number;
+  last_read_at?: number;
 }
 
 export type ChapterStatus =

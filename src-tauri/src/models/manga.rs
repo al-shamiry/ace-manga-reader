@@ -7,4 +7,8 @@ pub struct Manga {
     pub path: String,
     pub cover_path: String,
     pub chapter_count: usize,
+    #[serde(default)]
+    pub read_chapters: usize,
+    #[serde(default)]
+    pub last_read_at: u64,
 }
