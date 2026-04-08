@@ -4,6 +4,7 @@ import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { EmptyState } from "../components/EmptyState";
+import { SearchToggle } from "../components/SearchToggle";
 import { Toolbar, ToolbarActions, ToolbarButton, ToolbarTitle } from "../components/ui/toolbar";
 import type { Chapter, HistoryEntry, Manga } from "../types";
 import { formatRelativeDay, formatTime } from "../lib/date";
@@ -16,6 +17,7 @@ export function HistoryView() {
   const [entries, setEntries] = createSignal<HistoryEntry[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [confirmingClear, setConfirmingClear] = createSignal(false);
+  const [searchQuery, setSearchQuery] = createSignal("");
 
   onMount(async () => {
     try {
@@ -29,9 +31,15 @@ export function HistoryView() {
     }
   });
 
+  const filteredEntries = createMemo(() => {
+    const q = searchQuery().toLowerCase().trim();
+    if (!q) return entries();
+    return entries().filter((e) => e.manga_title.toLowerCase().includes(q));
+  });
+
   // Walk the already-sorted list and emit a new group whenever the day label changes.
   const groups = createMemo(() => {
-    const list = entries();
+    const list = filteredEntries();
     const out: Array<{ label: string; entries: HistoryEntry[] }> = [];
     let current: { label: string; entries: HistoryEntry[] } | null = null;
     for (const e of list) {
@@ -123,6 +131,7 @@ export function HistoryView() {
           }
         >
           <Show when={entries().length > 0}>
+            <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
             <ToolbarButton onClick={() => setConfirmingClear(true)} title="Clear all history">
               <Trash2 size={16} />
             </ToolbarButton>
@@ -134,7 +143,20 @@ export function HistoryView() {
           same sized parent as the populated list (EmptyState uses h-full). */}
       <Show when={!loading()}>
         <div class="flex-1 overflow-y-auto">
-          <Show when={entries().length > 0} fallback={<HistoryEmptyState />}>
+          <Show
+            when={filteredEntries().length > 0}
+            fallback={
+              entries().length > 0 ? (
+                <EmptyState
+                  eyebrow="History"
+                  title="No results."
+                  description={`No history entries match "${searchQuery()}".`}
+                />
+              ) : (
+                <HistoryEmptyState />
+              )
+            }
+          >
             <div class="max-w-3xl mx-auto px-8 pb-12">
               <For each={groups()}>
                 {(group, i) => (
