@@ -1,10 +1,9 @@
-use std::path::Path;
 use std::sync::Mutex;
 
 use tauri::Manager;
 
 use crate::models::manga_db::{MangaDb, MangaState};
-use crate::utils::{path_id, write_atomic_json};
+use crate::utils::write_atomic_json;
 
 // ── Cache struct ─────────────────────────────────────────────────────────────
 
@@ -56,27 +55,4 @@ where
 pub(crate) fn get_manga(cache: &Mutex<MangaDbCache>, manga_id: &str) -> Option<MangaState> {
     let guard = cache.lock().ok()?;
     guard.db.mangas.get(manga_id).cloned()
-}
-
-/// Clone all `MangaState` rows whose `source_id` matches.
-pub(crate) fn mangas_for_source(
-    cache: &Mutex<MangaDbCache>,
-    source_id: &str,
-) -> Vec<MangaState> {
-    let guard = match cache.lock() {
-        Ok(g) => g,
-        Err(_) => return Vec::new(),
-    };
-    guard
-        .db
-        .mangas
-        .values()
-        .filter(|m| m.source_id == source_id)
-        .cloned()
-        .collect()
-}
-
-/// Derive `source_id` from `manga_path` (the immediate parent directory).
-pub(crate) fn source_id_for_manga(manga_path: &Path) -> Option<String> {
-    manga_path.parent().map(path_id)
 }
