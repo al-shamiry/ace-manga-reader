@@ -36,7 +36,7 @@ const TabsTrigger = <T extends ValidComponent = "button">(
   return (
     <TabsPrimitive.Trigger
       class={cn(
-        "relative flex items-center gap-2 pb-2.5 pt-3 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer outline-none text-ink-500 hover:text-ink-300 data-selected:text-jade-400",
+        "relative flex h-13 items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer outline-none text-ink-500 hover:text-ink-300 data-selected:text-jade-400",
         local.class,
       )}
       {...others}

@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "./ui/dropdown-menu";
+import { toolbarIconButtonClass } from "./ui/toolbar";
 import type { ReadingStatus } from "../types";
 
 export interface FilterState {
@@ -57,13 +58,10 @@ export function FilterDropdown(props: FilterDropdownProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        class="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        title="Filters"
-      >
+      <DropdownMenuTrigger class={toolbarIconButtonClass} title="Filters">
         <SlidersHorizontal size={16} />
         <Show when={activeCount() > 0}>
-          <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+          <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-jade-500 px-1 text-[10px] font-bold text-ink-950">
             {activeCount()}
           </span>
         </Show>

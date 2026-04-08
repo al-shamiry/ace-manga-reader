@@ -1,8 +1,14 @@
 import { Show, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { DirectoryPicker } from "../components/DirectoryPicker";
+import { Folder } from "lucide-solid";
+import { open } from "@tauri-apps/plugin-dialog";
 import { EmptyState } from "../components/EmptyState";
 import { SourceGrid } from "../components/SourceGrid";
+import {
+  Toolbar,
+  ToolbarInlineButton,
+  ToolbarTitle,
+} from "../components/ui/toolbar";
 import { useLibrary } from "../context/LibraryContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
@@ -25,23 +31,34 @@ export function SourcesView() {
     navigate(`/source/${source.id}`);
   }
 
+  // Open the native folder picker. Tauri's dialog supports paste-into-
+  // address-bar for power-users, so we no longer need a separate text
+  // input in the toolbar — keeps the chrome quiet and on-family.
+  async function pickRoot() {
+    const selected = await open({ directory: true, multiple: false });
+    if (typeof selected === "string" && selected) {
+      await loadRoot(selected);
+    }
+  }
+
   return (
-    <>
-      <DirectoryPicker
-        onSelect={loadRoot}
-        onRefresh={() => {}}
-        hasLibrary={sources().length > 0}
-      />
-      <Show when={status() === "loading"}>
-        <p class="px-6 py-4 text-sm text-ink-500">Loading...</p>
-      </Show>
-      <Show when={status() === "error"}>
-        <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
-      </Show>
-      <Show when={status() === "idle" && sources().length === 0}>
-        {/* Wrap in a flex-1 block container so EmptyState's h-full resolves
-            against the post-picker space rather than the whole view. */}
-        <div class="flex-1 min-h-0">
+    <div class="flex flex-col flex-1 overflow-hidden">
+      <Toolbar>
+        <ToolbarTitle class="flex-1">Sources</ToolbarTitle>
+        <ToolbarInlineButton onClick={pickRoot} title="Choose library folder">
+          <Folder size={14} />
+          {sources().length > 0 ? "Change folder" : "Choose folder"}
+        </ToolbarInlineButton>
+      </Toolbar>
+
+      <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Show when={status() === "loading"}>
+          <p class="px-6 py-4 text-sm text-ink-500">Loading...</p>
+        </Show>
+        <Show when={status() === "error"}>
+          <p class="px-6 py-4 text-sm text-red-400">{error()}</p>
+        </Show>
+        <Show when={status() === "idle" && sources().length === 0}>
           <EmptyState
             eyebrow="Sources"
             title="No source folders here."
@@ -62,11 +79,11 @@ export function SourcesView() {
               </pre>
             </div>
           </EmptyState>
-        </div>
-      </Show>
-      <Show when={sources().length > 0}>
-        <SourceGrid sources={sources()} onSelect={openSource} />
-      </Show>
-    </>
+        </Show>
+        <Show when={sources().length > 0}>
+          <SourceGrid sources={sources()} onSelect={openSource} />
+        </Show>
+      </div>
+    </div>
   );
 }

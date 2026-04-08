@@ -10,6 +10,7 @@ import {
   DropdownMenuCheckboxItem,
 } from "./ui/dropdown-menu";
 import { Slider, SliderTrack, SliderFill, SliderThumb } from "./ui/slider";
+import { toolbarIconButtonClass } from "./ui/toolbar";
 import type { DisplayMode, LibraryDisplay } from "../types";
 
 interface Props {
@@ -39,10 +40,7 @@ export function DisplayOptionsPopover(props: Props) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        title="Display options"
-      >
+      <DropdownMenuTrigger class={toolbarIconButtonClass} title="Display options">
         <LayoutGrid size={16} />
       </DropdownMenuTrigger>
 

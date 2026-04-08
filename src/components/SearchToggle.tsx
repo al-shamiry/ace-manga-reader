@@ -1,6 +1,7 @@
 import { Show, createSignal } from "solid-js";
 import { Search, X } from "lucide-solid";
 import { TextField, TextFieldInput } from "./ui/text-field";
+import { toolbarIconButtonClass } from "./ui/toolbar";
 
 interface SearchToggleProps {
   query: string;
@@ -21,7 +22,7 @@ export function SearchToggle(props: SearchToggleProps) {
         when={props.query !== "" || open()}
         fallback={
           <button
-            class="flex items-center justify-center w-8 h-8 rounded-md text-ink-500 hover:bg-ink-800 hover:text-ink-300 transition-colors cursor-pointer"
+            class={toolbarIconButtonClass}
             onClick={() => setOpen(true)}
             title="Search"
           >

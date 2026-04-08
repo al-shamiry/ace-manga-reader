@@ -16,6 +16,7 @@ import {
 import { useLibrary } from "../context/LibraryContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { EmptyState } from "../components/EmptyState";
+import { Toolbar, ToolbarInlineButton } from "../components/ui/toolbar";
 import type { Manga, Chapter, ChapterStatus } from "../types";
 
 function StatusBadge(props: { status: ChapterStatus }) {
@@ -168,13 +169,12 @@ export function MangaDetailView() {
 
   return (
     <>
-      {/* Toolbar */}
-      <div class="flex items-center gap-2 px-4 py-2.5 bg-ink-900 border-b border-ink-800 shrink-0">
-        <Button variant="ghost" onClick={() => navigate(-1)}>
+      <Toolbar>
+        <ToolbarInlineButton onClick={() => navigate(-1)}>
           <ArrowLeft size={14} />
           Back
-        </Button>
-      </div>
+        </ToolbarInlineButton>
+      </Toolbar>
 
       {/* Header */}
       <div class="flex gap-5 p-5 border-b border-ink-800 shrink-0">

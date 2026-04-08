@@ -62,7 +62,7 @@ export function TabBar(props: Props) {
                 when={!isRenaming()}
                 fallback={
                   <form
-                    class="flex items-center pb-2.5 pt-3"
+                    class="flex h-13 items-center"
                     onSubmit={(e) => {
                       e.preventDefault();
                       props.onRenameSubmit?.();

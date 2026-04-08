@@ -4,6 +4,7 @@ import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { EmptyState } from "../components/EmptyState";
+import { Toolbar, ToolbarActions, ToolbarButton, ToolbarTitle } from "../components/ui/toolbar";
 import type { Chapter, HistoryEntry, Manga } from "../types";
 import { formatRelativeDay, formatTime } from "../lib/date";
 
@@ -99,39 +100,35 @@ export function HistoryView() {
 
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
-      {/* Toolbar — matches LibraryView band height */}
-      <div class="flex items-center justify-between px-4 h-13 bg-ink-900 border-b border-ink-800 shrink-0">
-        <p class="text-xs uppercase tracking-[0.2em] text-ink-500 font-medium">History</p>
+      <Toolbar>
+        <ToolbarTitle>History</ToolbarTitle>
+        <div class="flex-1" />
         <Show
           when={!confirmingClear()}
           fallback={
-            <div class="flex items-center gap-1">
+            <ToolbarActions>
               <button
-                class="text-xs text-ink-400 hover:text-ink-100 px-2 py-1 rounded hover:bg-ink-800 transition-colors cursor-pointer"
+                class="h-8 cursor-pointer rounded-md px-2.5 text-xs font-medium text-ink-400 transition-colors hover:bg-ink-800 hover:text-ink-100"
                 onClick={() => setConfirmingClear(false)}
               >
                 Cancel
               </button>
               <button
-                class="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-950/40 transition-colors cursor-pointer"
+                class="h-8 cursor-pointer rounded-md px-2.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-950/40 hover:text-red-300"
                 onClick={handleClearAll}
               >
                 Clear all
               </button>
-            </div>
+            </ToolbarActions>
           }
         >
           <Show when={entries().length > 0}>
-            <button
-              class="p-1.5 rounded text-ink-500 hover:text-ink-200 hover:bg-ink-800 transition-colors cursor-pointer"
-              onClick={() => setConfirmingClear(true)}
-              title="Clear all history"
-            >
+            <ToolbarButton onClick={() => setConfirmingClear(true)} title="Clear all history">
               <Trash2 size={16} />
-            </button>
+            </ToolbarButton>
           </Show>
         </Show>
-      </div>
+      </Toolbar>
 
       {/* Body — single scroll container so the empty state inherits the
           same sized parent as the populated list (EmptyState uses h-full). */}

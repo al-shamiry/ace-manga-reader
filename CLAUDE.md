@@ -125,7 +125,7 @@ Note: `lib.rs` has migration logic that converts old separate files (`settings.j
 - SolidJS reactivity: `createSignal`, `createEffect`, `createMemo`, `Show`/`Index` for conditional/list rendering
 - Navigation uses router state to pass data between views (no global store)
 - Icons from `lucide-solid`
-- Shared components: `Button` (variant: primary/ghost, iconOnly), `Checkbox`, `Skeleton` (shimmer loading), `MangaCard`, `MangaGrid`, `SourceCard`, `SourceGrid`, `SideNav` (collapsible, 52px→180px), `TabBar` (animated underline, context menu rename), `FilterDropdown`, `SortDropdown`, `SearchToggle`, `DirectoryPicker`, `DisplayOptionsPopover`, `EmptyState` (unified empty/first-run state), `LoadingOverlay`, `TitleBar`
+- Shared components: `Button` (variant: primary/ghost, iconOnly), `Toolbar` (`h-13` view-chrome band + `ToolbarTitle`/`ToolbarButton`/`ToolbarInlineButton`/`ToolbarActions` + `toolbarIconButtonClass` for shared trigger styling), `Checkbox`, `Skeleton` (shimmer loading), `MangaCard`, `MangaGrid`, `SourceCard`, `SourceGrid`, `SideNav` (collapsible, 52px→180px), `TabBar` (animated underline, context menu rename), `FilterDropdown`, `SortDropdown`, `SearchToggle`, `DisplayOptionsPopover`, `EmptyState` (unified empty/first-run state), `LoadingOverlay`, `TitleBar`
 - Custom CSS classes in `global.css`: `.manga-grid`/`.source-grid` (CSS Grid), `.cursor-{left|right|up|down}` (SVG data URI cursors), `.skeleton` (shimmer animation)
 
 ### Conventions

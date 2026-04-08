@@ -5,6 +5,7 @@ import { Folder } from "lucide-solid";
 import { useLibrary } from "../context/LibraryContext";
 import { Slider, SliderFill, SliderThumb, SliderTrack } from "../components/ui/slider";
 import { Checkbox } from "../components/ui/checkbox";
+import { Toolbar, ToolbarTitle } from "../components/ui/toolbar";
 import type {
   DisplayMode,
   FitMode,
@@ -114,10 +115,9 @@ export function SettingsView() {
 
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
-      {/* Toolbar — matches LibraryView/HistoryView band height */}
-      <div class="flex items-center px-4 h-13 bg-ink-900 border-b border-ink-800 shrink-0">
-        <p class="text-xs uppercase tracking-[0.2em] text-ink-500 font-medium">Settings</p>
-      </div>
+      <Toolbar>
+        <ToolbarTitle>Settings</ToolbarTitle>
+      </Toolbar>
 
       {/* Body */}
       <div class="flex-1 overflow-y-auto">

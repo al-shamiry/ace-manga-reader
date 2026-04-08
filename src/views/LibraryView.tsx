@@ -12,6 +12,7 @@ import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
 import { SortDropdown } from "../components/SortDropdown";
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { TabBar } from "../components/TabBar";
+import { Toolbar, ToolbarActions, ToolbarButton } from "../components/ui/toolbar";
 import type { Tab } from "../components/TabBar";
 import type { Chapter, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
@@ -375,9 +376,11 @@ export function LibraryView() {
 
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
-      {/* Library toolbar: tabs + actions */}
-      <div class="flex items-center gap-0 px-4 bg-ink-900 border-b border-ink-800 shrink-0">
-        <div class="flex items-center overflow-x-auto flex-1 min-w-0">
+      {/* Library toolbar — tabs left, action cluster right. gap-0 because
+          the tabs/`+` cluster manages its own spacing inside an overflow
+          container. */}
+      <Toolbar class="gap-0">
+        <div class="flex h-full items-center overflow-x-auto overflow-y-hidden flex-1 min-w-0">
           <Show when={displayOpts().show_category_tabs}>
             {/* Keyed remount on show_item_count toggle — Kobalte's TabsIndicator
                 only observes the selected tab's resize and reads offsetLeft
@@ -409,7 +412,7 @@ export function LibraryView() {
               when={!creatingCategory()}
               fallback={
                 <form
-                  class="flex items-center pb-2.5 pt-3 ml-2"
+                  class="flex h-full items-center ml-2"
                   onSubmit={(e) => {
                     e.preventDefault();
                     submitCreateCategory();
@@ -429,19 +432,15 @@ export function LibraryView() {
                 </form>
               }
             >
-              <button
-                class="flex items-center justify-center w-7 h-7 rounded-md text-ink-500 hover:bg-ink-800 hover:text-ink-300 transition-colors cursor-pointer shrink-0 ml-2"
-                onClick={startCreateCategory}
-                title="New category"
-              >
+              <ToolbarButton class="ml-2" onClick={startCreateCategory} title="New category">
                 <Plus size={16} />
-              </button>
+              </ToolbarButton>
             </Show>
           </Show>
         </div>
 
         {/* Search, sort & filter actions */}
-        <div class="flex items-center gap-1 shrink-0 ml-3">
+        <ToolbarActions class="ml-3">
           <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
           <SortDropdown preference={sortPref()} onChange={handleSortChange} />
           <DisplayOptionsPopover display={displayOpts()} onChange={handleDisplayChange} />
@@ -450,8 +449,8 @@ export function LibraryView() {
             availableSources={availableSources()}
             onChange={handleFilterChange}
           />
-        </div>
-      </div>
+        </ToolbarActions>
+      </Toolbar>
 
       {/* Manga grid or empty state */}
       <div class={`flex-1 overflow-y-auto ${slideClass()}`}>

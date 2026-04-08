@@ -8,6 +8,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
+import { toolbarIconButtonClass } from "./ui/toolbar";
 import type { SortField, SortPreference } from "../types";
 
 interface SortDropdownProps {
@@ -42,13 +43,10 @@ export function SortDropdown(props: SortDropdownProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        class="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        title="Sort"
-      >
+      <DropdownMenuTrigger class={toolbarIconButtonClass} title="Sort">
         <ArrowUpDown size={16} />
         <Show when={isNonDefault(props.preference)}>
-          <span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" />
+          <span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-jade-500" />
         </Show>
       </DropdownMenuTrigger>
 

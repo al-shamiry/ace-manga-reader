@@ -3,10 +3,15 @@ import { useParams, useNavigate } from "@solidjs/router";
 import { ArrowLeft, RefreshCw } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Button } from "../components/ui/button";
 import { EmptyState } from "../components/EmptyState";
 import { MangaGrid } from "../components/MangaGrid";
 import { MangaGridSkeleton } from "../components/Skeleton";
+import {
+  Toolbar,
+  ToolbarButton,
+  ToolbarInlineButton,
+  ToolbarTitle,
+} from "../components/ui/toolbar";
 import { useLibrary } from "../context/LibraryContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Manga } from "../types";
@@ -57,19 +62,22 @@ export function SourceView() {
 
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
-      <div class="flex items-center gap-2 px-4 py-2.5 bg-ink-900 border-b border-ink-800 shrink-0">
-        <Button variant="ghost" onClick={() => navigate("/sources")}>
+      <Toolbar>
+        <ToolbarInlineButton onClick={() => navigate("/sources")}>
           <ArrowLeft size={14} />
           Sources
-        </Button>
-        <span class="text-ink-600 text-sm">/</span>
-        <span class="flex-1 text-sm font-semibold text-ink-100 truncate">
-          {source()?.name}
-        </span>
-        <Button variant="ghost" iconOnly onClick={() => { const s = source(); if (s) loadMangas(s.path, true); }} title="Re-scan folder">
-          <RefreshCw size={14} />
-        </Button>
-      </div>
+        </ToolbarInlineButton>
+        <ToolbarTitle class="flex-1">{source()?.name}</ToolbarTitle>
+        <ToolbarButton
+          onClick={() => {
+            const s = source();
+            if (s) loadMangas(s.path, true);
+          }}
+          title="Re-scan folder"
+        >
+          <RefreshCw size={16} />
+        </ToolbarButton>
+      </Toolbar>
       <div class="flex-1 overflow-y-auto">
         <Show when={status() === "loading"}>
           <MangaGridSkeleton />
