@@ -4,19 +4,37 @@ A lightweight desktop manga reader built with Tauri v2 and SolidJS.
 
 ## Features
 
+### Library
 - Browse manga libraries organized by source folder
 - Supports both folder-based chapters (images in subfolders) and CBZ archives
+- **Categories** with tab bar — manga can live in multiple categories, right-click to rename/delete
+- **Add to Library** with category picker; reflected as a bookmark overlay on manga cards
+- **Search** by title (instant, client-side)
+- **Filter** by source folder and reading status (Unread / Started / Completed)
+- **Sort** alphabetically, by total chapters, last read, or date added — with direction toggle
+- **Display modes**: Compact / Comfortable / Cover-only grids and List view, with adjustable card size
+- **Card overlays**: unread chapter badge and continue-reading button (toggle in Display Options)
+- **History** view — recently read manga grouped by day, click to resume from your last page
+- **Settings** view — root directory, default fit mode, default reading mode, library display defaults
+
+### Reader
 - **4 reading modes**: Paged LTR, Paged RTL, Paged Vertical, Webtoon (continuous scroll)
 - **5 fit modes**: Fit Screen, Fit Width, Fit Height, Original, Stretch
+- Reading mode and fit mode persisted **per-manga** with global defaults
 - Chapter reading with keyboard, tap zone, and button navigation
 - Continuous keyboard scrolling in webtoon mode with speed boost on long hold
-- Automatic reading progress saved per chapter, persisted per-manga settings
+- Automatic reading progress saved per chapter
 - Jump to any page by clicking the page counter
 - Auto-advance to next/previous chapter at chapter boundaries
 - Page flip animations (direction-aware for each reading mode)
 - Fullscreen mode (F11 or toolbar button)
+
+### Polish
+- Side navigation rail (Library / History / Sources / Settings)
 - Natural sort order (Chapter 2 before Chapter 10)
+- Smart title cleanup — strips download-tool hash suffixes and restores `:` characters mangled by Windows filename rules
 - Shimmer loading skeletons while scanning
+- Editorial empty states with no centered modals
 
 ## Library Structure
 
@@ -62,13 +80,19 @@ Tap zones on the page image also work for mouse navigation — direction adapts 
 | Build | Vite |
 | Archive | `zip` crate (Rust) |
 
+## Download
+
+Pre-built installers for Windows and Linux are available on the [Releases page](https://github.com/al-shamiry/ace-manga-reader/releases).
+
+> Windows builds are not yet code-signed, so SmartScreen will show a warning on first run. Click **More info → Run anyway** to install.
+
 ## Roadmap
 
 ```
 Stage 1 — Library Browser     ██████████  done
 Stage 2 — Manga Reader        ██████████  done
-Stage 3 — Library Mgmt        ░░░░░░░░░░  planned
-Stage 4 — Reading Experience  ░░░░░░░░░░  planned
+Stage 3 — Library Management  ██████████  done
+Stage 4 — Sources Management  ░░░░░░░░░░  planned
 Stage 5 — Advanced            ░░░░░░░░░░  planned
 ```
 
@@ -104,29 +128,39 @@ Stage 5 — Advanced            ░░░░░░░░░░  planned
 </details>
 
 <details open>
-<summary><b>Stage 3 — Library Management</b> 📋</summary>
+<summary><b>Stage 3 — Library Management</b> ✅</summary>
 
-- ⬜Multiple library folders
-- ⬜Favorites and tags
-- ⬜Search and filter
-- ⬜Sort by name / date added / date modified
+- ✅Collapsible side navigation (Library / History / Sources / Settings)
+- ✅Categories with tab bar — manga can belong to multiple categories
+- ✅Add to Library with category picker, bookmark overlay on cards
+- ✅Search by title (instant, client-side)
+- ✅Filter by source folder and reading status (Unread / Started / Completed)
+- ✅Sort alphabetically, total chapters, last read, date added — with direction toggle
+- ✅Display options popover: grid styles (Compact / Comfortable / Cover-only / List), card size, unread badges, continue-reading button
+- ✅History view — recently read manga grouped by day, click to resume
+- ✅Settings view — root directory, default fit mode, default reading mode, library display defaults
+- ✅Persistent state across restarts (filters, sort, active category, display options)
 
 </details>
 
 <details open>
-<summary><b>Stage 4 — Reading Experience</b> 📋</summary>
+<summary><b>Stage 4 — Sources Management</b> 📋</summary>
 
-- ⬜Pinch-to-zoom / scroll zoom
-- ⬜Bookmarks
+- ⬜Sources view listing all source folders with manga counts and last-scanned dates
+- ⬜Add/remove source folders directly from the app
+- ⬜Per-source and bulk re-scan
+- ⬜Source ordering and visibility toggle
 
 </details>
 
 <details open>
 <summary><b>Stage 5 — Advanced</b> 📋</summary>
 
-- ⬜CBR support
+- ⬜CBR (RAR) archive support
+- ⬜Pinch-to-zoom / scroll zoom
+- ⬜Bookmarks within a manga
 - ⬜ComicInfo.xml metadata parsing
-- ⬜Settings panel (theme, default reading mode, cache size)
+- ⬜Theme customization
 - ⬜Drag-and-drop files onto window
 - ⬜Auto-detect new manga in watched directories
 
@@ -134,12 +168,14 @@ Stage 5 — Advanced            ░░░░░░░░░░  planned
 
 ## Screenshots
 
+
 | | |
 |---|---|
-| ![Source grid](docs/screenshots/Screenshot%2001.png) | ![Manga grid](docs/screenshots/Screenshot%2002.png) |
-| ![Manga grid (CBZ)](docs/screenshots/Screenshot%2003.png) | ![Chapter list](docs/screenshots/Screenshot%2004.png) |
+| ![Loading Screen](docs/screenshots/Screenshot%2001.png) | ![First-run welcome](docs/screenshots/Screenshot%2002.png) |
+| ![Library with display options popover](docs/screenshots/Screenshot%2003.png) | ![Reader view](docs/screenshots/Screenshot%2004.png) |
+| ![History view](docs/screenshots/Screenshot%2005.png) | ![Sources picker](docs/screenshots/Screenshot%2006.png) |
+| ![Source manga grid](docs/screenshots/Screenshot%2007.png) | ![Settings view](docs/screenshots/Screenshot%2008.png) |
 
-![Reader](docs/screenshots/Screenshot%2005.png)
 
 ## Development
 
