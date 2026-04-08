@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_CATEGORY_ID: &str = "default";
@@ -21,7 +19,7 @@ impl Category {
     }
 }
 
-/// A manga saved to the library — stores enough info to display without re-scanning.
+/// Projected library entry returned to the frontend — a view over `MangaState`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryEntry {
     pub manga_id: String,
@@ -35,12 +33,4 @@ pub struct LibraryEntry {
     pub added_at: u64,
     #[serde(default)]
     pub last_read_at: u64,
-}
-
-/// Combined library data: categories + bookmarked manga entries.
-/// Persisted as a single `library.json` file.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct LibraryData {
-    pub categories: Vec<Category>,
-    pub entries: HashMap<String, LibraryEntry>,
 }

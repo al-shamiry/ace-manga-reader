@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use tauri::Manager;
 
+use crate::models::category::{Category, DEFAULT_CATEGORY_ID};
+
 // ── Per-manga reader settings (settings/{manga_id}.json) ─────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,11 +36,7 @@ fn load_settings(path: &std::path::Path) -> Option<Settings> {
 }
 
 fn save_settings(path: &std::path::Path, settings: &Settings) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())
+    crate::utils::write_atomic_json(path, settings)
 }
 
 /// Returns manga-specific settings merged with global defaults.
@@ -138,6 +136,10 @@ impl Default for LibraryDisplay {
     }
 }
 
+fn default_categories() -> Vec<Category> {
+    vec![Category::default_category()]
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
@@ -154,6 +156,8 @@ pub struct Config {
     pub sort_preference: SortPreference,
     #[serde(default)]
     pub library_display: LibraryDisplay,
+    #[serde(default = "default_categories")]
+    pub categories: Vec<Category>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -169,7 +173,7 @@ pub fn config_path(app: &tauri::AppHandle) -> std::path::PathBuf {
 }
 
 pub fn load_config(app: &tauri::AppHandle) -> Config {
-    fs::read_to_string(config_path(app))
+    let mut config: Config = fs::read_to_string(config_path(app))
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_else(|| {
@@ -179,13 +183,16 @@ pub fn load_config(app: &tauri::AppHandle) -> Config {
                 reading_mode: defaults.reading_mode,
                 ..Default::default()
             }
-        })
+        });
+    // Always ensure default category exists
+    if !config.categories.iter().any(|c| c.id == DEFAULT_CATEGORY_ID) {
+        config.categories.insert(0, Category::default_category());
+    }
+    config
 }
 
 pub fn save_config(app: &tauri::AppHandle, config: &Config) -> Result<(), String> {
-    let path = config_path(app);
-    let json = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())
+    crate::utils::write_atomic_json(&config_path(app), config)
 }
 
 // ── Root directory ───────────────────────────────────────────────────────────

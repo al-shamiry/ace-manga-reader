@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use tauri::{AppHandle, Manager};
 
-use crate::commands::categories::now_epoch;
+use crate::utils::now_epoch;
 use crate::models::history::{HistoryData, HistoryEntry};
 
 const MAX_ENTRIES: usize = 1000;
@@ -21,12 +21,7 @@ fn load(app: &AppHandle) -> HistoryData {
 }
 
 fn save(app: &AppHandle, data: &HistoryData) -> Result<(), String> {
-    let path = history_path(app);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let json = serde_json::to_string_pretty(data).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())
+    crate::utils::write_atomic_json(&history_path(app), data)
 }
 
 #[tauri::command]

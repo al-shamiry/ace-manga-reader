@@ -2,6 +2,7 @@ mod commands;
 mod models;
 mod utils;
 
+use std::sync::Mutex;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,29 +15,8 @@ pub fn run() {
             let data_dir = app.handle().path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
 
-            // Migrate old categories.json + library.json → unified library.json
-            let old_categories = data_dir.join("categories.json");
-            if old_categories.exists() {
-                use crate::models::category::{Category, LibraryData, LibraryEntry};
-                use std::collections::HashMap;
-
-                let categories: Vec<Category> = std::fs::read_to_string(&old_categories)
-                    .ok()
-                    .and_then(|s| serde_json::from_str(&s).ok())
-                    .unwrap_or_default();
-
-                let library_path = data_dir.join("library.json");
-                let entries: HashMap<String, LibraryEntry> = std::fs::read_to_string(&library_path)
-                    .ok()
-                    .and_then(|s| serde_json::from_str(&s).ok())
-                    .unwrap_or_default();
-
-                let merged = LibraryData { categories, entries };
-                let json = serde_json::to_string_pretty(&merged)
-                    .expect("failed to serialize library data");
-                std::fs::write(&library_path, json)?;
-                std::fs::remove_file(&old_categories)?;
-            }
+            // Load the manga_db cache into managed state
+            app.manage(Mutex::new(commands::manga_db::MangaDbCache::load(app.handle())));
 
             // Migrate settings.json + root_directory.txt + library_filters.json → config.json
             let config_path = data_dir.join("config.json");
@@ -69,6 +49,7 @@ pub fn run() {
                     active_category: None,
                     sort_preference: Default::default(),
                     library_display: Default::default(),
+                    categories: vec![models::category::Category::default_category()],
                 };
                 let json = serde_json::to_string_pretty(&config)
                     .expect("failed to serialize config");

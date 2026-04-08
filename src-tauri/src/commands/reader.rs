@@ -2,61 +2,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::Path;
+use std::sync::Mutex;
 
 use rayon::prelude::*;
 use tauri::Manager;
 use zip::ZipArchive;
 
-use crate::utils::{images_in, is_image, normalize, path_id, subdirs_and_cbz, title_from_path};
+use crate::commands::manga_db::{self, MangaDbCache};
 use crate::models::chapter::{Chapter, ChapterStatus};
-use crate::commands::categories;
-
-// ── Progress helpers ──────────────────────────────────────────────────────────
-
-fn progress_file(app_data_dir: &std::path::Path, manga_id: &str) -> std::path::PathBuf {
-    app_data_dir.join("progress").join(format!("{}.json", manga_id))
-}
-
-fn load_progress_map(app_data_dir: &std::path::Path, manga_id: &str) -> HashMap<String, ChapterStatus> {
-    fs::read(progress_file(app_data_dir, manga_id))
-        .ok()
-        .and_then(|b| serde_json::from_slice(&b).ok())
-        .unwrap_or_default()
-}
-
-fn save_status(
-    app_data_dir: &std::path::Path,
-    manga_id: &str,
-    chapter_id: &str,
-    status: &ChapterStatus,
-) -> Result<(), String> {
-    let pf = progress_file(app_data_dir, manga_id);
-    if let Some(parent) = pf.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let mut map = load_progress_map(app_data_dir, manga_id);
-    map.insert(chapter_id.to_string(), status.clone());
-    let json = serde_json::to_vec(&map).map_err(|e| e.to_string())?;
-    fs::write(pf, json).map_err(|e| e.to_string())
-}
-
-fn count_read_chapters(app_data_dir: &std::path::Path, manga_id: &str) -> usize {
-    let progress = load_progress_map(app_data_dir, manga_id);
-    progress.values().filter(|s| matches!(s, ChapterStatus::Read)).count()
-}
-
-fn sync_library_read_chapters(app: &tauri::AppHandle, manga_id: &str) {
-    let app_data_dir = match app.path().app_data_dir() {
-        Ok(d) => d,
-        Err(_) => return,
-    };
-    let mut data = categories::load_library_data(app);
-    if let Some(entry) = data.entries.get_mut(manga_id) {
-        entry.read_chapters = count_read_chapters(&app_data_dir, manga_id);
-        entry.last_read_at = categories::now_epoch();
-        let _ = categories::save_library_data(app, &data);
-    }
-}
+use crate::models::manga_db::MangaState;
+use crate::utils::{images_in, is_image, now_epoch, normalize, path_id, subdirs_and_cbz, title_from_path};
 
 // ── Commands ──────────────────────────────────────────────────────────────────
 
@@ -66,10 +21,17 @@ pub fn get_chapters(
     app_handle: tauri::AppHandle,
 ) -> Result<Vec<Chapter>, String> {
     let dir = Path::new(&manga_path);
-    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
-
     let manga_id = path_id(dir);
-    let progress = load_progress_map(&app_data_dir, &manga_id);
+
+    // Pull the chapters map out of the cache (no I/O)
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    let chapters_map: HashMap<String, ChapterStatus> = {
+        let guard = cache.lock().map_err(|e| e.to_string())?;
+        guard.db.mangas.get(&manga_id)
+            .map(|m| m.chapters.clone())
+            .unwrap_or_default()
+    };
+
     let (sub_dirs, cbz_files) = subdirs_and_cbz(dir);
 
     let dir_chapters = sub_dirs.par_iter().filter_map(|p| {
@@ -78,7 +40,7 @@ pub fn get_chapters(
             return None;
         }
         let id = path_id(p);
-        let status = progress.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
+        let status = chapters_map.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
         Some(Chapter {
             id,
             title: title_from_path(p),
@@ -91,7 +53,7 @@ pub fn get_chapters(
 
     let cbz_chapters = cbz_files.par_iter().filter_map(|p| {
         let id = path_id(p);
-        let status = progress.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
+        let status = chapters_map.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
         let page_count = fs::File::open(p)
             .ok()
             .and_then(|f| ZipArchive::new(f).ok())
@@ -205,15 +167,32 @@ pub fn set_chapter_progress(
     total_pages: usize,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
     let status = if page >= total_pages.saturating_sub(1) {
         ChapterStatus::Read
     } else {
         ChapterStatus::Ongoing { page }
     };
-    save_status(&app_data_dir, &manga_id, &chapter_id, &status)?;
-    sync_library_read_chapters(&app_handle, &manga_id);
-    Ok(())
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app_handle, |db| {
+        let entry = db.mangas.entry(manga_id.clone()).or_insert_with(|| MangaState {
+            source_id: String::new(),
+            title: String::new(),
+            path: String::new(),
+            cover_path: String::new(),
+            cover_override: None,
+            chapter_count: 0,
+            read_chapters: 0,
+            last_read_at: 0,
+            added_at: None,
+            category_ids: Vec::new(),
+            chapters: HashMap::new(),
+        });
+        entry.chapters.insert(chapter_id.clone(), status);
+        entry.read_chapters = entry.chapters.values()
+            .filter(|s| matches!(s, ChapterStatus::Read))
+            .count();
+        entry.last_read_at = now_epoch();
+    })
 }
 
 #[tauri::command]
@@ -223,13 +202,26 @@ pub fn mark_chapter_read(
     read: bool,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
-    let status = if read {
-        ChapterStatus::Read
-    } else {
-        ChapterStatus::Unread
-    };
-    save_status(&app_data_dir, &manga_id, &chapter_id, &status)?;
-    sync_library_read_chapters(&app_handle, &manga_id);
-    Ok(())
+    let status = if read { ChapterStatus::Read } else { ChapterStatus::Unread };
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app_handle, |db| {
+        let entry = db.mangas.entry(manga_id.clone()).or_insert_with(|| MangaState {
+            source_id: String::new(),
+            title: String::new(),
+            path: String::new(),
+            cover_path: String::new(),
+            cover_override: None,
+            chapter_count: 0,
+            read_chapters: 0,
+            last_read_at: 0,
+            added_at: None,
+            category_ids: Vec::new(),
+            chapters: HashMap::new(),
+        });
+        entry.chapters.insert(chapter_id.clone(), status);
+        entry.read_chapters = entry.chapters.values()
+            .filter(|s| matches!(s, ChapterStatus::Read))
+            .count();
+        entry.last_read_at = now_epoch();
+    })
 }

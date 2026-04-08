@@ -1,13 +1,20 @@
+use std::collections::HashSet;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use rayon::prelude::*;
 use tauri::Manager;
 use zip::ZipArchive;
 
+use crate::commands::manga_db::{self, MangaDbCache};
 use crate::models::manga::Manga;
-use crate::utils::{images_in, is_image, natural_cmp, normalize, path_id, subdirs_and_cbz, title_from_path};
+use crate::models::manga_db::{MangaState, SourceMeta};
+use crate::utils::{
+    images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
+    title_from_path,
+};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Source {
@@ -146,25 +153,6 @@ pub fn list_sources(path: String) -> Result<Vec<Source>, String> {
     Ok(sources)
 }
 
-fn scan_cache_path(app_data_dir: &Path, scan_path: &Path) -> PathBuf {
-    let id = path_id(scan_path);
-    app_data_dir.join("cache").join("scans").join(format!("{}.json", id))
-}
-
-fn load_scan_cache(cache_file: &Path) -> Option<Vec<Manga>> {
-    let bytes = fs::read(cache_file).ok()?;
-    serde_json::from_slice(&bytes).ok()
-}
-
-fn save_scan_cache(cache_file: &Path, mangas: &[Manga]) {
-    if let Some(parent) = cache_file.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    if let Ok(json) = serde_json::to_vec_pretty(mangas) {
-        let _ = fs::write(cache_file, json);
-    }
-}
-
 #[tauri::command]
 pub fn scan_directory(
     path: String,
@@ -176,26 +164,83 @@ pub fn scan_directory(
         return Err(format!("'{}' is not a directory", path));
     }
 
+    let source_id = path_id(dir);
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+
+    // Cache hit: source is known and we have mangas for it → return directly
+    if !force_refresh {
+        let guard = cache.lock().map_err(|e| e.to_string())?;
+        if guard.db.sources.contains_key(&source_id)
+            && guard.db.mangas.values().any(|m| m.source_id == source_id)
+        {
+            let mut mangas: Vec<Manga> = guard
+                .db
+                .mangas
+                .iter()
+                .filter(|(_, m)| m.source_id == source_id)
+                .map(|(id, m)| Manga {
+                    id: id.clone(),
+                    title: m.title.clone(),
+                    path: m.path.clone(),
+                    cover_path: m.cover_path.clone(),
+                    chapter_count: m.chapter_count,
+                })
+                .collect();
+            mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
+            return Ok(mangas);
+        }
+    }
+
+    // Full disk scan
     let app_data_dir = app_handle
         .path()
         .app_data_dir()
         .map_err(|e: tauri::Error| e.to_string())?;
-
-    let cache_file = scan_cache_path(&app_data_dir, dir);
-
-    if !force_refresh {
-        if let Some(cached) = load_scan_cache(&cache_file) {
-            return Ok(cached);
-        }
-    }
-
     let covers_dir = app_data_dir.join("cache").join("covers");
     fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
 
     let mut mangas = collect_mangas(dir, 1, &covers_dir);
     mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
 
-    save_scan_cache(&cache_file, &mangas);
+    // Build the set of manga ids present on disk for this source
+    let on_disk_ids: HashSet<String> = mangas.iter().map(|m| m.id.clone()).collect();
+
+    let source_path_str = normalize(dir);
+    let scanned_at = now_epoch();
+
+    manga_db::mutate(&cache, &app_handle, |db| {
+        // Update source metadata
+        db.sources.insert(
+            source_id.clone(),
+            SourceMeta { source_path: source_path_str, scanned_at },
+        );
+
+        // Drop mangas from this source that no longer exist on disk
+        db.mangas.retain(|id, m| m.source_id != source_id || on_disk_ids.contains(id));
+
+        // Merge scanned mangas into the db
+        for manga in &mangas {
+            let entry = db.mangas.entry(manga.id.clone()).or_insert_with(|| MangaState {
+                source_id: source_id.clone(),
+                title: manga.title.clone(),
+                path: manga.path.clone(),
+                cover_path: manga.cover_path.clone(),
+                cover_override: None,
+                chapter_count: manga.chapter_count,
+                read_chapters: 0,
+                last_read_at: 0,
+                added_at: None,
+                category_ids: Vec::new(),
+                chapters: std::collections::HashMap::new(),
+            });
+            // Refresh mutable display fields; preserve reading state
+            entry.source_id = source_id.clone();
+            entry.title = manga.title.clone();
+            entry.path = manga.path.clone();
+            entry.cover_path = manga.cover_path.clone();
+            entry.chapter_count = manga.chapter_count;
+        }
+    })?;
 
     Ok(mangas)
 }
