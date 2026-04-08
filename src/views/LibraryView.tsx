@@ -457,7 +457,18 @@ export function LibraryView() {
         <Show
           when={mangasForGrid().length > 0}
           fallback={
-            <Show when={isFirstRun()} fallback={<LibraryEmptyState onBrowse={() => navigate("/sources")} />}>
+            <Show when={isFirstRun()} fallback={
+              <Show
+                when={filteredEntries().length > 0 && mangasForGrid().length === 0}
+                fallback={<LibraryEmptyState onBrowse={() => navigate("/sources")} />}
+              >
+                <EmptyState
+                  eyebrow="No results"
+                  title="No manga match your filters."
+                  description="Try adjusting the search query or active filters."
+                />
+              </Show>
+            }>
               <FirstRunWelcome onChooseFolder={handleChooseFolder} />
             </Show>
           }
