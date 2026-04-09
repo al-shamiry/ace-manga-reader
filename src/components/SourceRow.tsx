@@ -1,5 +1,6 @@
 import { Show, createEffect, on } from "solid-js";
-import { EllipsisVertical, EyeOff, Folder, Pencil, RefreshCw, Trash2 } from "lucide-solid";
+import { AlertCircle, Check, EllipsisVertical, EyeOff, Folder, Pencil, RefreshCw, Trash2 } from "lucide-solid";
+import type { ScanStatus } from "../context/LibraryContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,7 @@ interface SourceRowProps {
   onRename: () => void;
   onHide: () => void;
   onRemove: () => void;
+  scanStatus?: ScanStatus;
   renaming?: RenameState;
   removing?: RemoveState;
   fadingOut?: boolean;
@@ -113,34 +115,51 @@ export function SourceRow(props: SourceRowProps) {
           </p>
         </div>
         <Show when={!isRemoving()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              class="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-500 transition-colors hover:bg-ink-800 hover:text-ink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60"
-              onClick={(e: MouseEvent) => e.stopPropagation()}
-              tabIndex={-1}
-            >
-              <EllipsisVertical size={16} />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onSelect={props.onRescan}>
-                <RefreshCw size={14} />
-                Re-scan
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={props.onRename}>
-                <Pencil size={14} />
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={props.onHide}>
-                <EyeOff size={14} />
-                Hide
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={props.onRemove} class="text-red-400 focus:text-red-400">
-                <Trash2 size={14} />
-                Remove
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Show when={props.scanStatus === "scanning"}>
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center">
+              <RefreshCw size={16} class="text-jade-400 animate-spin" />
+            </div>
+          </Show>
+          <Show when={props.scanStatus === "done"}>
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center">
+              <Check size={16} class="text-jade-400" />
+            </div>
+          </Show>
+          <Show when={props.scanStatus === "error"}>
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center">
+              <AlertCircle size={16} class="text-red-400" />
+            </div>
+          </Show>
+          <Show when={!props.scanStatus}>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                class="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-500 transition-colors hover:bg-ink-800 hover:text-ink-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60"
+                onClick={(e: MouseEvent) => e.stopPropagation()}
+                tabIndex={-1}
+              >
+                <EllipsisVertical size={16} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onSelect={props.onRescan}>
+                  <RefreshCw size={14} />
+                  Re-scan
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={props.onRename}>
+                  <Pencil size={14} />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={props.onHide}>
+                  <EyeOff size={14} />
+                  Hide
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={props.onRemove} class="text-red-400 focus:text-red-400">
+                  <Trash2 size={14} />
+                  Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Show>
         </Show>
       </div>
       <Show when={props.removing}>

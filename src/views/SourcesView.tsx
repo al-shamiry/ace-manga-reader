@@ -17,7 +17,7 @@ import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, addSource, removeSource, refreshSources, initialLoad } = useLibrary();
+  const { sources, status, error, addSource, removeSource, refreshSources, initialLoad, scanStatus, scanSource, scanAllSources } = useLibrary();
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();
@@ -35,6 +35,10 @@ export function SourcesView() {
     [...sources()].sort((a, b) => a.sort_order - b.sort_order)
   );
 
+  const isAnyScanning = createMemo(() =>
+    Object.values(scanStatus()).some((s) => s === "scanning")
+  );
+
   function openSource(source: Source) {
     navigate(`/source/${source.id}`);
   }
@@ -47,7 +51,7 @@ export function SourcesView() {
   }
 
   function handleRescanAll() {
-    console.log("TODO 4.5");
+    scanAllSources();
   }
 
   function handleToggleHidden() {
@@ -96,8 +100,8 @@ export function SourcesView() {
           <ToolbarInlineButton onClick={handleAddSource}>
             <Plus size={14} /> Add source
           </ToolbarInlineButton>
-          <ToolbarButton onClick={handleRescanAll} title="Re-scan all sources">
-            <RefreshCw size={16} />
+          <ToolbarButton onClick={handleRescanAll} title="Re-scan all sources" disabled={isAnyScanning()}>
+            <RefreshCw size={16} class={isAnyScanning() ? "animate-spin" : ""} />
           </ToolbarButton>
           <ToolbarButton onClick={handleToggleHidden} title="Show hidden sources">
             <Eye size={16} />
@@ -142,8 +146,9 @@ export function SourcesView() {
                   <SourceRow
                     source={source}
                     onClick={() => openSource(source)}
-                    onRescan={() => console.log("TODO 4.5:", source.id)}
+                    onRescan={() => scanSource(source.id)}
                     onRename={() => startRename(source)}
+                    scanStatus={scanStatus()[source.id]}
                     onHide={() => console.log("TODO 4.7:", source.id)}
                     onRemove={() => setRemovingId(source.id)}
                     renaming={renamingId() === source.id ? {

@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Source, Category, LibraryEntry } from "../types";
 
 type Status = "idle" | "loading" | "error";
+export type ScanStatus = "scanning" | "done" | "error";
 
 interface LibraryContextValue {
   sources: () => Source[];
@@ -14,6 +15,9 @@ interface LibraryContextValue {
   removeSource: (sourceId: string) => Promise<void>;
   refreshSources: () => Promise<void>;
   getSource: (id: string) => Source | undefined;
+  scanStatus: () => Record<string, ScanStatus>;
+  scanSource: (sourceId: string) => void;
+  scanAllSources: () => void;
   categories: () => Category[];
   libraryEntries: () => LibraryEntry[];
   isInLibrary: (mangaId: string) => boolean;
@@ -33,6 +37,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   const [error, setError] = createSignal("");
   const [categories, setCategories] = createSignal<Category[]>([]);
   const [libraryEntries, setLibraryEntries] = createSignal<LibraryEntry[]>([]);
+  const [scanStatus, setScanStatus] = createSignal<Record<string, ScanStatus>>({});
 
   // Promise consumers can await — resolves when the initial sources +
   // categories + library load completes. Held in a closure so multiple
@@ -82,6 +87,41 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     await refreshLibrary();
   }
 
+  function setScanStatusFor(sourceId: string, status: ScanStatus | undefined) {
+    setScanStatus((prev) => {
+      const next = { ...prev };
+      if (status === undefined) delete next[sourceId];
+      else next[sourceId] = status;
+      return next;
+    });
+  }
+
+  function scanSource(sourceId: string) {
+    const source = sources().find((s) => s.id === sourceId);
+    if (!source) return;
+    if (scanStatus()[sourceId] === "scanning") return;
+
+    setScanStatusFor(sourceId, "scanning");
+
+    invoke("scan_directory", { path: source.path, forceRefresh: true })
+      .then(() => {
+        setScanStatusFor(sourceId, "done");
+        refreshSources();
+        setTimeout(() => setScanStatusFor(sourceId, undefined), 2000);
+      })
+      .catch((e) => {
+        console.error(`Re-scan failed for ${source.name}:`, e);
+        setScanStatusFor(sourceId, "error");
+        setTimeout(() => setScanStatusFor(sourceId, undefined), 3000);
+      });
+  }
+
+  function scanAllSources() {
+    for (const source of sources()) {
+      if (!source.hidden) scanSource(source.id);
+    }
+  }
+
   function getSource(id: string) {
     return sources().find((s) => s.id === id);
   }
@@ -111,6 +151,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   return (
     <LibraryContext.Provider value={{
       sources, status, error, loadRoot, addSource, removeSource, refreshSources, getSource,
+      scanStatus, scanSource, scanAllSources,
       categories, libraryEntries, isInLibrary, refreshCategories, refreshLibrary,
       initialLoad: () => initialLoadPromise,
     }}>
