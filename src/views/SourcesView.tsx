@@ -17,12 +17,13 @@ import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, addSource, refreshSources, initialLoad } = useLibrary();
+  const { sources, status, error, addSource, removeSource, refreshSources, initialLoad } = useLibrary();
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();
   const [renamingId, setRenamingId] = createSignal<string | null>(null);
   const [renameValue, setRenameValue] = createSignal("");
+  const [removingId, setRemovingId] = createSignal<string | null>(null);
 
   onMount(async () => {
     await initialLoad();
@@ -68,6 +69,17 @@ export function SourcesView() {
       console.error("Failed to rename source:", e);
     }
     setRenamingId(null);
+  }
+
+  async function confirmRemove() {
+    const id = removingId();
+    if (!id) return;
+    try {
+      await removeSource(id);
+    } catch (e) {
+      console.error("Failed to remove source:", e);
+    }
+    setRemovingId(null);
   }
 
   return (
@@ -127,12 +139,16 @@ export function SourcesView() {
                     onRescan={() => console.log("TODO 4.5:", source.id)}
                     onRename={() => startRename(source)}
                     onHide={() => console.log("TODO 4.7:", source.id)}
-                    onRemove={() => console.log("TODO 4.4:", source.id)}
+                    onRemove={() => setRemovingId(source.id)}
                     renaming={renamingId() === source.id ? {
                       value: renameValue(),
                       onChange: setRenameValue,
                       onConfirm: confirmRename,
                       onCancel: () => setRenamingId(null),
+                    } : undefined}
+                    removing={removingId() === source.id ? {
+                      onConfirm: confirmRemove,
+                      onCancel: () => setRemovingId(null),
                     } : undefined}
                   />
                 )}

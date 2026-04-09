@@ -11,6 +11,7 @@ interface LibraryContextValue {
   error: () => string;
   loadRoot: (path: string) => Promise<void>;
   addSource: (path: string, name?: string) => Promise<void>;
+  removeSource: (sourceId: string) => Promise<void>;
   refreshSources: () => Promise<void>;
   getSource: (id: string) => Source | undefined;
   categories: () => Category[];
@@ -75,6 +76,12 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     await refreshSources();
   }
 
+  async function removeSource(sourceId: string) {
+    await invoke("remove_source", { sourceId });
+    await refreshSources();
+    await refreshLibrary();
+  }
+
   function getSource(id: string) {
     return sources().find((s) => s.id === id);
   }
@@ -103,7 +110,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   return (
     <LibraryContext.Provider value={{
-      sources, status, error, loadRoot, addSource, refreshSources, getSource,
+      sources, status, error, loadRoot, addSource, removeSource, refreshSources, getSource,
       categories, libraryEntries, isInLibrary, refreshCategories, refreshLibrary,
       initialLoad: () => initialLoadPromise,
     }}>
