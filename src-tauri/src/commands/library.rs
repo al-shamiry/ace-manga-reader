@@ -213,11 +213,27 @@ pub fn scan_directory(
     let scanned_at = now_epoch();
 
     manga_db::mutate(&cache, &app_handle, |db| {
-        // Update source metadata
-        db.sources.insert(
-            source_id.clone(),
-            SourceMeta { source_path: source_path_str, scanned_at },
-        );
+        // Update source metadata: preserve user-controlled fields for existing sources
+        if let Some(existing) = db.sources.get_mut(&source_id) {
+            existing.source_path = source_path_str;
+            existing.scanned_at = scanned_at;
+        } else {
+            let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
+            db.sources.insert(
+                source_id.clone(),
+                SourceMeta {
+                    source_path: source_path_str,
+                    scanned_at,
+                    name: dir.file_name()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    added_at: now_epoch(),
+                    hidden: false,
+                    sort_order: next_order,
+                },
+            );
+        }
 
         // Drop mangas from this source that no longer exist on disk
         db.mangas.retain(|id, m| m.source_id != source_id || on_disk_ids.contains(id));

@@ -8,6 +8,14 @@ use crate::models::chapter::ChapterStatus;
 pub struct SourceMeta {
     pub source_path: String,
     pub scanned_at: u64,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub added_at: u64,
+    #[serde(default)]
+    pub hidden: bool,
+    #[serde(default)]
+    pub sort_order: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,12 +49,12 @@ pub struct MangaDb {
     pub mangas: HashMap<String, MangaState>,
 }
 
-fn default_version() -> u32 { 1 }
+fn default_version() -> u32 { 2 }
 
 impl Default for MangaDb {
     fn default() -> Self {
         Self {
-            version: 1,
+            version: 2,
             sources: HashMap::new(),
             mangas: HashMap::new(),
         }
