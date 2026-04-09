@@ -1,6 +1,7 @@
-import { For, Show, createMemo, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { Eye, Plus, RefreshCw } from "lucide-solid";
+import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { EmptyState } from "../components/EmptyState";
 import { SourceRow } from "../components/SourceRow";
@@ -16,10 +17,12 @@ import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, addSource, initialLoad } = useLibrary();
+  const { sources, status, error, addSource, refreshSources, initialLoad } = useLibrary();
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();
+  const [renamingId, setRenamingId] = createSignal<string | null>(null);
+  const [renameValue, setRenameValue] = createSignal("");
 
   onMount(async () => {
     await initialLoad();
@@ -47,6 +50,24 @@ export function SourcesView() {
 
   function handleToggleHidden() {
     console.log("TODO 4.7");
+  }
+
+  function startRename(source: Source) {
+    setRenamingId(source.id);
+    setRenameValue(source.name);
+  }
+
+  async function confirmRename() {
+    const id = renamingId();
+    const name = renameValue().trim();
+    if (!id || !name) { setRenamingId(null); return; }
+    try {
+      await invoke("rename_source", { sourceId: id, name });
+      await refreshSources();
+    } catch (e) {
+      console.error("Failed to rename source:", e);
+    }
+    setRenamingId(null);
   }
 
   return (
@@ -104,9 +125,15 @@ export function SourcesView() {
                     source={source}
                     onClick={() => openSource(source)}
                     onRescan={() => console.log("TODO 4.5:", source.id)}
-                    onRename={() => console.log("TODO 4.3:", source.id)}
+                    onRename={() => startRename(source)}
                     onHide={() => console.log("TODO 4.7:", source.id)}
                     onRemove={() => console.log("TODO 4.4:", source.id)}
+                    renaming={renamingId() === source.id ? {
+                      value: renameValue(),
+                      onChange: setRenameValue,
+                      onConfirm: confirmRename,
+                      onCancel: () => setRenamingId(null),
+                    } : undefined}
                   />
                 )}
               </For>

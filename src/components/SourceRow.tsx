@@ -1,3 +1,4 @@
+import { Show } from "solid-js";
 import { EllipsisVertical, EyeOff, Folder, Pencil, RefreshCw, Trash2 } from "lucide-solid";
 import {
   DropdownMenu,
@@ -9,6 +10,13 @@ import {
 import { formatRelativeDay } from "../lib/date";
 import type { Source } from "../types";
 
+interface RenameState {
+  value: string;
+  onChange: (v: string) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
 interface SourceRowProps {
   source: Source;
   onClick: () => void;
@@ -16,6 +24,7 @@ interface SourceRowProps {
   onRename: () => void;
   onHide: () => void;
   onRemove: () => void;
+  renaming?: RenameState;
 }
 
 export function SourceRow(props: SourceRowProps) {
@@ -36,7 +45,25 @@ export function SourceRow(props: SourceRowProps) {
     >
       <Folder size={28} class="text-jade-500 shrink-0" />
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium text-ink-100 truncate">{props.source.name}</p>
+        <Show when={props.renaming} fallback={
+          <p class="text-sm font-medium text-ink-100 truncate">{props.source.name}</p>
+        }>
+          {(renaming) => (
+            <input
+              ref={(el) => requestAnimationFrame(() => { el.focus(); el.select(); })}
+              type="text"
+              class="text-sm font-medium text-ink-100 bg-ink-900 border border-jade-500/60 rounded px-1.5 py-0.5 w-full outline-none focus:ring-1 focus:ring-jade-500/60"
+              value={renaming().value}
+              onInput={(e) => renaming().onChange(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") renaming().onConfirm();
+                if (e.key === "Escape") renaming().onCancel();
+              }}
+              onFocusOut={() => renaming().onConfirm()}
+              onClick={(e: MouseEvent) => e.stopPropagation()}
+            />
+          )}
+        </Show>
         <p class="text-xs text-ink-500">
           {props.source.manga_count} manga ·{" "}
           <span title={absoluteTime()}>{formatRelativeDay(props.source.scanned_at)}</span>
