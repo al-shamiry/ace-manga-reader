@@ -286,4 +286,20 @@
 /* Tab switch fade */
 @keyframes tab-fade-out { to { opacity: 0; } }
 .tab-fade-out { animation: tab-fade-out 100ms ease-out forwards; }
+
+/* Source row removal — opacity + height collapse */
+.source-row-fade-out {
+  opacity: 0 !important;
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  border-width: 0 !important;
+  transition: opacity 200ms ease-out,
+              max-height 200ms ease-out 50ms,
+              padding 200ms ease-out 50ms,
+              margin 200ms ease-out 50ms,
+              border-width 200ms ease-out 50ms;
+}
 .slide-in-down   { animation: slide-in-down   200ms ease-out forwards; }

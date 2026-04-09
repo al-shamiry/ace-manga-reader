@@ -24,6 +24,7 @@ export function SourcesView() {
   const [renamingId, setRenamingId] = createSignal<string | null>(null);
   const [renameValue, setRenameValue] = createSignal("");
   const [removingId, setRemovingId] = createSignal<string | null>(null);
+  const [fadingOutId, setFadingOutId] = createSignal<string | null>(null);
 
   onMount(async () => {
     await initialLoad();
@@ -74,12 +75,17 @@ export function SourcesView() {
   async function confirmRemove() {
     const id = removingId();
     if (!id) return;
+    setRemovingId(null);
+    setFadingOutId(id);
+  }
+
+  async function handleFadeOutDone(id: string) {
+    setFadingOutId(null);
     try {
       await removeSource(id);
     } catch (e) {
       console.error("Failed to remove source:", e);
     }
-    setRemovingId(null);
   }
 
   return (
@@ -150,6 +156,8 @@ export function SourcesView() {
                       onConfirm: confirmRemove,
                       onCancel: () => setRemovingId(null),
                     } : undefined}
+                    fadingOut={fadingOutId() === source.id}
+                    onFadeOutDone={() => handleFadeOutDone(source.id)}
                   />
                 )}
               </For>

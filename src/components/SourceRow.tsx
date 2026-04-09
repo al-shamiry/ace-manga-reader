@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import { Show, createEffect, on } from "solid-js";
 import { EllipsisVertical, EyeOff, Folder, Pencil, RefreshCw, Trash2 } from "lucide-solid";
 import {
   DropdownMenu,
@@ -31,33 +31,56 @@ interface SourceRowProps {
   onRemove: () => void;
   renaming?: RenameState;
   removing?: RemoveState;
+  fadingOut?: boolean;
+  onFadeOutDone?: () => void;
 }
 
 export function SourceRow(props: SourceRowProps) {
+  let rowRef!: HTMLDivElement;
   const absoluteTime = () =>
     new Date(props.source.scanned_at * 1000).toLocaleString();
   const isRemoving = () => !!props.removing;
 
+  createEffect(on(() => props.fadingOut, (fading) => {
+    if (!fading || !rowRef) return;
+    // Capture current height so the collapse transition has a start value
+    const h = rowRef.offsetHeight;
+    rowRef.style.maxHeight = `${h}px`;
+    // Force reflow before adding the collapsed state
+    void rowRef.offsetHeight;
+    rowRef.classList.add("source-row-fade-out");
+  }));
+
+  function handleTransitionEnd(e: TransitionEvent) {
+    if (e.propertyName === "opacity" && props.fadingOut && props.onFadeOutDone) {
+      props.onFadeOutDone();
+    }
+  }
+
   return (
     <div
+      ref={rowRef}
       tabIndex={0}
-      class={`group flex flex-col px-4 py-3 transition-colors border-b border-ink-800/40 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60 ${
+      class={`group flex flex-col px-4 py-3 transition-colors border-b border-ink-800/40 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60 overflow-hidden ${
         isRemoving()
           ? "bg-red-950/20 border-red-900/40"
-          : "cursor-pointer hover:bg-ink-900/40"
+          : props.fadingOut
+            ? ""
+            : "cursor-pointer hover:bg-ink-900/40"
       }`}
-      onClick={() => { if (!isRemoving()) props.onClick(); }}
+      onClick={() => { if (!isRemoving() && !props.fadingOut) props.onClick(); }}
       onKeyDown={(e) => {
         if (isRemoving() && e.key === "Escape") {
           e.preventDefault();
           props.removing!.onCancel();
           return;
         }
-        if (!isRemoving() && (e.key === "Enter" || e.key === " ")) {
+        if (!isRemoving() && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           props.onClick();
         }
       }}
+      onTransitionEnd={handleTransitionEnd}
     >
       <div class="flex items-center gap-4">
         <Folder size={28} class={isRemoving() ? "text-red-400/60 shrink-0" : "text-jade-500 shrink-0"} />
