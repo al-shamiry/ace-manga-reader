@@ -494,19 +494,3 @@ fn cleanup_source_cache(
     Ok(())
 }
 
-#[tauri::command]
-pub fn list_subdirs(path: String) -> Result<Vec<String>, String> {
-    let dir = Path::new(&path);
-    if !dir.is_dir() {
-        return Err(format!("'{}' is not a directory", path));
-    }
-    let mut subdirs: Vec<String> = fs::read_dir(dir)
-        .map_err(|e| e.to_string())?
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| p.is_dir())
-        .map(|p| normalize(&p))
-        .collect();
-    subdirs.sort();
-    Ok(subdirs)
-}

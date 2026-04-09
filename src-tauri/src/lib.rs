@@ -51,7 +51,6 @@ pub fn run() {
             commands::library::rename_source,
             commands::library::reorder_sources,
             commands::library::set_source_hidden,
-            commands::library::list_subdirs,
             commands::reader::get_chapters,
             commands::reader::open_chapter,
             commands::reader::set_chapter_progress,

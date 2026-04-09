@@ -10,13 +10,15 @@ interface LibraryContextValue {
   status: () => Status;
   error: () => string;
   loadRoot: (path: string) => Promise<void>;
+  addSource: (path: string, name?: string) => Promise<void>;
+  refreshSources: () => Promise<void>;
   getSource: (id: string) => Source | undefined;
   categories: () => Category[];
   libraryEntries: () => LibraryEntry[];
   isInLibrary: (mangaId: string) => boolean;
   refreshCategories: () => Promise<void>;
   refreshLibrary: () => Promise<void>;
-  /** Resolves once the provider's initial onMount load (root directory,
+  /** Resolves once the provider's initial onMount load (sources,
    *  categories, library entries) has finished. Views that depend on this
    *  data should `await initialLoad()` before calling `view.ready()`. */
   initialLoad: () => Promise<void>;
@@ -31,9 +33,10 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   const [categories, setCategories] = createSignal<Category[]>([]);
   const [libraryEntries, setLibraryEntries] = createSignal<LibraryEntry[]>([]);
 
-  // Promise consumers can await — resolves when the initial root + categories
-  // + library load completes. Held in a closure so multiple awaiters share
-  // the same resolution rather than each kicking off duplicate work.
+  // Promise consumers can await — resolves when the initial sources +
+  // categories + library load completes. Held in a closure so multiple
+  // awaiters share the same resolution rather than each kicking off
+  // duplicate work.
   let resolveInitial!: () => void;
   const initialLoadPromise = new Promise<void>((resolve) => {
     resolveInitial = resolve;
@@ -41,8 +44,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   onMount(async () => {
     try {
-      const root = await invoke<string | null>("get_root_directory");
-      if (root) await loadRoot(root);
+      await refreshSources();
       await refreshCategories();
       await refreshLibrary();
     } finally {
@@ -50,29 +52,27 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     }
   });
 
+  async function refreshSources() {
+    const srcs = await invoke<Source[]>("list_sources", { includeHidden: false });
+    setSources(srcs);
+  }
+
   async function loadRoot(path: string) {
     setStatus("loading");
     setError("");
     try {
       await invoke<void>("set_root_directory", { path });
-
-      // Transitional: enumerate subdirs of the picked root and add_source each.
-      // add_source is idempotent — re-picking the same root is a no-op for
-      // already-known sources. 4.3 replaces this with a per-source Add flow.
-      const subdirs = await invoke<string[]>("list_subdirs", { path });
-      for (const sub of subdirs) {
-        try { await invoke<Source>("add_source", { path: sub }); }
-        catch (e) { console.warn("add_source failed for", sub, e); }
-      }
-
-      const srcs = await invoke<Source[]>("list_sources", { includeHidden: false });
-      setSources(srcs);
-      getCurrentWindow().setTitle("Ace Manga Reader");
+      await refreshSources();
       setStatus("idle");
     } catch (e) {
       setError(String(e));
       setStatus("error");
     }
+  }
+
+  async function addSource(path: string, name?: string) {
+    await invoke<Source>("add_source", { path, name: name ?? null });
+    await refreshSources();
   }
 
   function getSource(id: string) {
@@ -103,7 +103,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   return (
     <LibraryContext.Provider value={{
-      sources, status, error, loadRoot, getSource,
+      sources, status, error, loadRoot, addSource, refreshSources, getSource,
       categories, libraryEntries, isInLibrary, refreshCategories, refreshLibrary,
       initialLoad: () => initialLoadPromise,
     }}>
