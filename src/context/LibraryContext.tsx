@@ -55,6 +55,16 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     setError("");
     try {
       await invoke<void>("set_root_directory", { path });
+
+      // Transitional: enumerate subdirs of the picked root and add_source each.
+      // add_source is idempotent — re-picking the same root is a no-op for
+      // already-known sources. 4.3 replaces this with a per-source Add flow.
+      const subdirs = await invoke<string[]>("list_subdirs", { path });
+      for (const sub of subdirs) {
+        try { await invoke<Source>("add_source", { path: sub }); }
+        catch (e) { console.warn("add_source failed for", sub, e); }
+      }
+
       const srcs = await invoke<Source[]>("list_sources", { includeHidden: false });
       setSources(srcs);
       getCurrentWindow().setTitle("Ace Manga Reader");

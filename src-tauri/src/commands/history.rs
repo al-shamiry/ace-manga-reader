@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 
@@ -55,4 +56,15 @@ pub fn delete_history_entry(chapter_id: String, app: AppHandle) -> Result<(), St
 #[tauri::command]
 pub fn clear_history(app: AppHandle) -> Result<(), String> {
     save(&app, &HistoryData::default())
+}
+
+/// Remove history entries for the given manga IDs. Called from `remove_source`.
+pub fn prune_mangas(app: &AppHandle, manga_ids: &[String]) -> Result<(), String> {
+    if manga_ids.is_empty() {
+        return Ok(());
+    }
+    let mut data = load(app);
+    let id_set: HashSet<&str> = manga_ids.iter().map(|s| s.as_str()).collect();
+    data.entries.retain(|e| !id_set.contains(e.manga_id.as_str()));
+    save(app, &data)
 }

@@ -284,3 +284,229 @@ pub fn scan_directory(
 
     Ok(enriched)
 }
+
+// ── Source CRUD helpers ───────────────────────────────────────────────────────
+
+fn build_source_from_cache(
+    db: &crate::models::manga_db::MangaDb,
+    id: &str,
+) -> Result<Source, String> {
+    let meta = db.sources.get(id).ok_or_else(|| format!("source '{}' not found", id))?;
+    let manga_count = db.mangas.values().filter(|m| m.source_id == id).count();
+    Ok(Source {
+        id: id.to_string(),
+        name: meta.name.clone(),
+        path: meta.source_path.clone(),
+        manga_count,
+        hidden: meta.hidden,
+        scanned_at: meta.scanned_at,
+        sort_order: meta.sort_order,
+    })
+}
+
+pub(crate) fn add_source_internal(
+    app: &tauri::AppHandle,
+    dir: &Path,
+    name: Option<String>,
+) -> Result<(), String> {
+    if !dir.is_dir() {
+        return Ok(());
+    }
+    let normalized = normalize(dir);
+    let id = path_id(dir);
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    {
+        let guard = cache.lock().map_err(|e| e.to_string())?;
+        if guard.db.sources.contains_key(&id) {
+            return Ok(());
+        }
+    }
+    let resolved_name = name
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| {
+            dir.file_name().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string()
+        });
+    manga_db::mutate(&cache, app, |db| {
+        let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
+        db.sources.insert(id.clone(), SourceMeta {
+            source_path: normalized,
+            scanned_at: 0,
+            name: resolved_name,
+            added_at: now_epoch(),
+            hidden: false,
+            sort_order: next_order,
+        });
+    })
+}
+
+// ── Source CRUD commands ──────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn add_source(
+    path: String,
+    name: Option<String>,
+    app_handle: tauri::AppHandle,
+) -> Result<Source, String> {
+    let dir = Path::new(&path);
+    if !dir.is_dir() {
+        return Err(format!("'{}' is not a directory", path));
+    }
+
+    let id = path_id(dir);
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+
+    {
+        let guard = cache.lock().map_err(|e| e.to_string())?;
+        if guard.db.sources.contains_key(&id) {
+            return build_source_from_cache(&guard.db, &id);
+        }
+    }
+
+    let normalized = normalize(dir);
+    let resolved_name = name
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| {
+            dir.file_name().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string()
+        });
+
+    manga_db::mutate(&cache, &app_handle, |db| {
+        let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
+        db.sources.insert(id.clone(), SourceMeta {
+            source_path: normalized,
+            scanned_at: 0,
+            name: resolved_name,
+            added_at: now_epoch(),
+            hidden: false,
+            sort_order: next_order,
+        });
+    })?;
+
+    let guard = cache.lock().map_err(|e| e.to_string())?;
+    build_source_from_cache(&guard.db, &id)
+}
+
+#[tauri::command]
+pub fn remove_source(
+    source_id: String,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let (manga_ids, chapter_ids): (Vec<String>, Vec<String>) = {
+        let cache = app_handle.state::<Mutex<MangaDbCache>>();
+        let guard = cache.lock().map_err(|e| e.to_string())?;
+        let mut mids = Vec::new();
+        let mut cids = Vec::new();
+        for (id, m) in &guard.db.mangas {
+            if m.source_id == source_id {
+                mids.push(id.clone());
+                cids.extend(m.chapters.keys().cloned());
+            }
+        }
+        (mids, cids)
+    };
+
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app_handle, |db| {
+        db.sources.remove(&source_id);
+        db.mangas.retain(|_, m| m.source_id != source_id);
+    })?;
+
+    crate::commands::history::prune_mangas(&app_handle, &manga_ids)?;
+
+    if let Err(e) = cleanup_source_cache(&app_handle, &manga_ids, &chapter_ids) {
+        eprintln!("cleanup_source_cache failed: {}", e);
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn rename_source(
+    source_id: String,
+    name: String,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app_handle, |db| {
+        if let Some(meta) = db.sources.get_mut(&source_id) {
+            meta.name = name;
+        }
+    })
+}
+
+#[tauri::command]
+pub fn reorder_sources(
+    ordered_ids: Vec<String>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app_handle, |db| {
+        for (i, id) in ordered_ids.iter().enumerate() {
+            if let Some(meta) = db.sources.get_mut(id) {
+                meta.sort_order = i as u32;
+            }
+        }
+    })
+}
+
+#[tauri::command]
+pub fn set_source_hidden(
+    source_id: String,
+    hidden: bool,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app_handle, |db| {
+        if let Some(meta) = db.sources.get_mut(&source_id) {
+            meta.hidden = hidden;
+        }
+    })
+}
+
+fn cleanup_source_cache(
+    app: &tauri::AppHandle,
+    manga_ids: &[String],
+    chapter_ids: &[String],
+) -> Result<(), String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let covers_dir = data_dir.join("cache").join("covers");
+    let pages_dir = data_dir.join("cache").join("pages");
+
+    if covers_dir.is_dir() {
+        let id_set: HashSet<&str> = manga_ids.iter().map(|s| s.as_str()).collect();
+        if let Ok(rd) = fs::read_dir(&covers_dir) {
+            for entry in rd.filter_map(|e| e.ok()) {
+                if let Some(stem) = entry.path().file_stem().and_then(|s| s.to_str()) {
+                    if id_set.contains(stem) {
+                        let _ = fs::remove_file(entry.path());
+                    }
+                }
+            }
+        }
+    }
+
+    for cid in chapter_ids {
+        let dir = pages_dir.join(cid);
+        if dir.is_dir() {
+            let _ = fs::remove_dir_all(&dir);
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn list_subdirs(path: String) -> Result<Vec<String>, String> {
+    let dir = Path::new(&path);
+    if !dir.is_dir() {
+        return Err(format!("'{}' is not a directory", path));
+    }
+    let mut subdirs: Vec<String> = fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .map(|p| normalize(&p))
+        .collect();
+    subdirs.sort();
+    Ok(subdirs)
+}
