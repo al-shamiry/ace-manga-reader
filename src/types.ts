@@ -27,6 +27,9 @@ export interface Source {
   name: string;
   path: string;
   manga_count: number;
+  hidden: boolean;
+  scanned_at: number;
+  sort_order: number;
 }
 
 export interface Category {

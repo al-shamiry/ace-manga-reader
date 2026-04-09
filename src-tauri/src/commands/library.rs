@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -22,6 +22,9 @@ pub struct Source {
     name: String,
     path: String,
     manga_count: usize,
+    hidden: bool,
+    scanned_at: u64,
+    sort_order: u32,
 }
 
 /// Find the cover from explicit cover files or first issue's first image.
@@ -129,29 +132,33 @@ fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Manga> {
 }
 
 #[tauri::command]
-pub fn list_sources(path: String) -> Result<Vec<Source>, String> {
-    let dir = Path::new(&path);
-    if !dir.is_dir() {
-        return Err(format!("'{}' is not a directory", path));
+pub fn list_sources(
+    include_hidden: Option<bool>,
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<Source>, String> {
+    let include_hidden = include_hidden.unwrap_or(false);
+    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    let guard = cache.lock().map_err(|e| e.to_string())?;
+
+    let mut counts: HashMap<&str, usize> = HashMap::new();
+    for m in guard.db.mangas.values() {
+        *counts.entry(m.source_id.as_str()).or_default() += 1;
     }
-    let mut sources: Vec<Source> = fs::read_dir(dir)
-        .map_err(|e| e.to_string())?
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| p.is_dir())
-        .map(|p| {
-            let manga_count = fs::read_dir(&p)
-                .map(|rd| rd.filter_map(|e| e.ok()).filter(|e| e.path().is_dir()).count())
-                .unwrap_or(0);
-            Source {
-                id: path_id(&p),
-                name: p.file_name().unwrap_or_default().to_string_lossy().to_string(),
-                path: normalize(&p),
-                manga_count,
-            }
+
+    let mut sources: Vec<Source> = guard.db.sources.iter()
+        .filter(|(_, meta)| include_hidden || !meta.hidden)
+        .map(|(id, meta)| Source {
+            id: id.clone(),
+            name: meta.name.clone(),
+            path: meta.source_path.clone(),
+            manga_count: counts.get(id.as_str()).copied().unwrap_or(0),
+            hidden: meta.hidden,
+            scanned_at: meta.scanned_at,
+            sort_order: meta.sort_order,
         })
         .collect();
-    sources.sort_by(|a, b| natural_cmp(&a.name, &b.name));
+
+    sources.sort_by_key(|s| s.sort_order);
     Ok(sources)
 }
 

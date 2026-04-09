@@ -55,7 +55,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     setError("");
     try {
       await invoke<void>("set_root_directory", { path });
-      const srcs = await invoke<Source[]>("list_sources", { path });
+      const srcs = await invoke<Source[]>("list_sources", { includeHidden: false });
       setSources(srcs);
       getCurrentWindow().setTitle("Ace Manga Reader");
       setStatus("idle");
