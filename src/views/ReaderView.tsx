@@ -186,14 +186,19 @@ export function ReaderView() {
       chapterPath: s.chapter.path,
       fileType: s.chapter.file_type,
     }).then((result) => {
+      // Compute the initial page once from the chapter load, so webtoon
+      // scroll-to-initial doesn't have to re-derive it later from a possibly-
+      // stale pageIndex() reading inside a MutationObserver callback.
+      let target = 0;
+      if (s.initialPage === "last") target = result.length - 1;
+      else if (s.initialPage !== undefined) target = s.initialPage;
+      else if (s.chapter.status.type === "ongoing") target = Math.min(s.chapter.status.page, result.length - 1);
+
       setPages(result);
-      if (s.initialPage === "last") {
-        setPageIndex(result.length - 1);
-      } else if (s.initialPage !== undefined) {
-        setPageIndex(s.initialPage);
-      } else if (s.chapter.status.type === "ongoing") {
-        setPageIndex(Math.min(s.chapter.status.page, result.length - 1));
-      }
+      setPageIndex(target);
+
+      // Webtoon scroll-to-initial is handled in initWebtoonRef on mount,
+      // so it also runs when cycling modes back into webtoon.
       // Record this chapter open in history (fire-and-forget). Backend overwrites last_read_at.
       invoke("record_history", {
         entry: {
@@ -381,26 +386,44 @@ export function ReaderView() {
       },
       { root: el, rootMargin: "-50% 0px", threshold: 0 }
     );
-    let scrolledToInitial = false;
     const mo = new MutationObserver(() => {
       el.querySelectorAll("[data-page]").forEach((img) => observer.observe(img));
-      if (!scrolledToInitial) {
-        const idx = pageIndex();
-        const target = el.querySelector(`[data-page="${idx}"]`) as HTMLImageElement | null;
-        if (target) {
-          if (state()?.initialPage === "last") {
-            const scrollToEnd = () => { el.scrollTop = el.scrollHeight; };
-            if (target.complete) scrollToEnd();
-            else target.addEventListener("load", scrollToEnd, { once: true });
-          } else {
-            target.scrollIntoView({ behavior: "instant" });
-          }
-          scrolledToInitial = true;
-        }
-      }
     });
     mo.observe(el, { childList: true, subtree: true });
     onCleanup(() => { observer.disconnect(); mo.disconnect(); });
+
+    // Scroll to the current page on mount. This covers both fresh chapter
+    // loads (target derived from saved progress) and cycling modes back into
+    // webtoon (target is whatever page the user was on). Wait for images
+    // above the target to actually load — otherwise scrollIntoView lands on
+    // the wrong offset because earlier pages are still 0-height.
+    const target = pageIndex();
+    const isLast = state()?.initialPage === "last";
+    if (target > 0 || isLast) {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const imgs = Array.from(el.querySelectorAll("img[data-page]")) as HTMLImageElement[];
+        const needed = isLast ? imgs : imgs.slice(0, target + 1);
+        const waits = needed.map((img) =>
+          img.complete && img.naturalHeight > 0
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                const done = () => resolve();
+                img.addEventListener("load", done, { once: true });
+                img.addEventListener("error", done, { once: true });
+              })
+        );
+        Promise.all(waits).then(() => {
+          // Bail if the container has been torn down while we waited.
+          if (webtoonContainer !== el) return;
+          if (isLast) {
+            el.scrollTop = el.scrollHeight;
+            return;
+          }
+          const targetEl = el.querySelector(`[data-page="${target}"]`) as HTMLImageElement | null;
+          if (targetEl) targetEl.scrollIntoView({ behavior: "instant" });
+        });
+      }));
+    }
   }
 
   function tapScrollUp() { webtoonScroll("up"); }
