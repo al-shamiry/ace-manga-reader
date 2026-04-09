@@ -232,17 +232,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.source-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 160px);
-  grid-auto-rows: 130px;
-  justify-content: space-evenly;
-  gap: 2rem 1rem;
-  padding: 1rem;
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
 
 /* Side navigation */
 .side-nav {

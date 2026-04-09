@@ -1,11 +1,13 @@
-import { Show, onMount } from "solid-js";
+import { For, Show, createMemo, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Folder } from "lucide-solid";
+import { Eye, Plus, RefreshCw } from "lucide-solid";
 import { open } from "@tauri-apps/plugin-dialog";
 import { EmptyState } from "../components/EmptyState";
-import { SourceGrid } from "../components/SourceGrid";
+import { SourceRow } from "../components/SourceRow";
 import {
   Toolbar,
+  ToolbarActions,
+  ToolbarButton,
   ToolbarInlineButton,
   ToolbarTitle,
 } from "../components/ui/toolbar";
@@ -16,39 +18,52 @@ import type { Source } from "../types";
 export function SourcesView() {
   const { sources, status, error, loadRoot, initialLoad } = useLibrary();
   const view = useViewLoading();
-  // Mark busy synchronously so the overlay paints on the first frame.
   const loadToken = view.busy();
   const navigate = useNavigate();
 
-  // SourcesView reads everything from LibraryContext — wait on its initial
-  // load and then declare ready. No local async work to coordinate.
   onMount(async () => {
     await initialLoad();
     view.ready(loadToken);
   });
 
+  const sortedSources = createMemo(() =>
+    [...sources()].sort((a, b) => a.sort_order - b.sort_order)
+  );
+
   function openSource(source: Source) {
     navigate(`/source/${source.id}`);
   }
 
-  // Open the native folder picker. Tauri's dialog supports paste-into-
-  // address-bar for power-users, so we no longer need a separate text
-  // input in the toolbar — keeps the chrome quiet and on-family.
-  async function pickRoot() {
+  async function handleAddSource() {
     const selected = await open({ directory: true, multiple: false });
     if (typeof selected === "string" && selected) {
       await loadRoot(selected);
     }
   }
 
+  function handleRescanAll() {
+    console.log("TODO 4.5");
+  }
+
+  function handleToggleHidden() {
+    console.log("TODO 4.7");
+  }
+
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
       <Toolbar>
         <ToolbarTitle class="flex-1">Sources</ToolbarTitle>
-        <ToolbarInlineButton onClick={pickRoot} title="Choose library folder">
-          <Folder size={14} />
-          {sources().length > 0 ? "Change folder" : "Choose folder"}
-        </ToolbarInlineButton>
+        <ToolbarActions>
+          <ToolbarInlineButton onClick={handleAddSource}>
+            <Plus size={14} /> Add source
+          </ToolbarInlineButton>
+          <ToolbarButton onClick={handleRescanAll} title="Re-scan all sources">
+            <RefreshCw size={16} />
+          </ToolbarButton>
+          <ToolbarButton onClick={handleToggleHidden} title="Show hidden sources">
+            <Eye size={16} />
+          </ToolbarButton>
+        </ToolbarActions>
       </Toolbar>
 
       <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -63,7 +78,7 @@ export function SourcesView() {
             eyebrow="Sources"
             title="No source folders here."
             description="Ace looks one level inside the folder you picked and treats each subfolder as a source. Pick a parent that contains your source folders, or add a source folder to the current path."
-            action={{ label: "Choose library folder", onClick: pickRoot }}
+            action={{ label: "Choose library folder", onClick: handleAddSource }}
           >
             <div class="mt-6 pt-6 border-t border-ink-800/80 w-full max-w-md">
               <p class="text-[0.7rem] uppercase tracking-wider text-ink-600 font-medium mb-3">
@@ -82,7 +97,22 @@ export function SourcesView() {
           </EmptyState>
         </Show>
         <Show when={sources().length > 0}>
-          <SourceGrid sources={sources()} onSelect={openSource} />
+          <div class="flex-1 overflow-y-auto">
+            <div class="max-w-3xl mx-auto px-4 py-2">
+              <For each={sortedSources()}>
+                {(source) => (
+                  <SourceRow
+                    source={source}
+                    onClick={() => openSource(source)}
+                    onRescan={() => console.log("TODO 4.5:", source.id)}
+                    onRename={() => console.log("TODO 4.3:", source.id)}
+                    onHide={() => console.log("TODO 4.7:", source.id)}
+                    onRemove={() => console.log("TODO 4.4:", source.id)}
+                  />
+                )}
+              </For>
+            </div>
+          </div>
         </Show>
       </div>
     </div>
