@@ -115,19 +115,20 @@ export function SourceRow(props: SourceRowProps) {
           </p>
         </div>
         <Show when={!isRemoving()}>
-          <Show when={props.scanStatus === "scanning"}>
-            <div class="flex h-8 w-8 shrink-0 items-center justify-center">
-              <RefreshCw size={16} class="text-jade-400 animate-spin" />
-            </div>
-          </Show>
-          <Show when={props.scanStatus === "done"}>
-            <div class="flex h-8 w-8 shrink-0 items-center justify-center">
-              <Check size={16} class="text-jade-400" />
-            </div>
-          </Show>
-          <Show when={props.scanStatus === "error"}>
-            <div class="flex h-8 w-8 shrink-0 items-center justify-center">
-              <AlertCircle size={16} class="text-red-400" />
+          {/* Scan-status badge — fades in over the overflow trigger area */}
+          <Show when={props.scanStatus}>
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center transition-opacity duration-200"
+              classList={{ "animate-fade-in": !!props.scanStatus }}
+            >
+              <Show when={props.scanStatus === "scanning"}>
+                <RefreshCw size={16} class="text-jade-400 animate-spin" />
+              </Show>
+              <Show when={props.scanStatus === "done"}>
+                <Check size={16} class="text-jade-400" />
+              </Show>
+              <Show when={props.scanStatus === "error"}>
+                <AlertCircle size={16} class="text-red-400" />
+              </Show>
             </div>
           </Show>
           <Show when={!props.scanStatus}>
