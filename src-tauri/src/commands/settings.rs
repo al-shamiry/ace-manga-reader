@@ -8,8 +8,12 @@ use crate::models::category::{Category, DEFAULT_CATEGORY_ID};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
+    #[serde(default)]
     pub fit_mode: Option<String>,
+    #[serde(default)]
     pub reading_mode: Option<String>,
+    #[serde(default)]
+    pub webtoon_padding: Option<u8>,
 }
 
 impl Default for Settings {
@@ -17,6 +21,7 @@ impl Default for Settings {
         Self {
             fit_mode: Some("fit-screen".to_string()),
             reading_mode: Some("paged-rtl".to_string()),
+            webtoon_padding: None,
         }
     }
 }
@@ -47,6 +52,7 @@ pub fn get_settings(app: tauri::AppHandle, manga_id: Option<String>) -> Settings
     let global = Settings {
         fit_mode: config.fit_mode,
         reading_mode: config.reading_mode,
+        webtoon_padding: config.webtoon_padding,
     };
 
     match manga_id {
@@ -56,6 +62,7 @@ pub fn get_settings(app: tauri::AppHandle, manga_id: Option<String>) -> Settings
                 Some(m) => Settings {
                     fit_mode: m.fit_mode.or(global.fit_mode),
                     reading_mode: m.reading_mode.or(global.reading_mode),
+                    webtoon_padding: m.webtoon_padding.or(global.webtoon_padding),
                 },
                 None => global,
             }
@@ -71,11 +78,29 @@ pub fn set_settings(
     manga_id: Option<String>,
 ) -> Result<(), String> {
     match manga_id {
-        Some(id) => save_settings(&manga_settings_path(&app, &id), &settings),
+        Some(id) => {
+            // Merge patch with existing manga settings so partial updates
+            // don't clobber other fields. Missing file → start from all-None.
+            let path = manga_settings_path(&app, &id);
+            let existing = load_settings(&path).unwrap_or(Settings {
+                fit_mode: None,
+                reading_mode: None,
+                webtoon_padding: None,
+            });
+            let merged = Settings {
+                fit_mode: settings.fit_mode.or(existing.fit_mode),
+                reading_mode: settings.reading_mode.or(existing.reading_mode),
+                webtoon_padding: settings.webtoon_padding.or(existing.webtoon_padding),
+            };
+            save_settings(&path, &merged)
+        }
         None => {
+            // Merge patch with existing global config so partial updates
+            // don't clobber other reader fields.
             let mut config = load_config(&app);
-            config.fit_mode = settings.fit_mode;
-            config.reading_mode = settings.reading_mode;
+            if settings.fit_mode.is_some() { config.fit_mode = settings.fit_mode; }
+            if settings.reading_mode.is_some() { config.reading_mode = settings.reading_mode; }
+            if settings.webtoon_padding.is_some() { config.webtoon_padding = settings.webtoon_padding; }
             save_config(&app, &config)
         }
     }
@@ -186,6 +211,8 @@ pub struct Config {
     pub fit_mode: Option<String>,
     #[serde(default)]
     pub reading_mode: Option<String>,
+    #[serde(default)]
+    pub webtoon_padding: Option<u8>,
     #[serde(default)]
     pub library_filters: LibraryFilters,
     #[serde(default)]

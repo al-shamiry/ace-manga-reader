@@ -79,6 +79,7 @@ export type ReadingMode = "paged-ltr" | "paged-rtl" | "paged-vertical" | "webtoo
 export interface Settings {
   fit_mode?: FitMode;
   reading_mode?: ReadingMode;
+  webtoon_padding?: number;
 }
 
 export interface HistoryEntry {

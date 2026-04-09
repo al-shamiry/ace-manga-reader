@@ -1,9 +1,15 @@
 import { createSignal, createEffect, createMemo, onMount, onCleanup, Show, Index } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronFirst, ChevronLast, Maximize, Maximize2, Minimize2, MoveHorizontal, MoveVertical, ScanEye, Fullscreen, BookOpen, BookOpenCheck, ArrowDownUp, Scroll } from "lucide-solid";
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronFirst, ChevronLast, Maximize, Maximize2, Minimize2, MoveHorizontal, MoveVertical, ScanEye, Fullscreen, BookOpen, BookOpenCheck, ArrowDownUp, Scroll, AlignCenter } from "lucide-solid";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "../components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+} from "../components/ui/dropdown-menu";
+import { Slider, SliderTrack, SliderFill, SliderThumb } from "../components/ui/slider";
 import type { Chapter, Manga, FitMode, ReadingMode, Settings } from "../types";
 
 const FIT_MODES: FitMode[] = ["fit-screen", "fit-width", "fit-height", "original", "stretch"];
@@ -53,6 +59,7 @@ export function ReaderView() {
   const [fitMode, setFitMode] = createSignal<FitMode>("fit-screen");
   const [readingMode, setReadingMode] = createSignal<ReadingMode>("paged-ltr");
   const [isFullscreen, setIsFullscreen] = createSignal(false);
+  const [webtoonPadding, setWebtoonPadding] = createSignal(0);
 
   // Load saved settings (manga-specific, with global fallback)
   onMount(() => {
@@ -61,6 +68,7 @@ export function ReaderView() {
     invoke<Settings>("get_settings", { mangaId: s.manga.id }).then((settings) => {
       if (settings.fit_mode) setFitMode(settings.fit_mode);
       if (settings.reading_mode) setReadingMode(settings.reading_mode);
+      if (settings.webtoon_padding !== undefined) setWebtoonPadding(settings.webtoon_padding);
     }).catch(() => {});
   });
 
@@ -85,6 +93,13 @@ export function ReaderView() {
     setReadingMode(next);
     saveSetting({ reading_mode: next });
   }
+
+  function nudgeWebtoonPadding(delta: number) {
+    const next = Math.max(0, Math.min(25, webtoonPadding() + delta));
+    setWebtoonPadding(next);
+    saveSetting({ webtoon_padding: next });
+  }
+
 
   const isPaged = () => readingMode() !== "webtoon";
   const isVertical = () => readingMode() === "paged-vertical";
@@ -284,9 +299,17 @@ export function ReaderView() {
       if (e.key === "ArrowUp" || e.key === "ArrowLeft") stopContinuousScroll(-1);
       if (e.key === "ArrowDown" || e.key === "ArrowRight") stopContinuousScroll(1);
     }
+    function onPaddingWheel(e: WheelEvent) {
+      if (!e.ctrlKey || e.altKey || e.metaKey) return;
+      if (readingMode() !== "webtoon") return;
+      if (e.deltaY === 0) return;
+      e.preventDefault();
+      nudgeWebtoonPadding(e.deltaY < 0 ? -1 : 1);
+    }
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
-    onCleanup(() => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); cancelAnimationFrame(scrollRaf); });
+    window.addEventListener("wheel", onPaddingWheel, { passive: false });
+    onCleanup(() => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("wheel", onPaddingWheel); cancelAnimationFrame(scrollRaf); });
   });
 
   async function goChapter(chapter: Chapter | undefined, initialPage: number | "last") {
@@ -457,6 +480,34 @@ export function ReaderView() {
                 <span class="text-xs">{FIT_LABELS[fitMode()]}</span>
               </Button>
             </Show>
+            <Show when={!isPaged()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger as={Button} variant="ghost" title="Side padding (Ctrl+scroll)">
+                  <AlignCenter size={14} />
+                  <span class="text-xs">{webtoonPadding()}%</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent class="w-52 p-3">
+                  <div class="mb-2 text-xs font-semibold text-ink-300">Side padding</div>
+                  <div class="flex items-center gap-2">
+                    <span class="shrink-0 text-[0.7rem] text-muted-foreground">0%</span>
+                    <Slider
+                      minValue={0}
+                      maxValue={25}
+                      step={1}
+                      value={[webtoonPadding()]}
+                      onChange={(v) => { setWebtoonPadding(v[0]); saveSetting({ webtoon_padding: v[0] }); }}
+                      class="flex-1"
+                    >
+                      <SliderTrack>
+                        <SliderFill />
+                        <SliderThumb />
+                      </SliderTrack>
+                    </Slider>
+                    <span class="shrink-0 text-[0.7rem] text-muted-foreground">25%</span>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </Show>
             <Button variant="ghost" iconOnly onClick={toggleFullscreen} title="Fullscreen (F11)">
               {isFullscreen() ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </Button>
@@ -489,7 +540,7 @@ export function ReaderView() {
                   <div class="w-full h-1/3" />
                   <div class="w-full h-1/3 pointer-events-auto cursor-down" onClick={tapScrollDown} />
                 </div>
-                <div class="flex flex-col items-center">
+                <div class="flex flex-col items-center" style={{ "padding-left": `${webtoonPadding()}%`, "padding-right": `${webtoonPadding()}%` }}>
                   <Index each={pages()}>
                     {(page, idx) => (
                       <img
