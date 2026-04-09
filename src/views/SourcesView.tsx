@@ -16,7 +16,7 @@ import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, loadRoot, initialLoad } = useLibrary();
+  const { sources, status, error, addSource, initialLoad } = useLibrary();
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ export function SourcesView() {
   async function handleAddSource() {
     const selected = await open({ directory: true, multiple: false });
     if (typeof selected === "string" && selected) {
-      await loadRoot(selected);
+      await addSource(selected);
     }
   }
 
@@ -76,22 +76,21 @@ export function SourcesView() {
         <Show when={status() === "idle" && sources().length === 0}>
           <EmptyState
             eyebrow="Sources"
-            title="No source folders here."
-            description="Ace looks one level inside the folder you picked and treats each subfolder as a source. Pick a parent that contains your source folders, or add a source folder to the current path."
-            action={{ label: "Choose library folder", onClick: handleAddSource }}
+            title="No source folders yet."
+            description="A source is a folder that contains manga. Pick a folder and Ace will treat each subfolder inside it as a manga title."
+            action={{ label: "Add source folder", onClick: handleAddSource }}
           >
             <div class="mt-6 pt-6 border-t border-ink-800/80 w-full max-w-md">
               <p class="text-[0.7rem] uppercase tracking-wider text-ink-600 font-medium mb-3">
                 Expected layout
               </p>
               <pre class="text-xs text-ink-500 leading-relaxed font-mono">
-{`root/               ← the folder you are going to pick
-  source/           ← each subfolder is a source (a collection of manga)
-    Manga Title/    ← the manga
-      Chapter 01/   ← folders that contain images (pages)
-      Chapter 02/
-    Another Manga/
-      vol01.cbz     ← you can also have .cbz files instead of folders`}
+{`source/           ← the folder you pick (a collection of manga)
+  Manga Title/    ← the manga
+    Chapter 01/   ← folders that contain images (pages)
+    Chapter 02/
+  Another Manga/
+    vol01.cbz     ← you can also have .cbz files instead of folders`}
               </pre>
             </div>
           </EmptyState>

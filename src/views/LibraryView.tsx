@@ -17,7 +17,7 @@ import type { Tab } from "../components/TabBar";
 import type { Chapter, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function LibraryView() {
-  const { categories, libraryEntries, sources, loadRoot, refreshCategories, refreshLibrary, initialLoad } = useLibrary();
+  const { categories, libraryEntries, sources, addSource, refreshCategories, refreshLibrary, initialLoad } = useLibrary();
   const view = useViewLoading();
   // Mark busy synchronously so the overlay paints on the first frame.
   const loadToken = view.busy();
@@ -355,7 +355,7 @@ export function LibraryView() {
   async function handleChooseFolder() {
     const selected = await open({ directory: true, multiple: false });
     if (typeof selected === "string" && selected) {
-      await loadRoot(selected);
+      await addSource(selected);
       navigate("/sources");
     }
   }
