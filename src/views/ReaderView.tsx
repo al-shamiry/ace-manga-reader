@@ -94,10 +94,37 @@ export function ReaderView() {
     saveSetting({ reading_mode: next });
   }
 
+  // Run `apply` while keeping the user's current page + intra-page position
+  // visually stable across a webtoon layout change (e.g. side padding).
+  // Images are `w-full h-auto`, so changing padding resizes every page and
+  // invalidates absolute scrollTop — we restore by ratio within the page.
+  function preserveWebtoonScroll(apply: () => void) {
+    const el = webtoonContainer;
+    if (!el || readingMode() !== "webtoon") { apply(); return; }
+    const idx = pageIndex();
+    const pageEl = el.querySelector(`[data-page="${idx}"]`) as HTMLElement | null;
+    if (!pageEl) { apply(); return; }
+    const prevHeight = pageEl.offsetHeight || 1;
+    const offsetWithin = el.scrollTop - pageEl.offsetTop;
+    const ratio = offsetWithin / prevHeight;
+    apply();
+    requestAnimationFrame(() => {
+      const newHeight = pageEl.offsetHeight || 1;
+      el.scrollTop = pageEl.offsetTop + ratio * newHeight;
+    });
+  }
+
+  function setWebtoonPaddingPreserving(next: number) {
+    if (next === webtoonPadding()) return;
+    preserveWebtoonScroll(() => {
+      setWebtoonPadding(next);
+      saveSetting({ webtoon_padding: next });
+    });
+  }
+
   function nudgeWebtoonPadding(delta: number) {
     const next = Math.max(0, Math.min(25, webtoonPadding() + delta));
-    setWebtoonPadding(next);
-    saveSetting({ webtoon_padding: next });
+    setWebtoonPaddingPreserving(next);
   }
 
 
@@ -518,7 +545,7 @@ export function ReaderView() {
                       maxValue={25}
                       step={1}
                       value={[webtoonPadding()]}
-                      onChange={(v) => { setWebtoonPadding(v[0]); saveSetting({ webtoon_padding: v[0] }); }}
+                      onChange={(v) => setWebtoonPaddingPreserving(v[0])}
                       class="flex-1"
                     >
                       <SliderTrack>
