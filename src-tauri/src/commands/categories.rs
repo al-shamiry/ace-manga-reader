@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Mutex;
 
 use tauri::Manager;
@@ -82,8 +83,13 @@ pub fn get_library(app: tauri::AppHandle) -> Vec<LibraryEntry> {
         Ok(g) => g,
         Err(_) => return Vec::new(),
     };
+    let hidden: HashSet<&str> = guard.db.sources.iter()
+        .filter(|(_, s)| s.hidden)
+        .map(|(id, _)| id.as_str())
+        .collect();
+
     guard.db.mangas.iter()
-        .filter(|(_, m)| m.added_at.is_some())
+        .filter(|(_, m)| m.added_at.is_some() && !hidden.contains(m.source_id.as_str()))
         .map(|(id, m)| LibraryEntry {
             manga_id: id.clone(),
             title: m.title.clone(),

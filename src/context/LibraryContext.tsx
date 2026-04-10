@@ -13,6 +13,7 @@ interface LibraryContextValue {
   loadRoot: (path: string) => Promise<void>;
   addSource: (path: string, name?: string) => Promise<void>;
   removeSource: (sourceId: string) => Promise<void>;
+  setSourceHidden: (sourceId: string, hidden: boolean) => Promise<void>;
   refreshSources: () => Promise<void>;
   getSource: (id: string) => Source | undefined;
   scanStatus: () => Record<string, ScanStatus>;
@@ -59,7 +60,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   });
 
   async function refreshSources() {
-    const srcs = await invoke<Source[]>("list_sources", { includeHidden: false });
+    const srcs = await invoke<Source[]>("list_sources", { includeHidden: true });
     setSources(srcs);
   }
 
@@ -122,6 +123,12 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     }
   }
 
+  async function setSourceHidden(sourceId: string, hidden: boolean) {
+    await invoke("set_source_hidden", { sourceId, hidden });
+    await refreshSources();
+    await refreshLibrary();
+  }
+
   function getSource(id: string) {
     return sources().find((s) => s.id === id);
   }
@@ -150,7 +157,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   return (
     <LibraryContext.Provider value={{
-      sources, status, error, loadRoot, addSource, removeSource, refreshSources, getSource,
+      sources, status, error, loadRoot, addSource, removeSource, setSourceHidden, refreshSources, getSource,
       scanStatus, scanSource, scanAllSources,
       categories, libraryEntries, isInLibrary, refreshCategories, refreshLibrary,
       initialLoad: () => initialLoadPromise,

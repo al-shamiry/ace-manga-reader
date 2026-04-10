@@ -1,5 +1,5 @@
 import { Show, createEffect, on } from "solid-js";
-import { AlertCircle, Check, EllipsisVertical, EyeOff, Folder, GripVertical, Pencil, RefreshCw, Trash2 } from "lucide-solid";
+import { AlertCircle, Check, EllipsisVertical, Eye, EyeOff, Folder, GripVertical, Pencil, RefreshCw, Trash2 } from "lucide-solid";
 import type { ScanStatus } from "../context/LibraryContext";
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ interface RemoveState {
 
 interface SourceRowProps {
   source: Source;
+  hidden?: boolean;
   onClick: () => void;
   onRescan: () => void;
   onRename: () => void;
@@ -45,6 +46,7 @@ interface SourceRowProps {
 
 export function SourceRow(props: SourceRowProps) {
   let rowRef!: HTMLDivElement;
+  let hideClicked = false;
   const absoluteTime = () =>
     new Date(props.source.scanned_at * 1000).toLocaleString();
   const isRemoving = () => !!props.removing;
@@ -70,7 +72,7 @@ export function SourceRow(props: SourceRowProps) {
     <div
       ref={rowRef}
       tabIndex={0}
-      draggable={!isRemoving() && !isRenaming() && !props.fadingOut}
+      draggable={!isRemoving() && !isRenaming() && !props.fadingOut && !props.hidden}
       class={`relative group flex flex-col px-4 py-3 transition-colors border-b border-ink-800/40 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60 overflow-hidden ${
         props.dragging ? "opacity-40" : ""
       } ${
@@ -80,14 +82,14 @@ export function SourceRow(props: SourceRowProps) {
             ? ""
             : "cursor-pointer hover:bg-ink-900/40"
       }`}
-      onClick={() => { if (!isRemoving() && !isRenaming() && !props.fadingOut) props.onClick(); }}
+      onClick={() => { if (!isRemoving() && !isRenaming() && !hideClicked && !props.fadingOut) props.onClick(); }}
       onKeyDown={(e) => {
         if (isRemoving() && e.key === "Escape") {
           e.preventDefault();
           props.removing!.onCancel();
           return;
         }
-        if (!isRemoving() && !isRenaming() && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
+        if (!isRemoving() && !isRenaming() && !hideClicked && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           props.onClick();
         }
@@ -113,17 +115,19 @@ export function SourceRow(props: SourceRowProps) {
 
       <div class="flex items-center gap-4">
         <div
-          class={`shrink-0 cursor-grab text-ink-700 hover:text-ink-400 transition-colors ${
-            isRemoving() || props.fadingOut ? "opacity-30" : ""
+          class={`shrink-0 transition-colors ${
+            props.hidden ? "opacity-0 pointer-events-none" : `cursor-grab text-ink-700 hover:text-ink-400 ${
+              isRemoving() || props.fadingOut ? "opacity-30" : ""
+            }`
           }`}
           onClick={(e: MouseEvent) => e.stopPropagation()}
         >
           <GripVertical size={16} />
         </div>
-        <Folder size={28} class={isRemoving() ? "text-red-400/60 shrink-0" : "text-jade-500 shrink-0"} />
+        <Folder size={28} class={isRemoving() ? "text-red-400/60 shrink-0" : props.hidden ? "text-ink-600 shrink-0" : "text-jade-500 shrink-0"} />
         <div class="flex-1 min-w-0">
           <Show when={props.renaming} fallback={
-            <p class="text-sm font-medium text-ink-100 truncate">{props.source.name}</p>
+            <p class={`text-sm font-medium truncate ${props.hidden ? "text-ink-500" : "text-ink-100"}`}>{props.source.name}</p>
           }>
             {(renaming) => (
               <input
@@ -184,9 +188,10 @@ export function SourceRow(props: SourceRowProps) {
                   <Pencil size={14} />
                   Rename
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={props.onHide}>
-                  <EyeOff size={14} />
-                  Hide
+                <DropdownMenuItem onSelect={() => { hideClicked = true; props.onHide(); requestAnimationFrame(() => { hideClicked = false; }); }}>
+                  <Show when={props.hidden} fallback={<><EyeOff size={14} /> Hide</>}>
+                    <Eye size={14} /> Show
+                  </Show>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={props.onRemove} class="text-red-400 focus:text-red-400">

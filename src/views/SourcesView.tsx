@@ -1,6 +1,6 @@
 import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Eye, Plus, RefreshCw } from "lucide-solid";
+import { Eye, EyeOff, Plus, RefreshCw } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { EmptyState } from "../components/EmptyState";
@@ -17,7 +17,7 @@ import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, addSource, removeSource, refreshSources, initialLoad, scanStatus, scanSource, scanAllSources } = useLibrary();
+  const { sources, status, error, addSource, removeSource, setSourceHidden, refreshSources, initialLoad, scanStatus, scanSource, scanAllSources } = useLibrary();
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();
@@ -25,6 +25,7 @@ export function SourcesView() {
   const [renameValue, setRenameValue] = createSignal("");
   const [removingId, setRemovingId] = createSignal<string | null>(null);
   const [fadingOutId, setFadingOutId] = createSignal<string | null>(null);
+  const [showHidden, setShowHidden] = createSignal(false);
   const [draggingId, setDraggingId] = createSignal<string | null>(null);
   const [dropTargetId, setDropTargetId] = createSignal<string | null>(null);
   const [dropPosition, setDropPosition] = createSignal<"above" | "below">("below");
@@ -36,6 +37,14 @@ export function SourcesView() {
 
   const sortedSources = createMemo(() =>
     [...sources()].sort((a, b) => a.sort_order - b.sort_order)
+  );
+
+  const visibleSources = createMemo(() =>
+    sortedSources().filter((s) => !s.hidden)
+  );
+
+  const hiddenSources = createMemo(() =>
+    sortedSources().filter((s) => s.hidden)
   );
 
   const isAnyScanning = createMemo(() =>
@@ -58,7 +67,7 @@ export function SourcesView() {
   }
 
   function handleToggleHidden() {
-    console.log("TODO 4.7");
+    setShowHidden((prev) => !prev);
   }
 
   function startRename(source: Source) {
@@ -161,8 +170,14 @@ export function SourcesView() {
           <ToolbarButton onClick={handleRescanAll} title="Re-scan all sources" disabled={isAnyScanning()}>
             <RefreshCw size={16} class={isAnyScanning() ? "animate-spin" : ""} />
           </ToolbarButton>
-          <ToolbarButton onClick={handleToggleHidden} title="Show hidden sources">
-            <Eye size={16} />
+          <ToolbarButton
+            onClick={handleToggleHidden}
+            title={showHidden() ? "Hide hidden sources" : "Show hidden sources"}
+            class={showHidden() ? "text-jade-400" : ""}
+          >
+            <Show when={showHidden()} fallback={<Eye size={16} />}>
+              <EyeOff size={16} />
+            </Show>
           </ToolbarButton>
         </ToolbarActions>
       </Toolbar>
@@ -199,7 +214,7 @@ export function SourcesView() {
         <Show when={sources().length > 0}>
           <div class="flex-1 overflow-y-auto">
             <div class="max-w-3xl mx-auto px-4 py-2">
-              <For each={sortedSources()}>
+              <For each={visibleSources()}>
                 {(source) => (
                   <SourceRow
                     source={source}
@@ -207,7 +222,7 @@ export function SourcesView() {
                     onRescan={() => scanSource(source.id)}
                     onRename={() => startRename(source)}
                     scanStatus={scanStatus()[source.id]}
-                    onHide={() => console.log("TODO 4.7:", source.id)}
+                    onHide={() => setSourceHidden(source.id, true)}
                     onRemove={() => setRemovingId(source.id)}
                     renaming={renamingId() === source.id ? {
                       value: renameValue(),
@@ -230,6 +245,40 @@ export function SourcesView() {
                   />
                 )}
               </For>
+
+              <Show when={showHidden() && hiddenSources().length > 0}>
+                <div class="mt-4 pt-4 border-t border-ink-800/40">
+                  <p class="text-xs uppercase tracking-wider text-ink-600 font-medium mb-2 px-4">
+                    Hidden
+                  </p>
+                  <For each={hiddenSources()}>
+                    {(source) => (
+                      <SourceRow
+                        source={source}
+                        hidden
+                        onClick={() => openSource(source)}
+                        onRescan={() => scanSource(source.id)}
+                        onRename={() => startRename(source)}
+                        scanStatus={scanStatus()[source.id]}
+                        onHide={() => setSourceHidden(source.id, false)}
+                        onRemove={() => setRemovingId(source.id)}
+                        renaming={renamingId() === source.id ? {
+                          value: renameValue(),
+                          onChange: setRenameValue,
+                          onConfirm: confirmRename,
+                          onCancel: () => setRenamingId(null),
+                        } : undefined}
+                        removing={removingId() === source.id ? {
+                          onConfirm: confirmRemove,
+                          onCancel: () => setRemovingId(null),
+                        } : undefined}
+                        fadingOut={fadingOutId() === source.id}
+                        onFadeOutDone={() => handleFadeOutDone(source.id)}
+                      />
+                    )}
+                  </For>
+                </div>
+              </Show>
             </div>
           </div>
         </Show>
