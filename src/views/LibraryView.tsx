@@ -127,14 +127,23 @@ export function LibraryView() {
     });
   });
 
-  // Derive available source names from library entries
+  // Derive available source names from library entries, ordered by user-defined sort_order
   const availableSources = createMemo(() => {
     const names = new Set<string>();
     for (const e of libraryEntries()) {
       const parts = e.path.replace(/\\/g, "/").split("/");
       if (parts.length >= 2) names.add(parts[parts.length - 2]);
     }
-    return [...names].sort();
+    const orderByBasename = new Map<string, number>();
+    for (const s of sources()) {
+      const basename = s.path.replace(/\\/g, "/").split("/").pop() ?? "";
+      orderByBasename.set(basename, s.sort_order);
+    }
+    return [...names].sort((a, b) => {
+      const oa = orderByBasename.get(a) ?? Infinity;
+      const ob = orderByBasename.get(b) ?? Infinity;
+      return oa !== ob ? oa - ob : a.localeCompare(b);
+    });
   });
 
   // Map manga_id → unread count for the badge overlay
