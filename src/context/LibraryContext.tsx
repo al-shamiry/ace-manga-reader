@@ -1,6 +1,5 @@
 import { createContext, createSignal, onMount, useContext, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Source, Category, LibraryEntry } from "../types";
 
 type Status = "idle" | "loading" | "error";
