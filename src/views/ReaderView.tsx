@@ -36,6 +36,59 @@ const READING_LABELS: Record<ReadingMode, string> = {
   "webtoon": "Webtoon",
 };
 
+const READING_ICONS: Record<ReadingMode, typeof BookOpen> = {
+  "paged-ltr": BookOpen,
+  "paged-rtl": BookOpenCheck,
+  "paged-vertical": ArrowDownUp,
+  "webtoon": Scroll,
+};
+
+const FIT_ICONS: Record<FitMode, typeof Maximize> = {
+  "fit-screen": Maximize,
+  "fit-width": MoveHorizontal,
+  "fit-height": MoveVertical,
+  "original": ScanEye,
+  "stretch": Fullscreen,
+};
+
+// ── Continuous keyboard scroll for webtoon mode ───────────────────
+function createContinuousScroll(getContainer: () => HTMLDivElement | undefined) {
+  let dir = 0;
+  let raf = 0;
+  let lastFrame = 0;
+  let startTime = 0;
+  const SPEED = 3000;       // px/s
+  const SPEED_FAST = 15000; // px/s after hold
+  const BOOST_AFTER = 2000; // ms
+
+  function loop(now: number) {
+    if (!dir) return;
+    if (lastFrame) {
+      const dt = (now - lastFrame) / 1000;
+      const speed = (now - startTime) > BOOST_AFTER ? SPEED_FAST : SPEED;
+      getContainer()?.scrollBy(0, dir * speed * dt);
+    }
+    lastFrame = now;
+    raf = requestAnimationFrame(loop);
+  }
+
+  return {
+    start(d: number) {
+      if (dir === d) return;
+      dir = d;
+      lastFrame = 0;
+      startTime = performance.now();
+      raf = requestAnimationFrame(loop);
+    },
+    stop(d: number) {
+      if (dir !== d) return;
+      dir = 0;
+      cancelAnimationFrame(raf);
+    },
+    cleanup() { cancelAnimationFrame(raf); },
+  };
+}
+
 interface ReaderState {
   chapter: Chapter;
   manga: Manga;
@@ -49,6 +102,7 @@ export function ReaderView() {
   const navigate = useNavigate();
   const state = createMemo(() => location.state as ReaderState | undefined);
 
+  // ── State & settings ──────────────────────────────────────────────
   const [pages, setPages] = createSignal<string[]>([]);
   const [pageIndex, setPageIndex] = createSignal(0);
   const [loading, setLoading] = createSignal(true);
@@ -94,6 +148,7 @@ export function ReaderView() {
     saveSetting({ reading_mode: next });
   }
 
+  // ── Webtoon padding helpers ──────────────────────────────────────
   // Run `apply` while keeping the user's current page + intra-page position
   // visually stable across a webtoon layout change (e.g. side padding).
   // Images are `w-full h-auto`, so changing padding resizes every page and
@@ -153,41 +208,9 @@ export function ReaderView() {
     webtoonContainer.scrollBy({ top: direction === "down" ? amount : -amount, behavior: "smooth" });
   }
 
-  // Continuous keyboard scroll for webtoon mode
-  let scrollDir = 0;
-  let scrollRaf = 0;
-  let lastFrame = 0;
-  let scrollStart = 0;
-  const SCROLL_SPEED = 3000; // px per second
-  const SCROLL_SPEED_FAST = 15000; // px per second after 3s
-  const BOOST_AFTER = 2000; // ms
+  const continuousScroll = createContinuousScroll(() => webtoonContainer);
 
-  function scrollLoop(now: number) {
-    if (!scrollDir) return;
-    if (lastFrame) {
-      const dt = (now - lastFrame) / 1000;
-      const speed = (now - scrollStart) > BOOST_AFTER ? SCROLL_SPEED_FAST : SCROLL_SPEED;
-      webtoonContainer?.scrollBy(0, scrollDir * speed * dt);
-    }
-    lastFrame = now;
-    scrollRaf = requestAnimationFrame(scrollLoop);
-  }
-
-  function startContinuousScroll(dir: number) {
-    if (scrollDir === dir) return;
-    scrollDir = dir;
-    lastFrame = 0;
-    scrollStart = performance.now();
-    scrollRaf = requestAnimationFrame(scrollLoop);
-  }
-
-  function stopContinuousScroll(dir: number) {
-    if (scrollDir !== dir) return;
-    scrollDir = 0;
-    cancelAnimationFrame(scrollRaf);
-  }
-
-  // Page flip animation
+  // ── Page flip animation ──────────────────────────────────────────
   type SlideDir = "left" | "right" | "up" | "down";
   const [anim, setAnim] = createSignal<{ prevIdx: number; dir: SlideDir } | null>(null);
 
@@ -198,7 +221,7 @@ export function ReaderView() {
     return action === "next" ? "left" : "right";
   }
 
-  // Reload whenever the chapter changes
+  // ── Chapter loading & progress ───────────────────────────────────
   createEffect(() => {
     const s = state();
     if (!s) return;
@@ -269,39 +292,45 @@ export function ReaderView() {
     }
   });
 
-  // Keyboard listeners — synchronous so onCleanup registers correctly
+  // ── Keyboard & wheel handlers ─────────────────────────────────────
   onMount(() => {
     function onKeyDown(e: KeyboardEvent) {
+      // Shared keys (all modes)
+      switch (e.key) {
+        case "m": cycleReadingMode(); return;
+        case "F11": e.preventDefault(); toggleFullscreen(); return;
+        case "Backspace":
+        case "Escape": navigate(-1); return;
+      }
+
+      // Webtoon-specific
       if (readingMode() === "webtoon") {
         switch (e.key) {
           case "ArrowUp":
           case "ArrowLeft":
             e.preventDefault();
-            if (!e.repeat && isAtScrollEdge("up")) { goChapter(state()?.prevChapter, "last"); }
-            else startContinuousScroll(-1);
+            if (!e.repeat && isAtScrollEdge("up")) goChapter(state()?.prevChapter, "last");
+            else continuousScroll.start(-1);
             break;
           case "ArrowDown":
           case "ArrowRight":
             e.preventDefault();
-            if (!e.repeat && isAtScrollEdge("down")) { goChapter(state()?.nextChapter, 0); }
-            else startContinuousScroll(1);
+            if (!e.repeat && isAtScrollEdge("down")) goChapter(state()?.nextChapter, 0);
+            else continuousScroll.start(1);
             break;
-          case "m": cycleReadingMode(); break;
-          case "F11": e.preventDefault(); toggleFullscreen(); break;
-          case "Backspace":
-          case "Escape": navigate(-1); break;
         }
         return;
       }
-      const rtl = isRtl();
+
+      // Paged-specific
       switch (e.key) {
         case "ArrowLeft":
           e.preventDefault();
-          rtl ? next() : prev();
+          logicalPrev()();
           break;
         case "ArrowRight":
           e.preventDefault();
-          rtl ? prev() : next();
+          logicalNext()();
           break;
         case "ArrowUp":
           e.preventDefault();
@@ -314,22 +343,11 @@ export function ReaderView() {
         case "f":
           cycleFitMode();
           break;
-        case "m":
-          cycleReadingMode();
-          break;
-        case "F11":
-          e.preventDefault();
-          toggleFullscreen();
-          break;
-        case "Backspace":
-        case "Escape":
-          navigate(-1);
-          break;
       }
     }
     function onKeyUp(e: KeyboardEvent) {
-      if (e.key === "ArrowUp" || e.key === "ArrowLeft") stopContinuousScroll(-1);
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") stopContinuousScroll(1);
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") continuousScroll.stop(-1);
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") continuousScroll.stop(1);
     }
     function onPaddingWheel(e: WheelEvent) {
       if (!e.ctrlKey || e.altKey || e.metaKey) return;
@@ -341,9 +359,10 @@ export function ReaderView() {
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("wheel", onPaddingWheel, { passive: false });
-    onCleanup(() => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("wheel", onPaddingWheel); cancelAnimationFrame(scrollRaf); });
+    onCleanup(() => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("wheel", onPaddingWheel); continuousScroll.cleanup(); });
   });
 
+  // ── Chapter & page navigation ────────────────────────────────────
   async function goChapter(chapter: Chapter | undefined, initialPage: number | "last") {
     if (!chapter) return;
     const s = state();
@@ -397,11 +416,16 @@ export function ReaderView() {
     setIsFullscreen(!full);
   }
 
+  // ── Webtoon ref setup ─────────────────────────────────────────────
   function initWebtoonRef(el: HTMLDivElement) {
     webtoonContainer = el;
+
+    // Track container height for tap zone sizing
     const ro = new ResizeObserver(() => setWebtoonHeight(el.clientHeight));
     ro.observe(el);
     onCleanup(() => ro.disconnect());
+
+    // Track which page is in view via IntersectionObserver
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -419,38 +443,36 @@ export function ReaderView() {
     mo.observe(el, { childList: true, subtree: true });
     onCleanup(() => { observer.disconnect(); mo.disconnect(); });
 
-    // Scroll to the current page on mount. This covers both fresh chapter
-    // loads (target derived from saved progress) and cycling modes back into
-    // webtoon (target is whatever page the user was on). Wait for images
-    // above the target to actually load — otherwise scrollIntoView lands on
-    // the wrong offset because earlier pages are still 0-height.
+    scrollToInitialPage(el);
+  }
+
+  // Scroll to saved progress or "last" page. Waits for images above the
+  // target to load — otherwise scrollIntoView lands on the wrong offset
+  // because earlier pages are still 0-height.
+  function scrollToInitialPage(el: HTMLDivElement) {
     const target = pageIndex();
     const isLast = state()?.initialPage === "last";
-    if (target > 0 || isLast) {
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        const imgs = Array.from(el.querySelectorAll("img[data-page]")) as HTMLImageElement[];
-        const needed = isLast ? imgs : imgs.slice(0, target + 1);
-        const waits = needed.map((img) =>
-          img.complete && img.naturalHeight > 0
-            ? Promise.resolve()
-            : new Promise<void>((resolve) => {
-                const done = () => resolve();
-                img.addEventListener("load", done, { once: true });
-                img.addEventListener("error", done, { once: true });
-              })
-        );
-        Promise.all(waits).then(() => {
-          // Bail if the container has been torn down while we waited.
-          if (webtoonContainer !== el) return;
-          if (isLast) {
-            el.scrollTop = el.scrollHeight;
-            return;
-          }
-          const targetEl = el.querySelector(`[data-page="${target}"]`) as HTMLImageElement | null;
-          if (targetEl) targetEl.scrollIntoView({ behavior: "instant" });
-        });
-      }));
-    }
+    if (target === 0 && !isLast) return;
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const imgs = Array.from(el.querySelectorAll("img[data-page]")) as HTMLImageElement[];
+      const needed = isLast ? imgs : imgs.slice(0, target + 1);
+      const waits = needed.map((img) =>
+        img.complete && img.naturalHeight > 0
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              const done = () => resolve();
+              img.addEventListener("load", done, { once: true });
+              img.addEventListener("error", done, { once: true });
+            })
+      );
+      Promise.all(waits).then(() => {
+        if (webtoonContainer !== el) return;
+        if (isLast) { el.scrollTop = el.scrollHeight; return; }
+        const targetEl = el.querySelector(`[data-page="${target}"]`) as HTMLImageElement | null;
+        if (targetEl) targetEl.scrollIntoView({ behavior: "instant" });
+      });
+    }));
   }
 
   function tapScrollUp() { webtoonScroll("up"); }
@@ -465,19 +487,36 @@ export function ReaderView() {
 
   function clearAnim() { setAnim(null); }
 
-  function tapLeft() { (isRtl() ? next : prev)(); }
-  function tapRight() { (isRtl() ? prev : next)(); }
+  // ── Direction-resolved navigation ─────────────────────────────────
+  // Maps visual direction to logical direction based on reading mode.
+  // In RTL the visual order is reversed relative to chapter order.
+  const logicalPrev = () => isRtl() ? next : prev;
+  const logicalNext = () => isRtl() ? prev : next;
+  const visualPrevChapter = () => isRtl() ? state()?.nextChapter : state()?.prevChapter;
+  const visualNextChapter = () => isRtl() ? state()?.prevChapter : state()?.nextChapter;
 
-  function goFirstChapter() { goChapter(isRtl() ? state()?.nextChapter : state()?.prevChapter, 0); }
-  function goLastChapter() { goChapter(isRtl() ? state()?.prevChapter : state()?.nextChapter, 0); }
-  function firstChapterDisabled() { return isRtl() ? !state()?.nextChapter : !state()?.prevChapter; }
-  function lastChapterDisabled() { return isRtl() ? !state()?.prevChapter : !state()?.nextChapter; }
+  function tapLeft() { logicalPrev()(); }
+  function tapRight() { logicalNext()(); }
 
-  function navPrev() { return isPaged() ? (isRtl() ? next : prev)() : webtoonScroll("up"); }
-  function navNext() { return isPaged() ? (isRtl() ? prev : next)() : webtoonScroll("down"); }
-  function navPrevDisabled() { return isPaged() && (isRtl() ? pageIndex() === pages().length - 1 && !state()?.nextChapter : pageIndex() === 0 && !state()?.prevChapter); }
-  function navNextDisabled() { return isPaged() && (isRtl() ? pageIndex() === 0 && !state()?.prevChapter : pageIndex() === pages().length - 1 && !state()?.nextChapter); }
+  function goFirstChapter() { goChapter(visualPrevChapter(), 0); }
+  function goLastChapter() { goChapter(visualNextChapter(), 0); }
+  function firstChapterDisabled() { return !visualPrevChapter(); }
+  function lastChapterDisabled() { return !visualNextChapter(); }
 
+  function navPrev() { return isPaged() ? logicalPrev()() : webtoonScroll("up"); }
+  function navNext() { return isPaged() ? logicalNext()() : webtoonScroll("down"); }
+  function navPrevDisabled() {
+    if (!isPaged()) return false;
+    const atEdge = isRtl() ? pageIndex() === pages().length - 1 : pageIndex() === 0;
+    return atEdge && !visualPrevChapter();
+  }
+  function navNextDisabled() {
+    if (!isPaged()) return false;
+    const atEdge = isRtl() ? pageIndex() === 0 : pageIndex() === pages().length - 1;
+    return atEdge && !visualNextChapter();
+  }
+
+  // ── Jump to page ─────────────────────────────────────────────────
   function startJump() { setJumpInput(String(pageIndex() + 1)); setJumping(true); }
   function submitJump(e: Event) {
     e.preventDefault();
@@ -514,19 +553,12 @@ export function ReaderView() {
               {s().manga.title} — {s().chapter.title}
             </span>
             <Button variant="ghost" onClick={cycleReadingMode} title={READING_LABELS[readingMode()]}>
-              {readingMode() === "paged-ltr" && <BookOpen size={14} />}
-              {readingMode() === "paged-rtl" && <BookOpenCheck size={14} />}
-              {readingMode() === "paged-vertical" && <ArrowDownUp size={14} />}
-              {readingMode() === "webtoon" && <Scroll size={14} />}
+              {(() => { const Icon = READING_ICONS[readingMode()]; return <Icon size={14} />; })()}
               <span class="text-xs">{READING_LABELS[readingMode()]}</span>
             </Button>
             <Show when={isPaged()}>
               <Button variant="ghost" onClick={cycleFitMode} title={FIT_LABELS[fitMode()]}>
-                {fitMode() === "fit-screen" && <Maximize size={14} />}
-                {fitMode() === "fit-width" && <MoveHorizontal size={14} />}
-                {fitMode() === "fit-height" && <MoveVertical size={14} />}
-                {fitMode() === "original" && <ScanEye size={14} />}
-                {fitMode() === "stretch" && <Fullscreen size={14} />}
+                {(() => { const Icon = FIT_ICONS[fitMode()]; return <Icon size={14} />; })()}
                 <span class="text-xs">{FIT_LABELS[fitMode()]}</span>
               </Button>
             </Show>
