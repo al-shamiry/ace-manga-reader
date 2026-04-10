@@ -25,6 +25,9 @@ export function SourcesView() {
   const [renameValue, setRenameValue] = createSignal("");
   const [removingId, setRemovingId] = createSignal<string | null>(null);
   const [fadingOutId, setFadingOutId] = createSignal<string | null>(null);
+  const [draggingId, setDraggingId] = createSignal<string | null>(null);
+  const [dropTargetId, setDropTargetId] = createSignal<string | null>(null);
+  const [dropPosition, setDropPosition] = createSignal<"above" | "below">("below");
 
   onMount(async () => {
     await initialLoad();
@@ -89,6 +92,61 @@ export function SourcesView() {
       await removeSource(id);
     } catch (e) {
       console.error("Failed to remove source:", e);
+    }
+  }
+
+  // ── Drag-to-reorder ─────────────────────────────────────────────────────────
+
+  function handleDragStart(e: DragEvent, sourceId: string) {
+    setDraggingId(sourceId);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", sourceId);
+    }
+  }
+
+  function handleDragOver(e: DragEvent, sourceId: string) {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    setDropPosition(e.clientY < mid ? "above" : "below");
+    setDropTargetId(sourceId);
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null);
+    setDropTargetId(null);
+  }
+
+  async function handleDrop(e: DragEvent, targetId: string) {
+    e.preventDefault();
+    const fromId = draggingId();
+    const pos = dropPosition();
+    setDraggingId(null);
+    setDropTargetId(null);
+
+    if (!fromId || fromId === targetId) return;
+
+    const items = [...sortedSources()];
+    const fromIdx = items.findIndex((s) => s.id === fromId);
+    if (fromIdx === -1) return;
+
+    const [moved] = items.splice(fromIdx, 1);
+    const targetNewIdx = items.findIndex((s) => s.id === targetId);
+    if (targetNewIdx === -1) return;
+
+    const insertAt = pos === "below" ? targetNewIdx + 1 : targetNewIdx;
+    items.splice(insertAt, 0, moved);
+
+    const orderedIds = items.map((s) => s.id);
+
+    try {
+      await invoke("reorder_sources", { orderedIds });
+      await refreshSources();
+    } catch (err) {
+      console.error("Failed to reorder sources:", err);
+      await refreshSources();
     }
   }
 
@@ -163,6 +221,12 @@ export function SourcesView() {
                     } : undefined}
                     fadingOut={fadingOutId() === source.id}
                     onFadeOutDone={() => handleFadeOutDone(source.id)}
+                    dragging={draggingId() === source.id}
+                    dropIndicator={dropTargetId() === source.id && draggingId() !== source.id ? dropPosition() : undefined}
+                    onDragStart={(e) => handleDragStart(e, source.id)}
+                    onDragOver={(e) => handleDragOver(e, source.id)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={(e) => handleDrop(e, source.id)}
                   />
                 )}
               </For>

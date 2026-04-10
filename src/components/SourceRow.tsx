@@ -1,5 +1,5 @@
 import { Show, createEffect, on } from "solid-js";
-import { AlertCircle, Check, EllipsisVertical, EyeOff, Folder, Pencil, RefreshCw, Trash2 } from "lucide-solid";
+import { AlertCircle, Check, EllipsisVertical, EyeOff, Folder, GripVertical, Pencil, RefreshCw, Trash2 } from "lucide-solid";
 import type { ScanStatus } from "../context/LibraryContext";
 import {
   DropdownMenu,
@@ -35,6 +35,12 @@ interface SourceRowProps {
   removing?: RemoveState;
   fadingOut?: boolean;
   onFadeOutDone?: () => void;
+  dragging?: boolean;
+  dropIndicator?: "above" | "below";
+  onDragStart?: (e: DragEvent) => void;
+  onDragOver?: (e: DragEvent) => void;
+  onDragEnd?: () => void;
+  onDrop?: (e: DragEvent) => void;
 }
 
 export function SourceRow(props: SourceRowProps) {
@@ -64,7 +70,10 @@ export function SourceRow(props: SourceRowProps) {
     <div
       ref={rowRef}
       tabIndex={0}
-      class={`group flex flex-col px-4 py-3 transition-colors border-b border-ink-800/40 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60 overflow-hidden ${
+      draggable={!isRemoving() && !isRenaming() && !props.fadingOut}
+      class={`relative group flex flex-col px-4 py-3 transition-colors border-b border-ink-800/40 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60 overflow-hidden ${
+        props.dragging ? "opacity-40" : ""
+      } ${
         isRemoving()
           ? "bg-red-950/20 border-red-900/40"
           : props.fadingOut
@@ -84,8 +93,33 @@ export function SourceRow(props: SourceRowProps) {
         }
       }}
       onTransitionEnd={handleTransitionEnd}
+      onDragStart={(e: DragEvent) => {
+        if (isRemoving() || isRenaming() || props.fadingOut) { e.preventDefault(); return; }
+        props.onDragStart?.(e);
+      }}
+      onDragOver={(e: DragEvent) => {
+        if (isRemoving() || props.fadingOut) return;
+        props.onDragOver?.(e);
+      }}
+      onDragEnd={() => props.onDragEnd?.()}
+      onDrop={(e: DragEvent) => {
+        if (isRemoving() || props.fadingOut) return;
+        props.onDrop?.(e);
+      }}
     >
+      <Show when={props.dropIndicator === "above"}>
+        <div class="absolute inset-x-0 top-0 h-0.5 bg-jade-400 z-10" />
+      </Show>
+
       <div class="flex items-center gap-4">
+        <div
+          class={`shrink-0 cursor-grab text-ink-700 hover:text-ink-400 transition-colors ${
+            isRemoving() || props.fadingOut ? "opacity-30" : ""
+          }`}
+          onClick={(e: MouseEvent) => e.stopPropagation()}
+        >
+          <GripVertical size={16} />
+        </div>
         <Folder size={28} class={isRemoving() ? "text-red-400/60 shrink-0" : "text-jade-500 shrink-0"} />
         <div class="flex-1 min-w-0">
           <Show when={props.renaming} fallback={
@@ -186,6 +220,10 @@ export function SourceRow(props: SourceRowProps) {
             </div>
           </div>
         )}
+      </Show>
+
+      <Show when={props.dropIndicator === "below"}>
+        <div class="absolute inset-x-0 bottom-0 h-0.5 bg-jade-400 z-10" />
       </Show>
     </div>
   );
