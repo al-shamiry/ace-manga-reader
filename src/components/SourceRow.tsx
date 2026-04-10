@@ -42,6 +42,7 @@ export function SourceRow(props: SourceRowProps) {
   const absoluteTime = () =>
     new Date(props.source.scanned_at * 1000).toLocaleString();
   const isRemoving = () => !!props.removing;
+  const isRenaming = () => !!props.renaming;
 
   createEffect(on(() => props.fadingOut, (fading) => {
     if (!fading || !rowRef) return;
@@ -70,14 +71,14 @@ export function SourceRow(props: SourceRowProps) {
             ? ""
             : "cursor-pointer hover:bg-ink-900/40"
       }`}
-      onClick={() => { if (!isRemoving() && !props.fadingOut) props.onClick(); }}
+      onClick={() => { if (!isRemoving() && !isRenaming() && !props.fadingOut) props.onClick(); }}
       onKeyDown={(e) => {
         if (isRemoving() && e.key === "Escape") {
           e.preventDefault();
           props.removing!.onCancel();
           return;
         }
-        if (!isRemoving() && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
+        if (!isRemoving() && !isRenaming() && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           props.onClick();
         }
