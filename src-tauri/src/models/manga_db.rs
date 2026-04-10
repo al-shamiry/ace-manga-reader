@@ -19,7 +19,7 @@ pub struct SourceMeta {
     pub sort_order: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MangaState {
     pub source_id: String,
     pub title: String,

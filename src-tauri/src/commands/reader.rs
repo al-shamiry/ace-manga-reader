@@ -10,8 +10,96 @@ use zip::ZipArchive;
 
 use crate::commands::manga_db::{self, MangaDbCache};
 use crate::models::chapter::{Chapter, ChapterStatus};
-use crate::models::manga_db::MangaState;
 use crate::utils::{images_in, is_image, now_epoch, normalize, path_id, subdirs_and_cbz, title_from_path};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+fn count_cbz_images(path: &Path) -> usize {
+    fs::File::open(path)
+        .ok()
+        .and_then(|f| ZipArchive::new(f).ok())
+        .map(|mut archive| {
+            (0..archive.len())
+                .filter(|&i| {
+                    archive
+                        .by_index(i)
+                        .map(|e| is_image(Path::new(e.name())))
+                        .unwrap_or(false)
+                })
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+fn extract_cbz_pages(cbz_path: &Path, app_handle: &tauri::AppHandle) -> Result<Vec<String>, String> {
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let chapter_id = path_id(cbz_path);
+    let extract_dir = app_data_dir.join("cache").join("pages").join(&chapter_id);
+
+    // Return cached extraction if it already exists
+    if extract_dir.is_dir() {
+        let pages: Vec<String> = images_in(&extract_dir).iter().map(|p| normalize(p)).collect();
+        if !pages.is_empty() {
+            return Ok(pages);
+        }
+    }
+
+    fs::create_dir_all(&extract_dir).map_err(|e| e.to_string())?;
+
+    let file = fs::File::open(cbz_path).map_err(|e| e.to_string())?;
+    let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
+
+    let mut image_names: Vec<String> = (0..archive.len())
+        .filter_map(|i| {
+            archive.by_index(i).ok().and_then(|e| {
+                let name = e.name().to_string();
+                if is_image(Path::new(&name)) { Some(name) } else { None }
+            })
+        })
+        .collect();
+    image_names.sort();
+
+    if image_names.is_empty() {
+        return Err("No images found in CBZ".to_string());
+    }
+
+    let mut extracted_paths = Vec::new();
+    for (i, name) in image_names.iter().enumerate() {
+        let ext = Path::new(name)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("jpg");
+        let dest = extract_dir.join(format!("{:05}.{}", i, ext));
+
+        if !dest.exists() {
+            let mut entry = archive.by_name(name).map_err(|e| e.to_string())?;
+            let mut bytes = Vec::new();
+            entry.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+            fs::write(&dest, &bytes).map_err(|e| e.to_string())?;
+        }
+
+        extracted_paths.push(normalize(&dest));
+    }
+
+    Ok(extracted_paths)
+}
+
+fn update_chapter_status(
+    cache: &Mutex<MangaDbCache>,
+    app: &tauri::AppHandle,
+    manga_id: String,
+    chapter_id: String,
+    status: ChapterStatus,
+) -> Result<(), String> {
+    manga_db::mutate(cache, app, |db| {
+        let entry = db.mangas.entry(manga_id).or_default();
+        entry.chapters.insert(chapter_id, status);
+        entry.read_chapters = entry.chapters.values()
+            .filter(|s| matches!(s, ChapterStatus::Read))
+            .count();
+        entry.last_read_at = now_epoch();
+    })
+}
 
 // ── Commands ──────────────────────────────────────────────────────────────────
 
@@ -54,19 +142,7 @@ pub fn get_chapters(
     let cbz_chapters = cbz_files.par_iter().filter_map(|p| {
         let id = path_id(p);
         let status = chapters_map.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
-        let page_count = fs::File::open(p)
-            .ok()
-            .and_then(|f| ZipArchive::new(f).ok())
-            .map(|mut a| {
-                (0..a.len())
-                    .filter(|&i| {
-                        a.by_index(i)
-                            .map(|e| is_image(Path::new(e.name())))
-                            .unwrap_or(false)
-                    })
-                    .count()
-            })
-            .unwrap_or(0);
+        let page_count = count_cbz_images(p);
         Some(Chapter {
             id,
             title: title_from_path(p),
@@ -99,61 +175,7 @@ pub fn open_chapter(
             Ok(pages)
         }
 
-        "cbz" => {
-            let app_data_dir =
-                app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
-            let chapter_id = path_id(path);
-            let extract_dir = app_data_dir.join("cache").join("pages").join(&chapter_id);
-
-            // Return cached extraction if it already exists
-            if extract_dir.is_dir() {
-                let pages: Vec<String> =
-                    images_in(&extract_dir).iter().map(|p| normalize(p)).collect();
-                if !pages.is_empty() {
-                    return Ok(pages);
-                }
-            }
-
-            // Extract all images from the CBZ
-            fs::create_dir_all(&extract_dir).map_err(|e| e.to_string())?;
-
-            let file = fs::File::open(path).map_err(|e| e.to_string())?;
-            let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
-
-            let mut image_names: Vec<String> = (0..archive.len())
-                .filter_map(|i| {
-                    archive.by_index(i).ok().and_then(|e| {
-                        let name = e.name().to_string();
-                        if is_image(Path::new(&name)) { Some(name) } else { None }
-                    })
-                })
-                .collect();
-            image_names.sort();
-
-            if image_names.is_empty() {
-                return Err("No images found in CBZ".to_string());
-            }
-
-            let mut extracted_paths = Vec::new();
-            for (i, name) in image_names.iter().enumerate() {
-                let ext = Path::new(name)
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or("jpg");
-                let dest = extract_dir.join(format!("{:05}.{}", i, ext));
-
-                if !dest.exists() {
-                    let mut entry = archive.by_name(name).map_err(|e| e.to_string())?;
-                    let mut bytes = Vec::new();
-                    entry.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
-                    fs::write(&dest, &bytes).map_err(|e| e.to_string())?;
-                }
-
-                extracted_paths.push(normalize(&dest));
-            }
-
-            Ok(extracted_paths)
-        }
+        "cbz" => extract_cbz_pages(path, &app_handle),
 
         _ => Err(format!("Unknown file_type: {}", file_type)),
     }
@@ -173,26 +195,7 @@ pub fn set_chapter_progress(
         ChapterStatus::Ongoing { page }
     };
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    manga_db::mutate(&cache, &app_handle, |db| {
-        let entry = db.mangas.entry(manga_id.clone()).or_insert_with(|| MangaState {
-            source_id: String::new(),
-            title: String::new(),
-            path: String::new(),
-            cover_path: String::new(),
-            cover_override: None,
-            chapter_count: 0,
-            read_chapters: 0,
-            last_read_at: 0,
-            added_at: None,
-            category_ids: Vec::new(),
-            chapters: HashMap::new(),
-        });
-        entry.chapters.insert(chapter_id.clone(), status);
-        entry.read_chapters = entry.chapters.values()
-            .filter(|s| matches!(s, ChapterStatus::Read))
-            .count();
-        entry.last_read_at = now_epoch();
-    })
+    update_chapter_status(&cache, &app_handle, manga_id, chapter_id, status)
 }
 
 #[tauri::command]
@@ -204,24 +207,5 @@ pub fn mark_chapter_read(
 ) -> Result<(), String> {
     let status = if read { ChapterStatus::Read } else { ChapterStatus::Unread };
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    manga_db::mutate(&cache, &app_handle, |db| {
-        let entry = db.mangas.entry(manga_id.clone()).or_insert_with(|| MangaState {
-            source_id: String::new(),
-            title: String::new(),
-            path: String::new(),
-            cover_path: String::new(),
-            cover_override: None,
-            chapter_count: 0,
-            read_chapters: 0,
-            last_read_at: 0,
-            added_at: None,
-            category_ids: Vec::new(),
-            chapters: HashMap::new(),
-        });
-        entry.chapters.insert(chapter_id.clone(), status);
-        entry.read_chapters = entry.chapters.values()
-            .filter(|s| matches!(s, ChapterStatus::Read))
-            .count();
-        entry.last_read_at = now_epoch();
-    })
+    update_chapter_status(&cache, &app_handle, manga_id, chapter_id, status)
 }
