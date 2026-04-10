@@ -21,14 +21,7 @@ export function SourcesView() {
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();
-  const [renamingId, setRenamingId] = createSignal<string | null>(null);
-  const [renameValue, setRenameValue] = createSignal("");
-  const [removingId, setRemovingId] = createSignal<string | null>(null);
-  const [fadingOutId, setFadingOutId] = createSignal<string | null>(null);
   const [showHidden, setShowHidden] = createSignal(false);
-  const [draggingId, setDraggingId] = createSignal<string | null>(null);
-  const [dropTargetId, setDropTargetId] = createSignal<string | null>(null);
-  const [dropPosition, setDropPosition] = createSignal<"above" | "below">("below");
 
   onMount(async () => {
     await initialLoad();
@@ -70,6 +63,11 @@ export function SourcesView() {
     setShowHidden((prev) => !prev);
   }
 
+  // ── Rename ────────────────────────────────────────────────────────────────────
+
+  const [renamingId, setRenamingId] = createSignal<string | null>(null);
+  const [renameValue, setRenameValue] = createSignal("");
+
   function startRename(source: Source) {
     setRenamingId(source.id);
     setRenameValue(source.name);
@@ -88,6 +86,11 @@ export function SourcesView() {
     setRenamingId(null);
   }
 
+  // ── Remove / fade-out ─────────────────────────────────────────────────────────
+
+  const [removingId, setRemovingId] = createSignal<string | null>(null);
+  const [fadingOutId, setFadingOutId] = createSignal<string | null>(null);
+
   async function confirmRemove() {
     const id = removingId();
     if (!id) return;
@@ -104,7 +107,11 @@ export function SourcesView() {
     }
   }
 
-  // ── Drag-to-reorder ─────────────────────────────────────────────────────────
+  // ── Drag-to-reorder ──────────────────────────────────────────────────────────
+
+  const [draggingId, setDraggingId] = createSignal<string | null>(null);
+  const [dropTargetId, setDropTargetId] = createSignal<string | null>(null);
+  const [dropPosition, setDropPosition] = createSignal<"above" | "below">("below");
 
   function handleDragStart(e: DragEvent, sourceId: string) {
     setDraggingId(sourceId);
@@ -157,6 +164,41 @@ export function SourcesView() {
       console.error("Failed to reorder sources:", err);
       await refreshSources();
     }
+  }
+
+  // ── Row renderer ──────────────────────────────────────────────────────────────
+
+  function renderSourceRow(source: Source, hidden?: boolean) {
+    return (
+      <SourceRow
+        source={source}
+        hidden={hidden}
+        onClick={() => openSource(source)}
+        onRescan={() => scanSource(source.id)}
+        onRename={() => startRename(source)}
+        scanStatus={scanStatus()[source.id]}
+        onHide={() => setSourceHidden(source.id, !hidden)}
+        onRemove={() => setRemovingId(source.id)}
+        renaming={renamingId() === source.id ? {
+          value: renameValue(),
+          onChange: setRenameValue,
+          onConfirm: confirmRename,
+          onCancel: () => setRenamingId(null),
+        } : undefined}
+        removing={removingId() === source.id ? {
+          onConfirm: confirmRemove,
+          onCancel: () => setRemovingId(null),
+        } : undefined}
+        fadingOut={fadingOutId() === source.id}
+        onFadeOutDone={() => handleFadeOutDone(source.id)}
+        dragging={!hidden ? draggingId() === source.id : undefined}
+        dropIndicator={!hidden && dropTargetId() === source.id && draggingId() !== source.id ? dropPosition() : undefined}
+        onDragStart={!hidden ? (e) => handleDragStart(e, source.id) : undefined}
+        onDragOver={!hidden ? (e) => handleDragOver(e, source.id) : undefined}
+        onDragEnd={!hidden ? handleDragEnd : undefined}
+        onDrop={!hidden ? (e) => handleDrop(e, source.id) : undefined}
+      />
+    );
   }
 
   return (
@@ -215,35 +257,7 @@ export function SourcesView() {
           <div class="flex-1 overflow-y-auto">
             <div class="max-w-3xl mx-auto px-4 py-2">
               <For each={visibleSources()}>
-                {(source) => (
-                  <SourceRow
-                    source={source}
-                    onClick={() => openSource(source)}
-                    onRescan={() => scanSource(source.id)}
-                    onRename={() => startRename(source)}
-                    scanStatus={scanStatus()[source.id]}
-                    onHide={() => setSourceHidden(source.id, true)}
-                    onRemove={() => setRemovingId(source.id)}
-                    renaming={renamingId() === source.id ? {
-                      value: renameValue(),
-                      onChange: setRenameValue,
-                      onConfirm: confirmRename,
-                      onCancel: () => setRenamingId(null),
-                    } : undefined}
-                    removing={removingId() === source.id ? {
-                      onConfirm: confirmRemove,
-                      onCancel: () => setRemovingId(null),
-                    } : undefined}
-                    fadingOut={fadingOutId() === source.id}
-                    onFadeOutDone={() => handleFadeOutDone(source.id)}
-                    dragging={draggingId() === source.id}
-                    dropIndicator={dropTargetId() === source.id && draggingId() !== source.id ? dropPosition() : undefined}
-                    onDragStart={(e) => handleDragStart(e, source.id)}
-                    onDragOver={(e) => handleDragOver(e, source.id)}
-                    onDragEnd={handleDragEnd}
-                    onDrop={(e) => handleDrop(e, source.id)}
-                  />
-                )}
+                {(source) => renderSourceRow(source)}
               </For>
 
               <Show when={showHidden() && hiddenSources().length > 0}>
@@ -252,30 +266,7 @@ export function SourcesView() {
                     Hidden
                   </p>
                   <For each={hiddenSources()}>
-                    {(source) => (
-                      <SourceRow
-                        source={source}
-                        hidden
-                        onClick={() => openSource(source)}
-                        onRescan={() => scanSource(source.id)}
-                        onRename={() => startRename(source)}
-                        scanStatus={scanStatus()[source.id]}
-                        onHide={() => setSourceHidden(source.id, false)}
-                        onRemove={() => setRemovingId(source.id)}
-                        renaming={renamingId() === source.id ? {
-                          value: renameValue(),
-                          onChange: setRenameValue,
-                          onConfirm: confirmRename,
-                          onCancel: () => setRenamingId(null),
-                        } : undefined}
-                        removing={removingId() === source.id ? {
-                          onConfirm: confirmRemove,
-                          onCancel: () => setRemovingId(null),
-                        } : undefined}
-                        fadingOut={fadingOutId() === source.id}
-                        onFadeOutDone={() => handleFadeOutDone(source.id)}
-                      />
-                    )}
+                    {(source) => renderSourceRow(source, true)}
                   </For>
                 </div>
               </Show>
