@@ -8,6 +8,7 @@ use crate::models::chapter::ChapterStatus;
 pub struct SourceMeta {
     pub source_path: String,
     pub scanned_at: u64,
+    pub manga_count: usize,
     #[serde(default)]
     pub name: String,
     #[serde(default)]

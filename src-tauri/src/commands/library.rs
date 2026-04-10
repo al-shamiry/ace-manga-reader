@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -131,6 +131,13 @@ fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Manga> {
         .collect()
 }
 
+/// Count mangas by immediate subdirectory count in the source directory.
+fn count_mangas(dir: &Path) -> usize {
+    fs::read_dir(dir)
+        .map(|rd| rd.filter_map(|e| e.ok()).filter(|e| e.path().is_dir()).count())
+        .unwrap_or(0)
+}
+
 #[tauri::command]
 pub fn list_sources(
     include_hidden: Option<bool>,
@@ -140,18 +147,13 @@ pub fn list_sources(
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
     let guard = cache.lock().map_err(|e| e.to_string())?;
 
-    let mut counts: HashMap<&str, usize> = HashMap::new();
-    for m in guard.db.mangas.values() {
-        *counts.entry(m.source_id.as_str()).or_default() += 1;
-    }
-
     let mut sources: Vec<Source> = guard.db.sources.iter()
         .filter(|(_, meta)| include_hidden || !meta.hidden)
         .map(|(id, meta)| Source {
             id: id.clone(),
             name: meta.name.clone(),
             path: meta.source_path.clone(),
-            manga_count: counts.get(id.as_str()).copied().unwrap_or(0),
+            manga_count: meta.manga_count,
             hidden: meta.hidden,
             scanned_at: meta.scanned_at,
             sort_order: meta.sort_order,
@@ -215,6 +217,7 @@ pub fn scan_directory(
 
     // Build the set of manga ids present on disk for this source
     let on_disk_ids: HashSet<String> = mangas.iter().map(|m| m.id.clone()).collect();
+    let manga_count = on_disk_ids.len();
 
     let source_path_str = normalize(dir);
     let scanned_at = now_epoch();
@@ -224,6 +227,7 @@ pub fn scan_directory(
         if let Some(existing) = db.sources.get_mut(&source_id) {
             existing.source_path = source_path_str;
             existing.scanned_at = scanned_at;
+            existing.manga_count = manga_count;
         } else {
             let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
             db.sources.insert(
@@ -231,6 +235,7 @@ pub fn scan_directory(
                 SourceMeta {
                     source_path: source_path_str,
                     scanned_at,
+                    manga_count,
                     name: dir.file_name()
                         .and_then(|s| s.to_str())
                         .unwrap_or("")
@@ -292,12 +297,11 @@ fn build_source_from_cache(
     id: &str,
 ) -> Result<Source, String> {
     let meta = db.sources.get(id).ok_or_else(|| format!("source '{}' not found", id))?;
-    let manga_count = db.mangas.values().filter(|m| m.source_id == id).count();
     Ok(Source {
         id: id.to_string(),
         name: meta.name.clone(),
         path: meta.source_path.clone(),
-        manga_count,
+        manga_count: meta.manga_count,
         hidden: meta.hidden,
         scanned_at: meta.scanned_at,
         sort_order: meta.sort_order,
@@ -326,11 +330,13 @@ pub(crate) fn add_source_internal(
         .unwrap_or_else(|| {
             dir.file_name().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string()
         });
+    let manga_count = count_mangas(dir);
     manga_db::mutate(&cache, app, |db| {
         let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
         db.sources.insert(id.clone(), SourceMeta {
             source_path: normalized,
             scanned_at: 0,
+            manga_count,
             name: resolved_name,
             added_at: now_epoch(),
             hidden: false,
@@ -368,12 +374,14 @@ pub fn add_source(
         .unwrap_or_else(|| {
             dir.file_name().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string()
         });
+    let manga_count = count_mangas(dir);
 
     manga_db::mutate(&cache, &app_handle, |db| {
         let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
         db.sources.insert(id.clone(), SourceMeta {
             source_path: normalized,
             scanned_at: 0,
+            manga_count,
             name: resolved_name,
             added_at: now_epoch(),
             hidden: false,
