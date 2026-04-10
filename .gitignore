@@ -2,3 +2,4 @@ node_modules
 dist
 notes/
 .dual-graph/
+.claude/settings.local.json
