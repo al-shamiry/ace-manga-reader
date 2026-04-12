@@ -22,7 +22,7 @@ Draft a commit message for the current changes in the working tree, matching the
    - `git status -s`
    - `git diff --stat HEAD`
    - `git diff HEAD` (or `git diff --staged` if anything is staged)
-2. Read recent commit subjects to calibrate tone: `git log --oneline -15`
+2. Read recent commit subjects to calibrate tone: `git log --oneline -10`
 3. Analyze what changed and why. If the user passed a hint as an argument, weight it heavily.
 4. Draft the message following the format below.
 5. Output the message in a fenced code block. Stop. Do not stage, commit, or push.
@@ -54,8 +54,8 @@ type(scope): one-phrase subject
 
 - **Lowercase** the entire subject (after the `type(scope):`).
 - **No trailing period.**
-- Keep it under ~72 characters.
-- Use a short scope in parentheses that names the area touched (e.g. `loader`, `library`, `reader`, `settings`, `history`, `ui`, `window`, `theme`, `branding`, `release`, `empty-states`). Omit the scope only when the change is genuinely cross-cutting.
+- Keep it under ~50 characters.
+- Use a short scope in parentheses that names the area touched (e.g. `loader`, `library`, `reader`, `settings`, `history`, `ui`, `window`, `theme`, `release`). Omit the scope only when the change is genuinely cross-cutting.
 - **Prefer imperative phrasing** — start with a verb that says what the change does (`add`, `fix`, `replace`, `unify`, `move`, `rename`, `drop`, `extract`). Imperative reads more clearly than descriptive (`basic settings view`) because it states the action up front.
 
 ### Type vocabulary used in this repo
@@ -71,30 +71,6 @@ type(scope): one-phrase subject
 | `chore` | Tooling, deps, config, releases, anything that isn't product code |
 | `ci` | GitHub Actions / workflow changes |
 | `build` | Build system / bundler / Tauri config that affects the build itself |
-
-### Examples from this repo's history (the target style)
-
-```
-feat(history): add reading history view
-```
-```
-feat(settings): basic settings view with general, reading, and display sections
-```
-```
-refactor(empty-states): unify empty states in a component
-```
-```
-style(loader): editorial serif wordmark with jade sweep
-```
-```
-fix(startup): display loader before app mounts
-```
-```
-chore(branding): replace default Tauri icons with temp app logo
-```
-```
-docs: refresh README for v0.3.0 release
-```
 
 ## Edge cases
 
