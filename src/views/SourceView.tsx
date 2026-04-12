@@ -26,7 +26,7 @@ type Status = "idle" | "loading" | "error";
 export function SourceView() {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSource, initialLoad } = useLibrary();
+  const { getSource, initialLoad, refreshSources } = useLibrary();
   const view = useViewLoading();
   const loadToken = view.busy();
 
@@ -83,6 +83,7 @@ export function SourceView() {
       setMangas(result);
       setStatus("idle");
       getCurrentWindow().setTitle(`Ace Manga Reader — ${source()?.name}`);
+      refreshSources();
     } catch (e) {
       setError(String(e));
       setStatus("error");

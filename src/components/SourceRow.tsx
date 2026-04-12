@@ -47,8 +47,11 @@ interface SourceRowProps {
 export function SourceRow(props: SourceRowProps) {
   let rowRef!: HTMLDivElement;
   let hideClicked = false;
+  const hasScanned = () => props.source.scanned_at > 0;
   const absoluteTime = () =>
-    new Date(props.source.scanned_at * 1000).toLocaleString();
+    hasScanned() ? new Date(props.source.scanned_at * 1000).toLocaleString() : undefined;
+  const lastScanLabel = () =>
+    hasScanned() ? formatRelativeDay(props.source.scanned_at) : "never";
   const isRemoving = () => !!props.removing;
   const isRenaming = () => !!props.renaming;
 
@@ -147,7 +150,7 @@ export function SourceRow(props: SourceRowProps) {
           </Show>
           <p class="text-xs text-ink-500">
             {props.source.manga_count} manga ·{" "}
-            <span title={absoluteTime()}>{formatRelativeDay(props.source.scanned_at)}</span>
+            <span title={absoluteTime()}>last scan: {lastScanLabel()}</span>
           </p>
           <p class="text-xs text-ink-600 truncate" title={props.source.path}>
             {props.source.path}
