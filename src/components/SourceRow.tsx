@@ -26,6 +26,9 @@ interface RemoveState {
 interface SourceRowProps {
   source: Source;
   hidden?: boolean;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
   onClick: () => void;
   onRescan: () => void;
   onRename: () => void;
@@ -54,6 +57,7 @@ export function SourceRow(props: SourceRowProps) {
     hasScanned() ? formatRelativeDay(props.source.scanned_at) : "never";
   const isRemoving = () => !!props.removing;
   const isRenaming = () => !!props.renaming;
+  const isSelectionMode = () => !!props.selectionMode;
 
   createEffect(on(() => props.fadingOut, (fading) => {
     if (!fading || !rowRef) return;
@@ -75,7 +79,9 @@ export function SourceRow(props: SourceRowProps) {
     <div
       ref={rowRef}
       tabIndex={0}
-      draggable={!isRemoving() && !isRenaming() && !props.fadingOut && !props.hidden}
+      draggable={!isSelectionMode() && !isRemoving() && !isRenaming() && !props.fadingOut && !props.hidden}
+      role={isSelectionMode() ? "checkbox" : undefined}
+      aria-checked={isSelectionMode() ? !!props.selected : undefined}
       class={`relative group flex flex-col px-4 py-3 transition-colors border-b border-ink-800/40 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60 overflow-hidden ${
         props.dragging ? "opacity-40" : ""
       } ${
@@ -83,32 +89,49 @@ export function SourceRow(props: SourceRowProps) {
           ? "bg-red-950/20 border-red-900/40"
           : props.fadingOut
             ? ""
-            : "cursor-pointer hover:bg-ink-900/40"
+            : props.selected && isSelectionMode()
+              ? "cursor-pointer bg-jade-950/20 border-jade-900/40 hover:bg-jade-950/30"
+              : "cursor-pointer hover:bg-ink-900/40"
       }`}
-      onClick={() => { if (!isRemoving() && !isRenaming() && !hideClicked && !props.fadingOut) props.onClick(); }}
+      onClick={() => {
+        if (isRemoving() || isRenaming() || hideClicked || props.fadingOut) return;
+        if (isSelectionMode()) {
+          props.onToggleSelect?.();
+          return;
+        }
+        props.onClick();
+      }}
       onKeyDown={(e) => {
         if (isRemoving() && e.key === "Escape") {
           e.preventDefault();
           props.removing!.onCancel();
           return;
         }
+
         if (!isRemoving() && !isRenaming() && !hideClicked && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
+          if (isSelectionMode()) {
+            props.onToggleSelect?.();
+            return;
+          }
           props.onClick();
         }
       }}
       onTransitionEnd={handleTransitionEnd}
       onDragStart={(e: DragEvent) => {
-        if (isRemoving() || isRenaming() || props.fadingOut) { e.preventDefault(); return; }
+        if (isSelectionMode() || isRemoving() || isRenaming() || props.fadingOut) { e.preventDefault(); return; }
         props.onDragStart?.(e);
       }}
       onDragOver={(e: DragEvent) => {
-        if (isRemoving() || props.fadingOut) return;
+        if (isSelectionMode() || isRemoving() || props.fadingOut) return;
         props.onDragOver?.(e);
       }}
-      onDragEnd={() => props.onDragEnd?.()}
+      onDragEnd={() => {
+        if (isSelectionMode()) return;
+        props.onDragEnd?.();
+      }}
       onDrop={(e: DragEvent) => {
-        if (isRemoving() || props.fadingOut) return;
+        if (isSelectionMode() || isRemoving() || props.fadingOut) return;
         props.onDrop?.(e);
       }}
     >
@@ -117,16 +140,33 @@ export function SourceRow(props: SourceRowProps) {
       </Show>
 
       <div class="flex items-center gap-4">
-        <div
-          class={`shrink-0 transition-colors ${
-            props.hidden ? "opacity-0 pointer-events-none" : `cursor-grab text-ink-700 hover:text-ink-400 ${
-              isRemoving() || props.fadingOut ? "opacity-30" : ""
-            }`
-          }`}
-          onClick={(e: MouseEvent) => e.stopPropagation()}
+        <Show
+          when={isSelectionMode()}
+          fallback={
+            <div
+              class={`shrink-0 transition-colors ${
+                props.hidden ? "opacity-0 pointer-events-none" : `cursor-grab text-ink-700 hover:text-ink-400 ${
+                  isRemoving() || props.fadingOut ? "opacity-30" : ""
+                }`
+              }`}
+              onClick={(e: MouseEvent) => e.stopPropagation()}
+            >
+              <GripVertical size={16} />
+            </div>
+          }
         >
-          <GripVertical size={16} />
-        </div>
+          <div class="shrink-0">
+            <div
+              class={`flex h-4 w-4 items-center justify-center rounded-sm border transition-colors ${
+                props.selected
+                  ? "border-jade-500 bg-jade-500 text-ink-950"
+                  : "border-ink-600 text-transparent"
+              }`}
+            >
+              <Check size={12} strokeWidth={3} class={props.selected ? "opacity-100" : "opacity-0"} />
+            </div>
+          </div>
+        </Show>
         <Folder size={28} class={isRemoving() ? "text-red-400/60 shrink-0" : props.hidden ? "text-ink-600 shrink-0" : "text-jade-500 shrink-0"} />
         <div class="flex-1 min-w-0">
           <Show when={props.renaming} fallback={
@@ -156,7 +196,7 @@ export function SourceRow(props: SourceRowProps) {
             {props.source.path}
           </p>
         </div>
-        <Show when={!isRemoving()}>
+        <Show when={!isRemoving() && !isSelectionMode()}>
           {/* Scan-status badge — fades in over the overflow trigger area */}
           <Show when={props.scanStatus}>
             <div class="flex h-8 w-8 shrink-0 items-center justify-center transition-opacity duration-200"
