@@ -47,6 +47,7 @@ pub fn run() {
             commands::library::scan_directory,
             commands::library::list_sources,
             commands::library::add_source,
+            commands::library::relocate_source,
             commands::library::remove_source,
             commands::library::rename_source,
             commands::library::reorder_sources,
