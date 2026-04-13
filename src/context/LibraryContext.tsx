@@ -12,6 +12,7 @@ interface LibraryContextValue {
   loadRoot: (path: string) => Promise<void>;
   addSource: (path: string, name?: string) => Promise<void>;
   removeSource: (sourceId: string) => Promise<void>;
+  relocateSource: (sourceId: string, newPath: string) => Promise<void>;
   setSourceHidden: (sourceId: string, hidden: boolean) => Promise<void>;
   refreshSources: () => Promise<void>;
   getSource: (id: string) => Source | undefined;
@@ -87,6 +88,12 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     await refreshLibrary();
   }
 
+  async function relocateSource(sourceId: string, newPath: string) {
+    await invoke<Source>("relocate_source", { sourceId, newPath });
+    await refreshSources();
+    await refreshLibrary();
+  }
+
   function setScanStatusFor(sourceId: string, status: ScanStatus | undefined) {
     setScanStatus((prev) => {
       const next = { ...prev };
@@ -100,6 +107,11 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     const source = sources().find((s) => s.id === sourceId);
     if (!source) return;
     if (scanStatus()[sourceId] === "scanning") return;
+    if (source.path_missing) {
+      setScanStatusFor(sourceId, "error");
+      setTimeout(() => setScanStatusFor(sourceId, undefined), 1500);
+      return;
+    }
 
     setScanStatusFor(sourceId, "scanning");
 
@@ -156,7 +168,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   return (
     <LibraryContext.Provider value={{
-      sources, status, error, loadRoot, addSource, removeSource, setSourceHidden, refreshSources, getSource,
+      sources, status, error, loadRoot, addSource, removeSource, relocateSource, setSourceHidden, refreshSources, getSource,
       scanStatus, scanSource, scanAllSources,
       categories, libraryEntries, isInLibrary, refreshCategories, refreshLibrary,
       initialLoad: () => initialLoadPromise,

@@ -17,7 +17,7 @@ import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, addSource, removeSource, setSourceHidden, refreshSources, initialLoad, scanStatus, scanSource, scanAllSources } = useLibrary();
+  const { sources, status, error, addSource, removeSource, relocateSource, setSourceHidden, refreshSources, initialLoad, scanStatus, scanSource, scanAllSources } = useLibrary();
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();
@@ -59,6 +59,20 @@ export function SourcesView() {
     scanAllSources();
   }
 
+  const [locateError, setLocateError] = createSignal<string | null>(null);
+
+  async function handleLocate(source: Source) {
+    setLocateError(null);
+    const selected = await open({ directory: true, multiple: false });
+    if (typeof selected !== "string" || !selected) return;
+    try {
+      await relocateSource(source.id, selected);
+      setLocatingId(null);
+    } catch (e) {
+      setLocateError(String(e));
+    }
+  }
+
   function handleToggleHidden() {
     setShowHidden((prev) => !prev);
   }
@@ -91,6 +105,7 @@ export function SourcesView() {
   // ── Remove / fade-out ─────────────────────────────────────────────────────────
 
   const [removingId, setRemovingId] = createSignal<string | null>(null);
+  const [locatingId, setLocatingId] = createSignal<string | null>(null);
   const [fadingOutId, setFadingOutId] = createSignal<string | null>(null);
 
   const [selectionMode, setSelectionMode] = createSignal(false);
@@ -121,6 +136,7 @@ export function SourcesView() {
   function enterSelectionMode() {
     setRenamingId(null);
     setRemovingId(null);
+    setLocatingId(null);
     setSelectionMode(true);
     clearSelection();
   }
@@ -159,7 +175,16 @@ export function SourcesView() {
   function startRemove(sourceId: string) {
     if (selectionMode()) exitSelectionMode();
     setRenamingId(null);
+    setLocatingId(null);
     setRemovingId(sourceId);
+  }
+
+  function startLocate(source: Source) {
+    if (selectionMode()) exitSelectionMode();
+    setRenamingId(null);
+    setRemovingId(null);
+    setLocateError(null);
+    setLocatingId(source.id);
   }
 
   function handleBulkRescan() {
@@ -319,11 +344,15 @@ export function SourcesView() {
         selectionMode={selectionMode()}
         selected={selectedIds().has(source.id)}
         onToggleSelect={() => toggleSelected(source.id)}
-        onClick={() => openSource(source)}
+        onClick={() => source.path_missing ? startLocate(source) : openSource(source)}
+        onLocate={() => handleLocate(source)}
         onRescan={() => scanSource(source.id)}
         onRename={() => startRename(source)}
         scanStatus={scanStatus()[source.id]}
-        onHide={() => setSourceHidden(source.id, !hidden)}
+        onHide={() => {
+          setLocatingId(null);
+          setSourceHidden(source.id, !hidden);
+        }}
         onRemove={() => startRemove(source.id)}
         renaming={renamingId() === source.id ? {
           value: renameValue(),
@@ -334,6 +363,11 @@ export function SourcesView() {
         removing={removingId() === source.id ? {
           onConfirm: confirmRemove,
           onCancel: () => setRemovingId(null),
+        } : undefined}
+        locating={locatingId() === source.id ? {
+          onConfirm: () => handleLocate(source),
+          onCancel: () => { setLocatingId(null); setLocateError(null); },
+          error: locateError() ?? undefined,
         } : undefined}
         fadingOut={fadingOutId() === source.id}
         onFadeOutDone={() => handleFadeOutDone(source.id)}

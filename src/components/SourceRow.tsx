@@ -1,5 +1,5 @@
 import { Show, createEffect, on } from "solid-js";
-import { AlertCircle, Check, EllipsisVertical, Eye, EyeOff, Folder, GripVertical, Pencil, RefreshCw, Trash2 } from "lucide-solid";
+import { AlertCircle, Check, EllipsisVertical, Eye, EyeOff, Folder, GripVertical, Link2, Pencil, RefreshCw, Trash2 } from "lucide-solid";
 import type { ScanStatus } from "../context/LibraryContext";
 import {
   DropdownMenu,
@@ -23,6 +23,12 @@ interface RemoveState {
   onCancel: () => void;
 }
 
+interface LocateState {
+  onConfirm: () => void;
+  onCancel: () => void;
+  error?: string;
+}
+
 interface SourceRowProps {
   source: Source;
   hidden?: boolean;
@@ -30,6 +36,7 @@ interface SourceRowProps {
   selected?: boolean;
   onToggleSelect?: () => void;
   onClick: () => void;
+  onLocate: () => void;
   onRescan: () => void;
   onRename: () => void;
   onHide: () => void;
@@ -37,6 +44,7 @@ interface SourceRowProps {
   scanStatus?: ScanStatus;
   renaming?: RenameState;
   removing?: RemoveState;
+  locating?: LocateState;
   fadingOut?: boolean;
   onFadeOutDone?: () => void;
   dragging?: boolean;
@@ -57,7 +65,16 @@ export function SourceRow(props: SourceRowProps) {
     hasScanned() ? formatRelativeDay(props.source.scanned_at) : "never";
   const isRemoving = () => !!props.removing;
   const isRenaming = () => !!props.renaming;
+  const isLocating = () => !!props.locating;
   const isSelectionMode = () => !!props.selectionMode;
+
+  function runMenuAction(action: () => void) {
+    hideClicked = true;
+    action();
+    requestAnimationFrame(() => {
+      hideClicked = false;
+    });
+  }
 
   createEffect(on(() => props.fadingOut, (fading) => {
     if (!fading || !rowRef) return;
@@ -79,7 +96,7 @@ export function SourceRow(props: SourceRowProps) {
     <div
       ref={rowRef}
       tabIndex={0}
-      draggable={!isSelectionMode() && !isRemoving() && !isRenaming() && !props.fadingOut && !props.hidden}
+      draggable={!isSelectionMode() && !isRemoving() && !isLocating() && !isRenaming() && !props.fadingOut && !props.hidden}
       role={isSelectionMode() ? "checkbox" : undefined}
       aria-checked={isSelectionMode() ? !!props.selected : undefined}
       class={`relative group flex flex-col px-4 py-3 transition-colors border-b border-ink-800/40 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/60 overflow-hidden ${
@@ -87,6 +104,8 @@ export function SourceRow(props: SourceRowProps) {
       } ${
         isRemoving()
           ? "bg-red-950/20 border-red-900/40"
+          : isLocating()
+            ? "bg-red-950/15 border-red-900/30"
           : props.fadingOut
             ? ""
             : props.selected && isSelectionMode()
@@ -94,7 +113,7 @@ export function SourceRow(props: SourceRowProps) {
               : "cursor-pointer hover:bg-ink-900/40"
       }`}
       onClick={() => {
-        if (isRemoving() || isRenaming() || hideClicked || props.fadingOut) return;
+        if (isRemoving() || isLocating() || isRenaming() || hideClicked || props.fadingOut) return;
         if (isSelectionMode()) {
           props.onToggleSelect?.();
           return;
@@ -102,13 +121,19 @@ export function SourceRow(props: SourceRowProps) {
         props.onClick();
       }}
       onKeyDown={(e) => {
+        if (isLocating() && e.key === "Escape") {
+          e.preventDefault();
+          props.locating!.onCancel();
+          return;
+        }
+
         if (isRemoving() && e.key === "Escape") {
           e.preventDefault();
           props.removing!.onCancel();
           return;
         }
 
-        if (!isRemoving() && !isRenaming() && !hideClicked && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
+        if (!isRemoving() && !isLocating() && !isRenaming() && !hideClicked && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           if (isSelectionMode()) {
             props.onToggleSelect?.();
@@ -119,11 +144,11 @@ export function SourceRow(props: SourceRowProps) {
       }}
       onTransitionEnd={handleTransitionEnd}
       onDragStart={(e: DragEvent) => {
-        if (isSelectionMode() || isRemoving() || isRenaming() || props.fadingOut) { e.preventDefault(); return; }
+        if (isSelectionMode() || isRemoving() || isLocating() || isRenaming() || props.fadingOut) { e.preventDefault(); return; }
         props.onDragStart?.(e);
       }}
       onDragOver={(e: DragEvent) => {
-        if (isSelectionMode() || isRemoving() || props.fadingOut) return;
+        if (isSelectionMode() || isRemoving() || isLocating() || props.fadingOut) return;
         props.onDragOver?.(e);
       }}
       onDragEnd={() => {
@@ -131,7 +156,7 @@ export function SourceRow(props: SourceRowProps) {
         props.onDragEnd?.();
       }}
       onDrop={(e: DragEvent) => {
-        if (isSelectionMode() || isRemoving() || props.fadingOut) return;
+        if (isSelectionMode() || isRemoving() || isLocating() || props.fadingOut) return;
         props.onDrop?.(e);
       }}
     >
@@ -146,7 +171,7 @@ export function SourceRow(props: SourceRowProps) {
             <div
               class={`shrink-0 transition-colors ${
                 props.hidden ? "opacity-0 pointer-events-none" : `cursor-grab text-ink-700 hover:text-ink-400 ${
-                  isRemoving() || props.fadingOut ? "opacity-30" : ""
+                  isRemoving() || isLocating() || props.fadingOut ? "opacity-30" : ""
                 }`
               }`}
               onClick={(e: MouseEvent) => e.stopPropagation()}
@@ -167,10 +192,28 @@ export function SourceRow(props: SourceRowProps) {
             </div>
           </div>
         </Show>
-        <Folder size={28} class={isRemoving() ? "text-red-400/60 shrink-0" : props.hidden ? "text-ink-600 shrink-0" : "text-jade-500 shrink-0"} />
+        <Folder
+          size={28}
+          class={
+            isRemoving()
+              ? "text-red-400/60 shrink-0"
+              : props.source.path_missing
+                ? "text-red-400 shrink-0"
+                : props.hidden
+                  ? "text-ink-600 shrink-0"
+                  : "text-jade-500 shrink-0"
+          }
+        />
         <div class="flex-1 min-w-0">
           <Show when={props.renaming} fallback={
-            <p class={`text-sm font-medium truncate ${props.hidden ? "text-ink-500" : "text-ink-100"}`}>{props.source.name}</p>
+            <div class="flex min-w-0 items-center gap-2">
+              <p class={`text-sm font-medium truncate ${props.hidden ? "text-ink-500" : "text-ink-100"}`}>{props.source.name}</p>
+              <Show when={props.source.path_missing}>
+                <span class="shrink-0 rounded-full border border-red-500/40 bg-red-950/40 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-red-300">
+                  Missing
+                </span>
+              </Show>
+            </div>
           }>
             {(renaming) => (
               <input
@@ -188,7 +231,7 @@ export function SourceRow(props: SourceRowProps) {
               />
             )}
           </Show>
-          <p class="text-xs text-ink-500">
+          <p class={`text-xs ${props.source.path_missing ? "text-ink-600" : "text-ink-500"}`}>
             {props.source.manga_count} manga ·{" "}
             <span title={absoluteTime()}>last scan: {lastScanLabel()}</span>
           </p>
@@ -196,7 +239,7 @@ export function SourceRow(props: SourceRowProps) {
             {props.source.path}
           </p>
         </div>
-        <Show when={!isRemoving() && !isSelectionMode()}>
+        <Show when={!isRemoving() && !isLocating() && !isSelectionMode()}>
           {/* Scan-status badge — fades in over the overflow trigger area */}
           <Show when={props.scanStatus}>
             <div class="flex h-8 w-8 shrink-0 items-center justify-center transition-opacity duration-200"
@@ -223,21 +266,27 @@ export function SourceRow(props: SourceRowProps) {
                 <EllipsisVertical size={16} />
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onSelect={props.onRescan}>
+                <Show when={props.source.path_missing}>
+                  <DropdownMenuItem onSelect={() => runMenuAction(props.onLocate)}>
+                    <Link2 size={14} />
+                    Locate
+                  </DropdownMenuItem>
+                </Show>
+                <DropdownMenuItem onSelect={() => runMenuAction(props.onRescan)} disabled={props.source.path_missing}>
                   <RefreshCw size={14} />
                   Re-scan
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={props.onRename}>
+                <DropdownMenuItem onSelect={() => runMenuAction(props.onRename)}>
                   <Pencil size={14} />
                   Rename
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { hideClicked = true; props.onHide(); requestAnimationFrame(() => { hideClicked = false; }); }}>
+                <DropdownMenuItem onSelect={() => runMenuAction(props.onHide)}>
                   <Show when={props.hidden} fallback={<><EyeOff size={14} /> Hide</>}>
                     <Eye size={14} /> Show
                   </Show>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={props.onRemove} class="text-red-400 focus:text-red-400">
+                <DropdownMenuItem onSelect={() => runMenuAction(props.onRemove)} class="text-red-400 focus:text-red-400">
                   <Trash2 size={14} />
                   Remove
                 </DropdownMenuItem>
@@ -264,6 +313,30 @@ export function SourceRow(props: SourceRowProps) {
                 onClick={(e: MouseEvent) => { e.stopPropagation(); removing().onConfirm(); }}
               >
                 Confirm remove
+              </button>
+            </div>
+          </div>
+        )}
+      </Show>
+
+      <Show when={props.locating}>
+        {(locating) => (
+          <div class="mt-2 pt-2 border-t border-red-900/30">
+            <p class="text-xs text-red-300/80 leading-relaxed mb-2">
+              {locating().error || "This source folder is missing. Relocate it to keep your library, categories, and reading progress linked."}
+            </p>
+            <div class="flex items-center gap-2 justify-end">
+              <button
+                class="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium text-ink-400 transition-colors hover:bg-ink-800 hover:text-ink-100"
+                onClick={(e: MouseEvent) => { e.stopPropagation(); locating().onCancel(); }}
+              >
+                Cancel
+              </button>
+              <button
+                class="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-950/40 hover:text-red-200"
+                onClick={(e: MouseEvent) => { e.stopPropagation(); locating().onConfirm(); }}
+              >
+                {locating().error ? "Try again" : "Relocate"}
               </button>
             </div>
           </div>
