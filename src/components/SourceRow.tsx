@@ -133,6 +133,18 @@ export function SourceRow(props: SourceRowProps) {
           return;
         }
 
+        if (!isRemoving() && !isLocating() && !isRenaming() && !isSelectionMode() && !hideClicked && !props.fadingOut && e.key === "Delete") {
+          e.preventDefault();
+          props.onRemove();
+          return;
+        }
+
+        if (!isRemoving() && !isLocating() && !isRenaming() && !isSelectionMode() && !hideClicked && !props.fadingOut && e.key === "F2") {
+          e.preventDefault();
+          props.onRename();
+          return;
+        }
+
         if (!isRemoving() && !isLocating() && !isRenaming() && !hideClicked && !props.fadingOut && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           if (isSelectionMode()) {
