@@ -4,6 +4,7 @@ import type { Source, Category, LibraryEntry } from "../types";
 
 type Status = "idle" | "loading" | "error";
 export type ScanStatus = "scanning" | "done" | "error";
+export type ScanEntry = { status: ScanStatus; error?: string };
 
 interface LibraryContextValue {
   sources: () => Source[];
@@ -16,7 +17,7 @@ interface LibraryContextValue {
   setSourceHidden: (sourceId: string, hidden: boolean) => Promise<void>;
   refreshSources: () => Promise<void>;
   getSource: (id: string) => Source | undefined;
-  scanStatus: () => Record<string, ScanStatus>;
+  scanStatus: () => Record<string, ScanEntry>;
   scanSource: (sourceId: string) => void;
   scanAllSources: () => void;
   categories: () => Category[];
@@ -38,7 +39,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   const [error, setError] = createSignal("");
   const [categories, setCategories] = createSignal<Category[]>([]);
   const [libraryEntries, setLibraryEntries] = createSignal<LibraryEntry[]>([]);
-  const [scanStatus, setScanStatus] = createSignal<Record<string, ScanStatus>>({});
+  const [scanStatus, setScanStatus] = createSignal<Record<string, ScanEntry>>({});
 
   // Promise consumers can await — resolves when the initial sources +
   // categories + library load completes. Held in a closure so multiple
@@ -94,11 +95,11 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     await refreshLibrary();
   }
 
-  function setScanStatusFor(sourceId: string, status: ScanStatus | undefined) {
+  function setScanStatusFor(sourceId: string, entry: ScanEntry | undefined) {
     setScanStatus((prev) => {
       const next = { ...prev };
-      if (status === undefined) delete next[sourceId];
-      else next[sourceId] = status;
+      if (entry === undefined) delete next[sourceId];
+      else next[sourceId] = entry;
       return next;
     });
   }
@@ -106,24 +107,24 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   function scanSource(sourceId: string) {
     const source = sources().find((s) => s.id === sourceId);
     if (!source) return;
-    if (scanStatus()[sourceId] === "scanning") return;
+    if (scanStatus()[sourceId]?.status === "scanning") return;
     if (source.path_missing) {
-      setScanStatusFor(sourceId, "error");
+      setScanStatusFor(sourceId, { status: "error", error: "Source folder is missing" });
       setTimeout(() => setScanStatusFor(sourceId, undefined), 1500);
       return;
     }
 
-    setScanStatusFor(sourceId, "scanning");
+    setScanStatusFor(sourceId, { status: "scanning" });
 
     invoke("scan_directory", { path: source.path, forceRefresh: true })
       .then(() => {
-        setScanStatusFor(sourceId, "done");
+        setScanStatusFor(sourceId, { status: "done" });
         refreshSources();
         setTimeout(() => setScanStatusFor(sourceId, undefined), 2000);
       })
       .catch((e) => {
         console.error(`Re-scan failed for ${source.name}:`, e);
-        setScanStatusFor(sourceId, "error");
+        setScanStatusFor(sourceId, { status: "error", error: String(e) });
         setTimeout(() => setScanStatusFor(sourceId, undefined), 3000);
       });
   }

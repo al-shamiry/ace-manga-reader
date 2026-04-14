@@ -43,3 +43,29 @@ export function ChapterListSkeleton(props: { count?: number }) {
     </For>
   );
 }
+
+/** Skeleton that matches a SourceRow in SourcesView */
+export function SourceRowSkeleton() {
+  return (
+    <div class="relative flex flex-col px-4 py-3 border-b border-ink-800/40 rounded-md overflow-hidden">
+      <div class="flex items-center gap-4">
+        <div class="skeleton h-4 w-4 rounded-sm shrink-0" />
+        <div class="skeleton h-7 w-7 rounded-md shrink-0" />
+        <div class="flex-1 min-w-0">
+          <div class="skeleton h-4 rounded w-3/5" />
+          <div class="skeleton h-3 rounded w-2/5 mt-1.5" />
+          <div class="skeleton h-3 rounded w-4/5 mt-1.5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** N source row skeletons */
+export function SourceListSkeleton(props: { count?: number }) {
+  return (
+    <For each={Array(props.count ?? 3).fill(0)}>
+      {() => <SourceRowSkeleton />}
+    </For>
+  );
+}

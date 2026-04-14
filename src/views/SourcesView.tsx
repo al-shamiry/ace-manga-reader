@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { EmptyState } from "../components/EmptyState";
 import { SourceRow } from "../components/SourceRow";
+import { SourceListSkeleton } from "../components/Skeleton";
 import {
   Toolbar,
   ToolbarActions,
@@ -41,7 +42,7 @@ export function SourcesView() {
   );
 
   const isAnyScanning = createMemo(() =>
-    Object.values(scanStatus()).some((s) => s === "scanning")
+    Object.values(scanStatus()).some((s) => s.status === "scanning")
   );
 
   function openSource(source: Source) {
@@ -468,7 +469,11 @@ export function SourcesView() {
 
       <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
         <Show when={status() === "loading"}>
-          <p class="px-6 py-4 text-sm text-ink-500">Loading...</p>
+          <div class="flex-1 overflow-y-auto">
+            <div class="max-w-3xl mx-auto px-4 py-2">
+              <SourceListSkeleton count={3} />
+            </div>
+          </div>
         </Show>
         <Show when={status() === "error"}>
           <p class="px-6 py-4 text-sm text-red-400">{error()}</p>

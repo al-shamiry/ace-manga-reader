@@ -1,6 +1,6 @@
 import { Show, createEffect, on } from "solid-js";
 import { AlertCircle, Check, EllipsisVertical, Eye, EyeOff, Folder, GripVertical, Link2, Pencil, RefreshCw, Trash2 } from "lucide-solid";
-import type { ScanStatus } from "../context/LibraryContext";
+import type { ScanEntry } from "../context/LibraryContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +41,7 @@ interface SourceRowProps {
   onRename: () => void;
   onHide: () => void;
   onRemove: () => void;
-  scanStatus?: ScanStatus;
+  scanStatus?: ScanEntry;
   renaming?: RenameState;
   removing?: RemoveState;
   locating?: LocateState;
@@ -238,6 +238,17 @@ export function SourceRow(props: SourceRowProps) {
           <p class="text-xs text-ink-600 truncate" title={props.source.path}>
             {props.source.path}
           </p>
+          <Show when={props.scanStatus?.status === "error" && props.scanStatus.error}>
+            <p class="text-[11px] text-red-400/80 mt-0.5 flex items-center gap-1">
+              {props.scanStatus!.error}
+              <button
+                class="text-red-300 underline hover:text-red-200 cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); props.onRescan(); }}
+              >
+                Retry
+              </button>
+            </p>
+          </Show>
         </div>
         <Show when={!isRemoving() && !isLocating() && !isSelectionMode()}>
           {/* Scan-status badge — fades in over the overflow trigger area */}
@@ -245,13 +256,13 @@ export function SourceRow(props: SourceRowProps) {
             <div class="flex h-8 w-8 shrink-0 items-center justify-center transition-opacity duration-200"
               classList={{ "animate-fade-in": !!props.scanStatus }}
             >
-              <Show when={props.scanStatus === "scanning"}>
+              <Show when={props.scanStatus?.status === "scanning"}>
                 <RefreshCw size={16} class="text-jade-400 animate-spin" />
               </Show>
-              <Show when={props.scanStatus === "done"}>
+              <Show when={props.scanStatus?.status === "done"}>
                 <Check size={16} class="text-jade-400" />
               </Show>
-              <Show when={props.scanStatus === "error"}>
+              <Show when={props.scanStatus?.status === "error"}>
                 <AlertCircle size={16} class="text-red-400" />
               </Show>
             </div>
