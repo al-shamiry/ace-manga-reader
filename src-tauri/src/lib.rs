@@ -35,7 +35,7 @@ pub fn run() {
                             .collect();
                         subdirs.sort();
                         for sub in subdirs {
-                            let _ = commands::library::add_source_internal(app.handle(), &sub, None);
+                            let _ = commands::sources::add_source_internal(app.handle(), &sub, None);
                         }
                     }
                 }
@@ -44,14 +44,14 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::library::scan_directory,
-            commands::library::list_sources,
-            commands::library::add_source,
-            commands::library::relocate_source,
-            commands::library::remove_source,
-            commands::library::rename_source,
-            commands::library::reorder_sources,
-            commands::library::set_source_hidden,
+            commands::sources::scan_directory,
+            commands::sources::list_sources,
+            commands::sources::add_source,
+            commands::sources::relocate_source,
+            commands::sources::remove_source,
+            commands::sources::rename_source,
+            commands::sources::reorder_sources,
+            commands::sources::set_source_hidden,
             commands::reader::get_chapters,
             commands::reader::open_chapter,
             commands::reader::set_chapter_progress,

@@ -2,7 +2,7 @@ import { For, JSX, Show, createSignal, onMount } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Folder } from "lucide-solid";
-import { useLibrary } from "../context/LibraryContext";
+import { useSources } from "../context/SourcesContext";
 import { Slider, SliderFill, SliderThumb, SliderTrack } from "../components/ui/slider";
 import { Checkbox } from "../components/ui/checkbox";
 import { Toolbar, ToolbarTitle } from "../components/ui/toolbar";
@@ -37,7 +37,7 @@ const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
 ];
 
 export function SettingsView() {
-  const { loadRoot } = useLibrary();
+  const { loadRoot } = useSources();
   const [rootDir, setRootDir] = createSignal<string | null>(null);
   const [fitMode, setFitMode] = createSignal<FitMode>("fit-screen");
   const [readingMode, setReadingMode] = createSignal<ReadingMode>("paged-rtl");

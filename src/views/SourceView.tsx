@@ -17,7 +17,7 @@ import {
   ToolbarInlineButton,
   ToolbarTitle,
 } from "../components/ui/toolbar";
-import { useLibrary } from "../context/LibraryContext";
+import { useSources } from "../context/SourcesContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Chapter, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
@@ -26,7 +26,7 @@ type Status = "idle" | "loading" | "error";
 export function SourceView() {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSource, initialLoad, refreshSources } = useLibrary();
+  const { getSource, initialLoad, refreshSources } = useSources();
   const view = useViewLoading();
   const loadToken = view.busy();
 

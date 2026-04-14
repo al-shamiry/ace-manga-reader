@@ -1,6 +1,6 @@
 import { Show, createEffect, on } from "solid-js";
 import { AlertCircle, Check, EllipsisVertical, Eye, EyeOff, Folder, GripVertical, Link2, Pencil, RefreshCw, Trash2 } from "lucide-solid";
-import type { ScanEntry } from "../context/LibraryContext";
+import type { ScanEntry } from "../context/SourcesContext";
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -4,6 +4,7 @@ import { Plus } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useLibrary } from "../context/LibraryContext";
+import { useSources } from "../context/SourcesContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { EmptyState } from "../components/EmptyState";
 import { MangaGrid } from "../components/MangaGrid";
@@ -17,7 +18,8 @@ import type { Tab } from "../components/TabBar";
 import type { Chapter, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function LibraryView() {
-  const { categories, libraryEntries, sources, addSource, refreshCategories, refreshLibrary, initialLoad } = useLibrary();
+  const { categories, libraryEntries, refreshCategories, refreshLibrary, initialLoad } = useLibrary();
+  const { sources, addSource } = useSources();
   const view = useViewLoading();
   // Mark busy synchronously so the overlay paints on the first frame.
   const loadToken = view.busy();

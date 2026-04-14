@@ -2,6 +2,7 @@ import { Show, JSX } from "solid-js";
 import type { RouteSectionProps } from "@solidjs/router";
 import { useLocation } from "@solidjs/router";
 import { LibraryProvider } from "./context/LibraryContext";
+import { SourcesProvider } from "./context/SourcesContext";
 import { ViewLoadingProvider, useViewLoading } from "./context/ViewLoadingContext";
 import { SideNav } from "./components/SideNav";
 import { TitleBar } from "./components/TitleBar";
@@ -41,19 +42,21 @@ function App(props: RouteSectionProps) {
   const isReader = () => location.pathname.startsWith("/reader/");
 
   return (
-    <LibraryProvider>
-      <ViewLoadingProvider>
-        <div class="flex flex-col h-screen overflow-hidden bg-background text-foreground">
-          <TitleBar />
-          <div class="flex flex-1 min-h-0 overflow-hidden">
-            <Show when={!isReader()}>
-              <SideNav />
-            </Show>
-            <MainArea>{props.children}</MainArea>
+    <SourcesProvider>
+      <LibraryProvider>
+        <ViewLoadingProvider>
+          <div class="flex flex-col h-screen overflow-hidden bg-background text-foreground">
+            <TitleBar />
+            <div class="flex flex-1 min-h-0 overflow-hidden">
+              <Show when={!isReader()}>
+                <SideNav />
+              </Show>
+              <MainArea>{props.children}</MainArea>
+            </div>
           </div>
-        </div>
-      </ViewLoadingProvider>
-    </LibraryProvider>
+        </ViewLoadingProvider>
+      </LibraryProvider>
+    </SourcesProvider>
   );
 }
 

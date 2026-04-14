@@ -13,12 +13,12 @@ import {
   ToolbarInlineButton,
   ToolbarTitle,
 } from "../components/ui/toolbar";
-import { useLibrary } from "../context/LibraryContext";
+import { useSources } from "../context/SourcesContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, addSource, removeSource, relocateSource, setSourceHidden, refreshSources, initialLoad, scanStatus, scanSource, scanAllSources } = useLibrary();
+  const { sources, status, error, addSource, removeSource, relocateSource, setSourceHidden, refreshSources, initialLoad, scanStatus, scanSource, scanAllSources } = useSources();
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();

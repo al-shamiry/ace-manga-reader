@@ -1,50 +1,25 @@
-import { createContext, createSignal, onMount, useContext, JSX } from "solid-js";
+import { createContext, createEffect, createSignal, on, onMount, useContext, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-import type { Source, Category, LibraryEntry } from "../types";
-
-type Status = "idle" | "loading" | "error";
-export type ScanStatus = "scanning" | "done" | "error";
-export type ScanEntry = { status: ScanStatus; error?: string };
+import { useSources } from "./SourcesContext";
+import type { Category, LibraryEntry } from "../types";
 
 interface LibraryContextValue {
-  sources: () => Source[];
-  status: () => Status;
-  error: () => string;
-  loadRoot: (path: string) => Promise<void>;
-  addSource: (path: string, name?: string) => Promise<void>;
-  removeSource: (sourceId: string) => Promise<void>;
-  relocateSource: (sourceId: string, newPath: string) => Promise<void>;
-  setSourceHidden: (sourceId: string, hidden: boolean) => Promise<void>;
-  refreshSources: () => Promise<void>;
-  getSource: (id: string) => Source | undefined;
-  scanStatus: () => Record<string, ScanEntry>;
-  scanSource: (sourceId: string) => void;
-  scanAllSources: () => void;
   categories: () => Category[];
   libraryEntries: () => LibraryEntry[];
   isInLibrary: (mangaId: string) => boolean;
   refreshCategories: () => Promise<void>;
   refreshLibrary: () => Promise<void>;
-  /** Resolves once the provider's initial onMount load (sources,
-   *  categories, library entries) has finished. Views that depend on this
-   *  data should `await initialLoad()` before calling `view.ready()`. */
+  /** Resolves once sources + categories + library entries are loaded. */
   initialLoad: () => Promise<void>;
 }
 
 const LibraryContext = createContext<LibraryContextValue>();
 
 export function LibraryProvider(props: { children: JSX.Element }) {
-  const [sources, setSources] = createSignal<Source[]>([]);
-  const [status, setStatus] = createSignal<Status>("idle");
-  const [error, setError] = createSignal("");
+  const { initialLoad: sourcesInitialLoad, sourceMutationCount } = useSources();
   const [categories, setCategories] = createSignal<Category[]>([]);
   const [libraryEntries, setLibraryEntries] = createSignal<LibraryEntry[]>([]);
-  const [scanStatus, setScanStatus] = createSignal<Record<string, ScanEntry>>({});
 
-  // Promise consumers can await — resolves when the initial sources +
-  // categories + library load completes. Held in a closure so multiple
-  // awaiters share the same resolution rather than each kicking off
-  // duplicate work.
   let resolveInitial!: () => void;
   const initialLoadPromise = new Promise<void>((resolve) => {
     resolveInitial = resolve;
@@ -52,7 +27,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   onMount(async () => {
     try {
-      await refreshSources();
+      await sourcesInitialLoad();
       await refreshCategories();
       await refreshLibrary();
     } finally {
@@ -60,90 +35,9 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     }
   });
 
-  async function refreshSources() {
-    const srcs = await invoke<Source[]>("list_sources", { includeHidden: true });
-    setSources(srcs);
-  }
-
-  async function loadRoot(path: string) {
-    setStatus("loading");
-    setError("");
-    try {
-      await invoke<void>("set_root_directory", { path });
-      await refreshSources();
-      setStatus("idle");
-    } catch (e) {
-      setError(String(e));
-      setStatus("error");
-    }
-  }
-
-  async function addSource(path: string, name?: string) {
-    await invoke<Source>("add_source", { path, name: name ?? null });
-    await refreshSources();
-  }
-
-  async function removeSource(sourceId: string) {
-    await invoke("remove_source", { sourceId });
-    await refreshSources();
-    await refreshLibrary();
-  }
-
-  async function relocateSource(sourceId: string, newPath: string) {
-    await invoke<Source>("relocate_source", { sourceId, newPath });
-    await refreshSources();
-    await refreshLibrary();
-  }
-
-  function setScanStatusFor(sourceId: string, entry: ScanEntry | undefined) {
-    setScanStatus((prev) => {
-      const next = { ...prev };
-      if (entry === undefined) delete next[sourceId];
-      else next[sourceId] = entry;
-      return next;
-    });
-  }
-
-  function scanSource(sourceId: string) {
-    const source = sources().find((s) => s.id === sourceId);
-    if (!source) return;
-    if (scanStatus()[sourceId]?.status === "scanning") return;
-    if (source.path_missing) {
-      setScanStatusFor(sourceId, { status: "error", error: "Source folder is missing" });
-      setTimeout(() => setScanStatusFor(sourceId, undefined), 1500);
-      return;
-    }
-
-    setScanStatusFor(sourceId, { status: "scanning" });
-
-    invoke("scan_directory", { path: source.path, forceRefresh: true })
-      .then(() => {
-        setScanStatusFor(sourceId, { status: "done" });
-        refreshSources();
-        setTimeout(() => setScanStatusFor(sourceId, undefined), 2000);
-      })
-      .catch((e) => {
-        console.error(`Re-scan failed for ${source.name}:`, e);
-        setScanStatusFor(sourceId, { status: "error", error: String(e) });
-        setTimeout(() => setScanStatusFor(sourceId, undefined), 3000);
-      });
-  }
-
-  function scanAllSources() {
-    for (const source of sources()) {
-      if (!source.hidden) scanSource(source.id);
-    }
-  }
-
-  async function setSourceHidden(sourceId: string, hidden: boolean) {
-    await invoke("set_source_hidden", { sourceId, hidden });
-    await refreshSources();
-    await refreshLibrary();
-  }
-
-  function getSource(id: string) {
-    return sources().find((s) => s.id === id);
-  }
+  createEffect(on(sourceMutationCount, () => {
+    void refreshLibrary();
+  }, { defer: true }));
 
   function isInLibrary(mangaId: string) {
     return libraryEntries().some((e) => e.manga_id === mangaId);
@@ -169,9 +63,11 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   return (
     <LibraryContext.Provider value={{
-      sources, status, error, loadRoot, addSource, removeSource, relocateSource, setSourceHidden, refreshSources, getSource,
-      scanStatus, scanSource, scanAllSources,
-      categories, libraryEntries, isInLibrary, refreshCategories, refreshLibrary,
+      categories,
+      libraryEntries,
+      isInLibrary,
+      refreshCategories,
+      refreshLibrary,
       initialLoad: () => initialLoadPromise,
     }}>
       {props.children}
