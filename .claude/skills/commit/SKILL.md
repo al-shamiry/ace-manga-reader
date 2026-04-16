@@ -57,6 +57,7 @@ type(scope): one-phrase subject
 - Keep it under ~50 characters.
 - Use a short scope in parentheses that names the area touched (e.g. `loader`, `library`, `reader`, `settings`, `history`, `ui`, `window`, `theme`, `release`). Omit the scope only when the change is genuinely cross-cutting.
 - **Prefer imperative phrasing** — start with a verb that says what the change does (`add`, `fix`, `replace`, `unify`, `move`, `rename`, `drop`, `extract`). Imperative reads more clearly than descriptive (`basic settings view`) because it states the action up front.
+- Write the subject as a high-level intent summary (the why), not a comma-separated change list; put detailed changes in the body as bullets when needed.
 
 ### Type vocabulary used in this repo
 

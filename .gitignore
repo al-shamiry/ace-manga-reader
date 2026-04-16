@@ -3,3 +3,4 @@ dist
 notes/
 .dual-graph/
 .claude/settings.local.json
+.pi

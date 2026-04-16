@@ -1,94 +1,115 @@
-<!-- dgc-policy-v11 -->
-# Dual-Graph Context Policy
+# CLAUDE.md
 
-This project uses a local dual-graph MCP server for efficient context retrieval.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## MANDATORY: Adaptive graph_continue rule
+## Commands
 
-**Call `graph_continue` ONLY when you do NOT already know the relevant files.**
+```bash
+# Dev (Tauri window + Vite HMR, frontend on port 1420)
+npm run tauri dev
 
-### Call `graph_continue` when:
-- This is the first message of a new task / conversation
-- The task shifts to a completely different area of the codebase
-- You need files you haven't read yet in this session
+# Type-check frontend only
+npx tsc --noEmit
 
-### SKIP `graph_continue` when:
-- You already identified the relevant files earlier in this conversation
-- You are doing follow-up work on files already read (verify, refactor, test, docs, cleanup, commit)
-- The task is pure text (writing a commit message, summarising, explaining)
+# Check Rust only
+cd src-tauri && cargo check
 
-**If skipping, go directly to `graph_read` on the already-known `file::symbol`.**
+# Frontend production build
+npm run build
 
-## When you DO call graph_continue
-
-1. **If `graph_continue` returns `needs_project=true`**: call `graph_scan` with `pwd`. Do NOT ask the user.
-
-2. **If `graph_continue` returns `skip=true`**: fewer than 5 files  -  read only specifically named files.
-
-3. **Read `recommended_files`** using `graph_read`.
-   - Always use `file::symbol` notation (e.g. `src/auth.ts::handleLogin`)  -  never read whole files.
-   - `recommended_files` entries that already contain `::` must be passed verbatim.
-
-4. **Obey confidence caps:**
-   - `confidence=high` -> Stop. Do NOT grep or explore further.
-   - `confidence=medium` -> `fallback_rg` at most `max_supplementary_greps` times, then `graph_read` at most `max_supplementary_files` more symbols. Stop.
-   - `confidence=low` -> same as medium. Stop.
-
-## Session State (compact, update after every turn)
-
-Maintain a short JSON block in your working memory. Update it after each turn:
-
-```json
-{
-  "files_identified": ["path/to/file.py"],
-  "symbols_changed": ["module::function"],
-  "fix_applied": true,
-  "features_added": ["description"],
-  "open_issues": ["one-line note"]
-}
+# Installer build (Tauri bundle)
+npm run tauri build
 ```
 
-Use this state  -  not prose summaries  -  to remember what's been done across turns.
+No test infrastructure exists yet (no Vitest, no Rust tests). CI releases run via `.github/workflows/release.yml` on `v*` tag pushes — builds Windows + Linux installers as a **draft** GitHub Release using `tauri-apps/tauri-action`.
 
-## Token Usage
+## Architecture
 
-A `token-counter` MCP is available for tracking live token usage.
+**Tauri v2 + SolidJS** desktop manga reader. Rust backend handles file I/O and persistence; frontend is display/navigation with router-state-driven flows.
 
-- Before reading a large file: `count_tokens({text: "<content>"})` to check cost first.
-- To show running session cost: `get_session_stats()`
-- To log completed task: `log_usage({input_tokens: N, output_tokens: N, description: "task"})`
-
-## Rules
-
-- Do NOT use `rg`, `grep`, or bash file exploration before calling `graph_continue` (when required).
-- Do NOT do broad/recursive exploration at any confidence level.
-- `max_supplementary_greps` and `max_supplementary_files` are hard caps  -  never exceed them.
-- Do NOT call `graph_continue` more than once per turn.
-- Always use `file::symbol` notation with `graph_read`  -  never bare filenames.
-- After edits, call `graph_register_edit` with changed files using `file::symbol` notation.
-
-## Context Store
-
-Whenever you make a decision, identify a task, note a next step, fact, or blocker during a conversation, append it to `.dual-graph/context-store.json`.
-
-**Entry format:**
-```json
-{"type": "decision|task|next|fact|blocker", "content": "one sentence max 15 words", "tags": ["topic"], "files": ["relevant/file.ts"], "date": "YYYY-MM-DD"}
+### Library structure on disk (current model: source-first)
+```
+Source folder/              ← add directly in Sources view
+  Manga title/              ← one Manga entry in the grid
+    Chapter 01/             ← chapters can be image folders
+      001.jpg
+    Chapter 02.cbz          ← or CBZ files (a manga can mix both)
 ```
 
-**To append:** Read the file -> add the new entry to the array -> Write it back -> call `graph_register_edit` on `.dual-graph/context-store.json`.
+`root_directory` in settings is now mostly a compatibility helper. On startup, if a root is set and no sources exist yet, immediate root subfolders are imported as sources.
 
-**Rules:**
-- Only log things worth remembering across sessions (not every minor detail)
-- `content` must be under 15 words
-- `files` lists the files this decision/task relates to (can be empty)
-- Log immediately when the item arises  -  not at session end
+### Data flow
 
-## Session End
+1. Sources load from manga DB via `list_sources`
+2. Opening a source calls `scan_directory(path, force_refresh?)` → `Manga[]` and updates cache/metadata
+3. Opening a manga detail calls `get_chapters(manga_path)` → `Chapter[]` + saved progress
+4. Opening a chapter calls `open_chapter(chapter_path, file_type)`; frontend renders via `convertFileSrc`
+5. Reader updates progress via `set_chapter_progress` and history via `record_history`
 
-When the user signals they are done (e.g. "bye", "done", "wrap up", "end session"), proactively update `CONTEXT.md` in the project root with:
-- **Current Task**: one sentence on what was being worked on
-- **Key Decisions**: bullet list, max 3 items
-- **Next Steps**: bullet list, max 3 items
+### Tauri commands
+Registered in `src-tauri/src/lib.rs` — check `generate_handler!` for the canonical list. Modules under `commands/`: `sources`, `reader`, `settings`, `categories`, `history`, plus `manga_db` (the DB hub, not exposed).
 
-Keep `CONTEXT.md` under 20 lines total. Do NOT summarize the full conversation  -  only what's needed to resume next session.
+### Key Rust files
+- `commands/manga_db.rs` — `MangaDbCache` (Mutex-managed), load/backfill/save for `manga_db.json`
+- `models/manga_db.rs` — `SourceMeta`, `MangaState`, `MangaDb` (central data model)
+- `utils.rs` — `is_image`, `path_id`, `normalize`, `title_from_path`, `natural_cmp`, `images_in`, `subdirs_and_cbz`, `write_atomic_json`
+
+### Frontend contexts (`src/context/`)
+- `SourcesContext` — source list, CRUD, scan status, `initialLoad`, mutation counter
+- `LibraryContext` — categories/library-entry signals, refresh helpers, `initialLoad`
+- `ViewLoadingContext` — sequence-token busy/ready API used by `LoadingOverlay`
+
+Router state is the primary cross-view payload mechanism (no global "current chapter" store). Routes in `src/index.tsx`. `ReaderView` receives `{ chapter, manga, prevChapter?, nextChapter?, initialPage? }`; `MangaDetailView` receives `Manga`.
+
+### Asset protocol
+Pages/covers served via Tauri asset protocol. Use `convertFileSrc(path)` from `@tauri-apps/api/core` (resolves to `http://asset.localhost/...` — note `http://` not `https://`).
+
+### Title normalisation (`utils::title_from_path`)
+- Strips trailing `_HEXSTRING` suffixes (4–16 hex chars) — download-tool dedup hashes
+- Replaces `_ ` with `: ` — Windows-safe filename restoration
+
+### Persistent storage (`app_data_dir`, typically `%APPDATA%\ace-manga-reader\` on Windows)
+| Path | Contents |
+|---|---|
+| `config.json` | Global config: root directory, reading defaults, filters, sort/display prefs, categories, active category |
+| `manga_db.json` | Central DB: sources + manga state (progress, categories per manga, metadata) |
+| `history.json` | Recently-read entries (1000 cap, deduped by manga) |
+| `cache/covers/` | Extracted CBZ cover cache |
+| `cache/pages/{chapter_id}/` | Extracted CBZ page cache |
+| `settings/{manga_id}.json` | Per-manga reader overrides (`fit_mode`, `reading_mode`, `webtoon_padding`) |
+
+Legacy files (`library.json`, `progress.json`) may exist on older installs but are not part of the active persistence model.
+
+### ReaderView — architectural hotspot
+`src/views/ReaderView.tsx`:
+- **4 reading modes**: `paged-ltr`, `paged-rtl`, `paged-vertical`, `webtoon` (cycle: `m`)
+- **5 fit modes** (paged only): `fit-screen`, `fit-width`, `fit-height`, `original`, `stretch` (cycle: `f`)
+- **Webtoon side padding**: 0–25%, persisted in settings; adjustable via UI slider and `Ctrl+Wheel`
+- **Tap zones**: thirds (paged: left/center/right or top/center/bottom in vertical; webtoon: sticky top/center/bottom)
+- **Keyboard**: arrows navigate/scroll; webtoon uses rAF continuous scrolling with >2s speed boost; `Backspace`/`Escape` back; `F11` fullscreen
+- **Page flip animations**: direction-aware `slide-in-*` / `slide-out-*` classes (~200ms)
+- **Chapter edge behavior**: extra input at boundary advances to prev/next chapter
+- **Settings**: `get_settings` merges manga-specific values with global defaults
+- **Progress/history**: progress saved on page turns, history recorded on chapter open
+- **Code pattern**: handlers/helpers above JSX; keep template declarative
+
+### Conventions
+- Conventional Commits (`feat`, `fix`, `refactor`, `perf`, `docs`, `chore`)
+- IDs = first 8 bytes of SHA-256(path), hex-encoded (`path_id`)
+- Rust normalizes paths to forward slashes before sending to frontend
+- Tailwind v4 CSS-first (`@import "tailwindcss"` in `global.css`; no `tailwind.config.js`)
+- `src/types.ts` must stay aligned with Rust command payloads
+
+### Cross-agent guardrails
+- Keep frontend/backend contracts in sync: if a Rust command payload changes, update `src/types.ts` and all frontend consumers
+- Preserve config compatibility: prefer additive changes to persisted keys (`config.json`, per-manga settings) and avoid breaking existing installs
+- Keep TypeScript strictness intact; avoid `any` unless unavoidable
+- Do not introduce unnecessary dependencies when existing stack/utilities can solve the problem
+- Register all new commands in `tauri::generate_handler!` (`src-tauri/src/lib.rs`)
+
+### UI/UX constraints
+- Dark-first aesthetic using `ink-*` + `jade-*` tokens from `global.css` (avoid stock Tailwind palette)
+- Motion purposeful/short (generally <=200ms)
+- Keyboard-first workflows for core actions
+- Reader experience is sacred: low noise, content-first
+- Typography: Newsreader (`font-display`) for hero titles, Hanken Grotesk (`font-sans`) for UI
