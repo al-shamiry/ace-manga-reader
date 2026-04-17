@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuGroup,
+  DropdownMenuHeader,
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 import { toolbarIconButtonClass } from "./ui/toolbar";
@@ -48,21 +49,22 @@ export function SortDropdown(props: SortDropdownProps) {
     }
   }
 
+  function resetSort() {
+    props.onChange(effectiveDefault());
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger class={toolbarIconButtonClass} title="Sort">
         <ArrowUpDown size={16} />
-        <Show when={isNonDefault()}>
-          <span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-jade-500" />
-        </Show>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent class="w-48">
+        <DropdownMenuHeader onReset={resetSort} canReset={isNonDefault()}>
+          Sort by
+        </DropdownMenuHeader>
+        <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <div class="px-2 pb-1 pt-2 text-sm font-semibold text-foreground">
-            Sort By
-          </div>
-          <DropdownMenuSeparator />
           <For each={visibleOptions()}>
             {(option) => {
               const isActive = () => props.preference.field === option.value;

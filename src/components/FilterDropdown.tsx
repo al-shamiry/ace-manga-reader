@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuGroupLabel,
+  DropdownMenuHeader,
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "./ui/dropdown-menu";
@@ -68,17 +69,9 @@ export function FilterDropdown(props: FilterDropdownProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent class="w-56">
-        <div class="flex items-center justify-between px-2 pb-1 pt-2">
-          <span class="text-sm font-semibold text-foreground">Filters</span>
-          <Show when={activeCount() > 0}>
-            <button
-              class="cursor-pointer text-xs text-primary hover:text-primary-hover"
-              onClick={clearAll}
-            >
-              Clear all
-            </button>
-          </Show>
-        </div>
+        <DropdownMenuHeader onReset={clearAll} canReset={activeCount() > 0}>
+          Filters
+        </DropdownMenuHeader>
         <DropdownMenuSeparator />
 
         <DropdownMenuGroup>

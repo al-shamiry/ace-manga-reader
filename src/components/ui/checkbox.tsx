@@ -25,14 +25,14 @@ const Checkbox = (props: CheckboxProps) => {
       <CheckboxPrimitive.Input class="peer sr-only" />
       <CheckboxPrimitive.Control
         class={cn(
-          "flex items-center justify-center w-4 h-4 rounded shrink-0 border transition-all duration-150",
+          "flex items-center justify-center w-4 h-4 rounded-[3px] shrink-0 border transition-colors duration-150",
           "border-ink-600 bg-ink-900 group-hover:border-ink-500",
-          "data-checked:bg-jade-500 data-checked:border-jade-500",
-          "peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-background",
+          "data-[checked]:bg-jade-500 data-[checked]:border-jade-500 data-[checked]:group-hover:border-jade-400",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-jade-500/60 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-background",
         )}
       >
         <CheckboxPrimitive.Indicator>
-          <Check size={12} stroke-width={3} class="text-white" />
+          <Check size={12} stroke-width={3} class="text-ink-950" />
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Control>
       <Show when={props.label}>

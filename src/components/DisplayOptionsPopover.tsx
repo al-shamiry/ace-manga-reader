@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuGroupLabel,
+  DropdownMenuHeader,
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "./ui/dropdown-menu";
@@ -17,6 +18,7 @@ interface Props {
   display: LibraryDisplay;
   onChange: (display: LibraryDisplay) => void;
   showTabsSection?: boolean;
+  defaults?: LibraryDisplay;
 }
 
 const DISPLAY_MODES: { value: DisplayMode; label: string }[] = [
@@ -26,7 +28,38 @@ const DISPLAY_MODES: { value: DisplayMode; label: string }[] = [
   { value: "list", label: "List" },
 ];
 
+export const DEFAULT_LIBRARY_DISPLAY: LibraryDisplay = {
+  display_mode: "comfortable",
+  card_size: 8,
+  show_unread_badge: false,
+  show_continue_button: false,
+  show_category_tabs: true,
+  show_item_count: true,
+};
+
+export const DEFAULT_SOURCE_DISPLAY: LibraryDisplay = {
+  ...DEFAULT_LIBRARY_DISPLAY,
+  show_category_tabs: false,
+  show_item_count: false,
+};
+
+function sameDisplay(a: LibraryDisplay, b: LibraryDisplay): boolean {
+  return (
+    a.display_mode === b.display_mode &&
+    a.card_size === b.card_size &&
+    a.show_unread_badge === b.show_unread_badge &&
+    a.show_continue_button === b.show_continue_button &&
+    a.show_category_tabs === b.show_category_tabs &&
+    a.show_item_count === b.show_item_count
+  );
+}
+
 export function DisplayOptionsPopover(props: Props) {
+  const defaults = () =>
+    props.defaults ??
+    ((props.showTabsSection ?? true) ? DEFAULT_LIBRARY_DISPLAY : DEFAULT_SOURCE_DISPLAY);
+  const canReset = () => !sameDisplay(props.display, defaults());
+
   function setMode(mode: DisplayMode) {
     props.onChange({ ...props.display, display_mode: mode });
   }
@@ -39,16 +72,20 @@ export function DisplayOptionsPopover(props: Props) {
     props.onChange({ ...props.display, [key]: !props.display[key] });
   }
 
+  function resetDisplay() {
+    props.onChange(defaults());
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger class={toolbarIconButtonClass} title="Display options">
         <LayoutGrid size={16} />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent class="w-64">
-        <div class="px-2 pb-1 pt-2 text-sm font-semibold text-foreground">
+      <DropdownMenuContent class="w-72">
+        <DropdownMenuHeader onReset={resetDisplay} canReset={canReset()}>
           Display
-        </div>
+        </DropdownMenuHeader>
         <DropdownMenuSeparator />
 
         <DropdownMenuGroup>
@@ -59,10 +96,10 @@ export function DisplayOptionsPopover(props: Props) {
                 const isActive = () => props.display.display_mode === mode.value;
                 return (
                   <button
-                    class="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
+                    class="cursor-pointer rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors"
                     classList={{
-                      "bg-primary text-primary-foreground": isActive(),
-                      "bg-secondary text-secondary-foreground hover:bg-accent":
+                      "border-jade-500/60 bg-jade-500/10 text-jade-300": isActive(),
+                      "border-transparent bg-ink-900/60 text-ink-300 hover:border-ink-700 hover:bg-ink-900 hover:text-ink-100":
                         !isActive(),
                     }}
                     onClick={() => setMode(mode.value)}
@@ -79,7 +116,7 @@ export function DisplayOptionsPopover(props: Props) {
         <DropdownMenuGroup>
           <DropdownMenuGroupLabel>Card size</DropdownMenuGroupLabel>
           <div class="flex items-center gap-2 px-2 pb-2 pt-1">
-            <span class="shrink-0 text-[0.7rem] text-muted-foreground">Small</span>
+            <span class="shrink-0 text-[0.7rem] uppercase tracking-[0.12em] text-ink-500">Small</span>
             <Slider
               minValue={1}
               maxValue={15}
@@ -93,7 +130,7 @@ export function DisplayOptionsPopover(props: Props) {
                 <SliderThumb />
               </SliderTrack>
             </Slider>
-            <span class="shrink-0 text-[0.7rem] text-muted-foreground">Large</span>
+            <span class="shrink-0 text-[0.7rem] uppercase tracking-[0.12em] text-ink-500">Large</span>
           </div>
         </DropdownMenuGroup>
 

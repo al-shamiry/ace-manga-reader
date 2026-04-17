@@ -1,5 +1,5 @@
 import type { Component, ComponentProps, JSX, ValidComponent } from "solid-js"
-import { splitProps } from "solid-js"
+import { Show, splitProps } from "solid-js"
 
 import * as DropdownMenuPrimitive from "@kobalte/core/dropdown-menu"
 import type { PolymorphicProps } from "@kobalte/core/polymorphic"
@@ -29,12 +29,46 @@ const DropdownMenuContent = <T extends ValidComponent = "div">(
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         class={cn(
-          "z-50 min-w-32 overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl outline-none",
+          "z-50 min-w-32 overflow-hidden rounded-lg border border-ink-700/70 bg-ink-800 p-1 text-ink-100 shadow-2xl shadow-ink-950/70 ring-1 ring-ink-950/40 outline-none",
           props.class
         )}
         {...rest}
       />
     </DropdownMenuPrimitive.Portal>
+  )
+}
+
+// ── Header ────────────────────────────────────────────────────────────────
+// Shared title row for toolbar popovers. Pairs a small-caps-ish title with
+// a muted-text Reset affordance that only surfaces when `canReset` is true,
+// so an unmodified menu stays visually calm.
+
+interface DropdownMenuHeaderProps {
+  children: JSX.Element
+  onReset?: () => void
+  canReset?: boolean
+  class?: string
+}
+
+const DropdownMenuHeader: Component<DropdownMenuHeaderProps> = (props) => {
+  return (
+    <div
+      class={cn(
+        "flex items-center justify-between gap-2 px-2 pb-1.5 pt-1.5",
+        props.class,
+      )}
+    >
+      <span class="text-sm font-semibold text-ink-100">{props.children}</span>
+      <Show when={props.onReset && props.canReset}>
+        <button
+          type="button"
+          class="cursor-pointer rounded px-1 py-0.5 text-2xs font-medium uppercase tracking-[0.14em] text-ink-500 transition-colors hover:text-jade-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-jade-500/60"
+          onClick={props.onReset}
+        >
+          Reset
+        </button>
+      </Show>
+    </div>
   )
 }
 
@@ -50,7 +84,7 @@ const DropdownMenuItem = <T extends ValidComponent = "div">(
   return (
     <DropdownMenuPrimitive.Item
       class={cn(
-        "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink-200 outline-none transition-colors focus:bg-ink-700/70 focus:text-ink-50 data-highlighted:bg-ink-700/70 data-highlighted:text-ink-50 data-disabled:pointer-events-none data-disabled:opacity-50",
         props.class
       )}
       {...rest}
@@ -84,7 +118,7 @@ const DropdownMenuSeparator = <T extends ValidComponent = "hr">(
   const [, rest] = splitProps(props as DropdownMenuSeparatorProps, ["class"])
   return (
     <DropdownMenuPrimitive.Separator
-      class={cn("-mx-1 my-1 h-px border-0 bg-border", props.class)}
+      class={cn("-mx-1 my-1 h-px border-0 bg-ink-700/60", props.class)}
       {...rest}
     />
   )
@@ -137,7 +171,7 @@ const DropdownMenuSubContent = <T extends ValidComponent = "div">(
   return (
     <DropdownMenuPrimitive.SubContent
       class={cn(
-        "z-50 min-w-32 overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl",
+        "z-50 min-w-32 overflow-hidden rounded-lg border border-ink-700/70 bg-ink-800 p-1 text-ink-100 shadow-2xl shadow-ink-950/70 ring-1 ring-ink-950/40",
         props.class
       )}
       {...rest}
@@ -158,22 +192,22 @@ const DropdownMenuCheckboxItem = <T extends ValidComponent = "div">(
   return (
     <DropdownMenuPrimitive.CheckboxItem
       class={cn(
-        "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        "group relative flex cursor-pointer select-none items-center gap-2 rounded-md py-1.5 pl-7 pr-2.5 text-sm text-ink-200 outline-none transition-colors focus:bg-ink-700/70 focus:text-ink-50 data-highlighted:bg-ink-700/70 data-highlighted:text-ink-50 data-checked:text-ink-50 data-disabled:pointer-events-none data-disabled:opacity-50",
         props.class
       )}
       {...rest}
     >
-      <span class="absolute left-2 flex size-3.5 items-center justify-center">
+      <span class="absolute left-1.5 flex size-4 items-center justify-center rounded-[3px] border border-ink-600 bg-ink-900 transition-colors group-data-checked:border-jade-500 group-data-checked:bg-jade-500">
         <DropdownMenuPrimitive.ItemIndicator>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="3"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="size-4"
+            class="size-3 text-ink-950"
           >
             <path d="M5 12l5 5l10 -10" />
           </svg>
@@ -196,7 +230,7 @@ const DropdownMenuGroupLabel = <T extends ValidComponent = "span">(
   return (
     <DropdownMenuPrimitive.GroupLabel
       class={cn(
-        "block px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+        "block px-2 pb-0.5 pt-1.5 text-2xs font-semibold uppercase tracking-[0.14em] text-ink-500",
         props.class,
       )}
       {...rest}
@@ -217,12 +251,12 @@ const DropdownMenuRadioItem = <T extends ValidComponent = "div">(
   return (
     <DropdownMenuPrimitive.RadioItem
       class={cn(
-        "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-7 pr-2.5 text-sm text-ink-200 outline-none transition-colors focus:bg-ink-700/70 focus:text-ink-50 data-highlighted:bg-ink-700/70 data-highlighted:text-ink-50 data-disabled:pointer-events-none data-disabled:opacity-50",
         props.class
       )}
       {...rest}
     >
-      <span class="absolute left-2 flex size-3.5 items-center justify-center">
+      <span class="absolute left-1.5 flex size-4 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -258,6 +292,7 @@ export {
   DropdownMenuCheckboxItem,
   DropdownMenuGroup,
   DropdownMenuGroupLabel,
+  DropdownMenuHeader,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem
 }
