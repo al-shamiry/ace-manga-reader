@@ -8,12 +8,11 @@ import { useSources } from "../context/SourcesContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { EmptyState } from "../components/EmptyState";
 import { MangaGrid } from "../components/MangaGrid";
-import { SearchToggle } from "../components/SearchToggle";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
 import { SortDropdown } from "../components/SortDropdown";
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { TabBar } from "../components/TabBar";
-import { Toolbar, ToolbarActions, ToolbarButton } from "../components/ui/toolbar";
+import { Toolbar, ToolbarActions, ToolbarButton, ToolbarSearchRow } from "../components/ui/toolbar";
 import type { Tab } from "../components/TabBar";
 import type { Chapter, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
@@ -450,9 +449,8 @@ export function LibraryView() {
           </Show>
         </div>
 
-        {/* Search, sort & filter actions */}
+        {/* Sort & filter actions */}
         <ToolbarActions class="ml-3">
-          <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
           <SortDropdown preference={sortPref()} onChange={handleSortChange} />
           <DisplayOptionsPopover display={displayOpts()} onChange={handleDisplayChange} />
           <FilterDropdown
@@ -462,6 +460,13 @@ export function LibraryView() {
           />
         </ToolbarActions>
       </Toolbar>
+
+      <ToolbarSearchRow
+        value={searchQuery()}
+        onInput={setSearchQuery}
+        placeholder="Search library…"
+        autofocus
+      />
 
       {/* Manga grid or empty state */}
       <div class={`flex-1 overflow-y-auto ${slideClass()}`}>

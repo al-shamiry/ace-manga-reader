@@ -4,8 +4,7 @@ import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { EmptyState } from "../components/EmptyState";
-import { SearchToggle } from "../components/SearchToggle";
-import { Toolbar, ToolbarActions, ToolbarButton, ToolbarTitle } from "../components/ui/toolbar";
+import { Toolbar, ToolbarActions, ToolbarButton, ToolbarSearchRow, ToolbarTitle } from "../components/ui/toolbar";
 import type { Chapter, HistoryEntry, Manga } from "../types";
 import { formatRelativeDay, formatTime } from "../lib/date";
 
@@ -131,13 +130,23 @@ export function HistoryView() {
           }
         >
           <Show when={entries().length > 0}>
-            <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
-            <ToolbarButton onClick={() => setConfirmingClear(true)} title="Clear all history">
-              <Trash2 size={16} />
-            </ToolbarButton>
+            <ToolbarActions>
+              <ToolbarButton onClick={() => setConfirmingClear(true)} title="Clear all history">
+                <Trash2 size={16} />
+              </ToolbarButton>
+            </ToolbarActions>
           </Show>
         </Show>
       </Toolbar>
+
+      <Show when={entries().length > 0}>
+        <ToolbarSearchRow
+          value={searchQuery()}
+          onInput={setSearchQuery}
+          placeholder="Search history…"
+          autofocus
+        />
+      </Show>
 
       {/* Body — single scroll container so the empty state inherits the
           same sized parent as the populated list (EmptyState uses h-full). */}

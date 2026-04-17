@@ -6,7 +6,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { EmptyState } from "../components/EmptyState";
 import { MangaGrid } from "../components/MangaGrid";
 import { MangaGridSkeleton } from "../components/Skeleton";
-import { SearchToggle } from "../components/SearchToggle";
 import { SortDropdown } from "../components/SortDropdown";
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
@@ -15,6 +14,7 @@ import {
   ToolbarActions,
   ToolbarButton,
   ToolbarInlineButton,
+  ToolbarSearchRow,
   ToolbarTitle,
 } from "../components/ui/toolbar";
 import { useSources } from "../context/SourcesContext";
@@ -231,7 +231,6 @@ export function SourceView() {
         </ToolbarInlineButton>
         <ToolbarTitle class="flex-1">{source()?.name}</ToolbarTitle>
         <ToolbarActions>
-          <SearchToggle query={searchQuery()} onQueryChange={setSearchQuery} />
           <SortDropdown
             preference={sortPref()}
             onChange={handleSortChange}
@@ -259,6 +258,12 @@ export function SourceView() {
           </ToolbarButton>
         </ToolbarActions>
       </Toolbar>
+      <ToolbarSearchRow
+        value={searchQuery()}
+        onInput={setSearchQuery}
+        placeholder="Search manga…"
+        autofocus
+      />
       <div class="flex-1 overflow-y-auto">
         <Show when={status() === "loading"}>
           <MangaGridSkeleton />

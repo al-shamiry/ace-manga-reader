@@ -11,6 +11,7 @@ import {
   ToolbarActions,
   ToolbarButton,
   ToolbarInlineButton,
+  ToolbarSearchRow,
   ToolbarTitle,
 } from "../components/ui/toolbar";
 import { useSources } from "../context/SourcesContext";
@@ -23,6 +24,7 @@ export function SourcesView() {
   const loadToken = view.busy();
   const navigate = useNavigate();
   const [showHidden, setShowHidden] = createSignal(false);
+  const [searchQuery, setSearchQuery] = createSignal("");
 
   onMount(async () => {
     await initialLoad();
@@ -33,12 +35,18 @@ export function SourcesView() {
     [...sources()].sort((a, b) => a.sort_order - b.sort_order)
   );
 
+  const filteredSources = createMemo(() => {
+    const q = searchQuery().toLowerCase().trim();
+    if (!q) return sortedSources();
+    return sortedSources().filter((s) => s.name.toLowerCase().includes(q));
+  });
+
   const visibleSources = createMemo(() =>
-    sortedSources().filter((s) => !s.hidden)
+    filteredSources().filter((s) => !s.hidden)
   );
 
   const hiddenSources = createMemo(() =>
-    sortedSources().filter((s) => s.hidden)
+    filteredSources().filter((s) => s.hidden)
   );
 
   const isAnyScanning = createMemo(() =>
@@ -443,6 +451,13 @@ export function SourcesView() {
         </Show>
       </Toolbar>
 
+      <ToolbarSearchRow
+        value={searchQuery()}
+        onInput={setSearchQuery}
+        placeholder="Search sources…"
+        autofocus
+      />
+
       <Show when={selectionMode() && bulkRemoving()}>
         <div class="border-b border-red-900/30 bg-red-950/20 px-4 py-2">
           <div class="mx-auto flex max-w-3xl items-start justify-between gap-3">
@@ -500,7 +515,14 @@ export function SourcesView() {
             </div>
           </EmptyState>
         </Show>
-        <Show when={sources().length > 0}>
+        <Show when={sources().length > 0 && visibleSources().length === 0 && hiddenSources().length === 0}>
+          <EmptyState
+            eyebrow="No results"
+            title="No sources match your search."
+            description="Try a different query or clear the search to see all sources."
+          />
+        </Show>
+        <Show when={sources().length > 0 && (visibleSources().length > 0 || hiddenSources().length > 0)}>
           <div class="flex-1 overflow-y-auto">
             <div class="max-w-3xl mx-auto px-4 py-2">
               <For each={visibleSources()}>

@@ -1,5 +1,6 @@
 import type { JSX, ValidComponent } from "solid-js";
-import { splitProps } from "solid-js";
+import { Show, onMount, splitProps } from "solid-js";
+import { Search, X } from "lucide-solid";
 
 import * as ButtonPrimitive from "@kobalte/core/button";
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
@@ -127,6 +128,71 @@ export function ToolbarButton<T extends ValidComponent = "button">(
       class={cn(toolbarIconButtonClass, local.class)}
       {...others}
     />
+  );
+}
+
+// ── Search row ─────────────────────────────────────────────────────────────
+// Dedicated second row that sits flush under the primary Toolbar. Always
+// visible; autofocuses on mount so keyboard users can type immediately
+// when entering a view.
+
+interface ToolbarSearchRowProps {
+  value: string;
+  onInput: (value: string) => void;
+  placeholder?: string;
+  autofocus?: boolean;
+  class?: string;
+}
+
+export function ToolbarSearchRow(props: ToolbarSearchRowProps) {
+  let inputEl!: HTMLInputElement;
+  // Autofocus on initial mount only. Router transitions and loading
+  // overlays can race with a bare setTimeout — wait a rAF so layout and
+  // any competing focus calls settle first.
+  onMount(() => {
+    if (!props.autofocus) return;
+    // rAF + short timeout: wait past the router transition and any
+    // competing focus moves from onMount async work in the parent view.
+    requestAnimationFrame(() => {
+      setTimeout(() => inputEl?.focus(), 50);
+    });
+  });
+  return (
+    <div
+      class={cn(
+        "relative flex h-11 shrink-0 items-center border-b border-ink-800 bg-ink-900 px-4",
+        props.class,
+      )}
+    >
+      <Search
+        size={15}
+        class="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2 text-ink-500"
+      />
+      <input
+        ref={inputEl}
+        type="text"
+        value={props.value}
+        placeholder={props.placeholder ?? "Search…"}
+        onInput={(e) => props.onInput(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && props.value) {
+            e.preventDefault();
+            props.onInput("");
+          }
+        }}
+        class="h-8 w-full rounded-md bg-ink-800/60 pl-8 pr-8 text-sm text-ink-100 placeholder:text-ink-600 outline-none transition-colors focus:bg-ink-800 focus-visible:ring-2 focus-visible:ring-jade-500/60"
+      />
+      <Show when={props.value}>
+        <button
+          type="button"
+          class="absolute right-6 top-1/2 -translate-y-1/2 cursor-pointer text-ink-500 hover:text-ink-300"
+          onClick={() => props.onInput("")}
+          title="Clear search"
+        >
+          <X size={14} />
+        </button>
+      </Show>
+    </div>
   );
 }
 
