@@ -1,5 +1,5 @@
 import type { ValidComponent } from "solid-js";
-import { splitProps } from "solid-js";
+import { createSignal, onMount, splitProps } from "solid-js";
 
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
 import * as TabsPrimitive from "@kobalte/core/tabs";
@@ -36,7 +36,7 @@ const TabsTrigger = <T extends ValidComponent = "button">(
   return (
     <TabsPrimitive.Trigger
       class={cn(
-        "relative flex h-13 items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer outline-none text-ink-500 hover:text-ink-300 data-selected:text-jade-400",
+        "relative flex h-13 items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer outline-none text-ink-500 hover:text-ink-300 data-selected:text-jade-400 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-jade-500/60 rounded-sm",
         local.class,
       )}
       {...others}
@@ -66,10 +66,13 @@ const TabsIndicator = <T extends ValidComponent = "div">(
   props: PolymorphicProps<T, TabsIndicatorProps<T>>,
 ) => {
   const [local, others] = splitProps(props as TabsIndicatorProps, ["class"]);
+  const [mounted, setMounted] = createSignal(false);
+  onMount(() => requestAnimationFrame(() => setMounted(true)));
   return (
     <TabsPrimitive.Indicator
       class={cn(
-        "absolute bottom-0 h-0.5 bg-jade-500 rounded-full transition-all duration-300 ease-in-out",
+        "absolute bottom-0 h-0.5 bg-jade-500 rounded-full",
+        mounted() ? "transition-all duration-300 ease-in-out" : "transition-none",
         local.class,
       )}
       {...others}

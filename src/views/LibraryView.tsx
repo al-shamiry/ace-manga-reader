@@ -391,61 +391,59 @@ export function LibraryView() {
           container. */}
       <Toolbar class="gap-0">
         <div class="flex h-full items-center overflow-x-auto overflow-y-hidden flex-1 min-w-0">
-          <Show when={displayOpts().show_category_tabs}>
-            {/* Keyed remount on show_item_count toggle — Kobalte's TabsIndicator
-                only observes the selected tab's resize and reads offsetLeft
-                synchronously, so reflows from other tabs widening leave the
-                indicator misaligned. Remounting forces its onMount path which
-                waits a microtask for layout to settle. */}
-            <Show when={displayOpts().show_item_count ? "with" : "without"} keyed>
-              {(_key) => (
-                <TabBar
-                  tabs={tabs()}
-                  activeTab={activeTab()}
-                  onSelect={switchTab}
-                  onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
-                  onDelete={(tab) => handleDeleteCategory(tab.id)}
-                  renamingId={renaming()?.id}
-                  renamingValue={renaming()?.name}
-                  onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
-                  onRenameSubmit={handleRenameCategory}
-                  onRenameCancel={() => setRenaming(null)}
-                />
-              )}
-            </Show>
+          {/* Keyed remount on show_item_count toggle — Kobalte's TabsIndicator
+              only observes the selected tab's resize and reads offsetLeft
+              synchronously, so reflows from other tabs widening leave the
+              indicator misaligned. Remounting forces its onMount path which
+              waits a microtask for layout to settle. */}
+          <Show when={`${displayOpts().show_item_count ? "with" : "without"}\0${visibleCategories().map(c => c.name).join("\0")}`} keyed>
+            {(_key) => (
+              <TabBar
+                tabs={tabs()}
+                activeTab={activeTab()}
+                onSelect={switchTab}
+                onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
+                onDelete={(tab) => handleDeleteCategory(tab.id)}
+                renamingId={renaming()?.id}
+                renamingValue={renaming()?.name}
+                onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
+                onRenameSubmit={handleRenameCategory}
+                onRenameCancel={() => setRenaming(null)}
+              />
+            )}
+          </Show>
 
-            {/* Inline category create — replaces a modal. Commit only on
-                Enter; Escape or focus loss cancels without creating. This
-                keeps the commit path single-entry so there's nothing to
-                race against. */}
-            <Show
-              when={!creatingCategory()}
-              fallback={
-                <form
-                  class="flex h-full items-center ml-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    submitCreateCategory();
+          {/* Inline category create — replaces a modal. Commit only on
+              Enter; Escape or focus loss cancels without creating. This
+              keeps the commit path single-entry so there's nothing to
+              race against. */}
+          <Show
+            when={!creatingCategory()}
+            fallback={
+              <form
+                class="flex h-full items-center ml-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submitCreateCategory();
+                }}
+              >
+                <input
+                  ref={(el) => requestAnimationFrame(() => el.focus())}
+                  placeholder="Category name"
+                  class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-32"
+                  value={newCategoryName()}
+                  onInput={(e) => setNewCategoryName(e.currentTarget.value)}
+                  onBlur={cancelCreateCategory}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") cancelCreateCategory();
                   }}
-                >
-                  <input
-                    autofocus
-                    placeholder="Category name"
-                    class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-32"
-                    value={newCategoryName()}
-                    onInput={(e) => setNewCategoryName(e.currentTarget.value)}
-                    onBlur={cancelCreateCategory}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") cancelCreateCategory();
-                    }}
-                  />
-                </form>
-              }
-            >
-              <ToolbarButton class="ml-2" onClick={startCreateCategory} title="New category">
-                <Plus size={16} />
-              </ToolbarButton>
-            </Show>
+                />
+              </form>
+            }
+          >
+            <ToolbarButton class="ml-2" onClick={startCreateCategory} title="New category">
+              <Plus size={16} />
+            </ToolbarButton>
           </Show>
         </div>
 

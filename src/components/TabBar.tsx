@@ -39,12 +39,25 @@ export function TabBar(props: Props) {
   const [menuOpen, setMenuOpen] = createSignal(false);
   const [menuTab, setMenuTab] = createSignal<Tab | null>(null);
   const [anchor, setAnchor] = createSignal({ x: 0, y: 0, width: 0, height: 0 });
+  const [renameAnchor, setRenameAnchor] = createSignal({ x: 0, y: 0, width: 0, height: 0 });
+
+  // Map of tab id → TabsTrigger DOM element, used to anchor the rename popover.
+  const tabRefs = new Map<string, HTMLElement>();
 
   function openMenu(e: MouseEvent, tab: Tab) {
     e.preventDefault();
     setMenuTab(tab);
     setAnchor({ x: e.clientX, y: e.clientY, width: 0, height: 0 });
     setMenuOpen(true);
+  }
+
+  function startRename(tab: Tab) {
+    const el = tabRefs.get(tab.id);
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setRenameAnchor({ x: r.left, y: r.bottom, width: r.width, height: 0 });
+    }
+    props.onRenameStart?.(tab);
   }
 
   return (
@@ -55,56 +68,60 @@ export function TabBar(props: Props) {
     >
       <TabsList>
         <For each={props.tabs}>
-          {(tab) => {
-            const isRenaming = () => props.renamingId === tab.id;
-            return (
-              <Show
-                when={!isRenaming()}
-                fallback={
-                  <form
-                    class="flex h-13 items-center"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      props.onRenameSubmit?.();
-                    }}
-                  >
-                    <input
-                      autofocus
-                      class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 rounded text-sm outline-none w-28"
-                      value={props.renamingValue ?? ""}
-                      onInput={(e) => props.onRenameInput?.(e.currentTarget.value)}
-                      onBlur={() => props.onRenameSubmit?.()}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") props.onRenameCancel?.();
-                      }}
-                    />
-                  </form>
-                }
-              >
-                <TabsTrigger
-                  value={tab.id}
-                  onContextMenu={(e: MouseEvent) => openMenu(e, tab)}
+          {(tab) => (
+            <TabsTrigger
+              value={tab.id}
+              ref={(el) => tabRefs.set(tab.id, el)}
+              onContextMenu={(e: MouseEvent) => openMenu(e, tab)}
+            >
+              {tab.label}
+              {tab.count !== undefined && (
+                <span
+                  class="text-xs px-1.5 py-0.5 rounded-full"
+                  classList={{
+                    "bg-ink-700 text-ink-300": props.activeTab === tab.id,
+                    "bg-ink-800 text-ink-500": props.activeTab !== tab.id,
+                  }}
                 >
-                  {tab.label}
-                  {tab.count !== undefined && (
-                    <span
-                      class="text-xs px-1.5 py-0.5 rounded-full"
-                      classList={{
-                        "bg-ink-700 text-ink-300": props.activeTab === tab.id,
-                        "bg-ink-800 text-ink-500": props.activeTab !== tab.id,
-                      }}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </Show>
-            );
-          }}
+                  {tab.count}
+                </span>
+              )}
+            </TabsTrigger>
+          )}
         </For>
         <TabsIndicator />
       </TabsList>
 
+      {/* Rename popover — anchored to the tab element, outside click cancels */}
+      <DropdownMenu
+        open={props.renamingId != null}
+        onOpenChange={(open) => { if (!open) props.onRenameCancel?.(); }}
+        getAnchorRect={() => renameAnchor()}
+      >
+        <DropdownMenuPortal>
+          <DropdownMenuContent class="p-2 min-w-0">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                props.onRenameSubmit?.();
+              }}
+            >
+              <input
+                ref={(el) => requestAnimationFrame(() => setTimeout(() => el.focus(), 50))}
+                placeholder="Category name"
+                class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-40"
+                value={props.renamingValue ?? ""}
+                onInput={(e) => props.onRenameInput?.(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") props.onRenameCancel?.();
+                }}
+              />
+            </form>
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </DropdownMenu>
+
+      {/* Context menu — anchored to cursor on right-click */}
       <DropdownMenu
         open={menuOpen()}
         onOpenChange={setMenuOpen}
@@ -116,7 +133,7 @@ export function TabBar(props: Props) {
               class="flex items-center gap-2 px-3 py-1.5 text-sm text-ink-300 cursor-pointer outline-none data-highlighted:bg-ink-700 data-highlighted:text-ink-100"
               onSelect={() => {
                 const t = menuTab();
-                if (t) props.onRenameStart?.(t);
+                if (t) startRename(t);
               }}
             >
               <Pencil size={14} />

@@ -49,7 +49,6 @@ function sameDisplay(a: LibraryDisplay, b: LibraryDisplay): boolean {
     a.card_size === b.card_size &&
     a.show_unread_badge === b.show_unread_badge &&
     a.show_continue_button === b.show_continue_button &&
-    a.show_category_tabs === b.show_category_tabs &&
     a.show_item_count === b.show_item_count
   );
 }
@@ -157,13 +156,6 @@ export function DisplayOptionsPopover(props: Props) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuGroupLabel>Tabs</DropdownMenuGroupLabel>
-            <DropdownMenuCheckboxItem
-              checked={props.display.show_category_tabs}
-              onChange={() => toggle("show_category_tabs")}
-              closeOnSelect={false}
-            >
-              Show category tabs
-            </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={props.display.show_item_count}
               onChange={() => toggle("show_item_count")}

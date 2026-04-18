@@ -216,11 +216,6 @@ export function SettingsView() {
             <Field label="Category tabs">
               <div class="flex flex-col">
                 <Checkbox
-                  label="Show category tabs"
-                  checked={display().show_category_tabs}
-                  onChange={() => toggleDisplay("show_category_tabs")}
-                />
-                <Checkbox
                   label="Show number of items"
                   checked={display().show_item_count}
                   onChange={() => toggleDisplay("show_item_count")}
