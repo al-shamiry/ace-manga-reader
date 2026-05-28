@@ -92,8 +92,9 @@ Pre-built installers for Windows and Linux are available on the [Releases page](
 Stage 1 — Library Browser     ██████████  done
 Stage 2 — Manga Reader        ██████████  done
 Stage 3 — Library Management  ██████████  done
-Stage 4 — Sources Management  ░░░░░░░░░░  planned
-Stage 5 — Advanced            ░░░░░░░░░░  planned
+Stage 4 — Sources Management  ██████████  done
+Stage 5 — UX Enhancements     ███░░░░░░░  in progress
+Stage 6 — Advanced            ░░░░░░░░░░  planned
 ```
 
 <details open>
@@ -144,17 +145,36 @@ Stage 5 — Advanced            ░░░░░░░░░░  planned
 </details>
 
 <details open>
-<summary><b>Stage 4 — Sources Management</b> 📋</summary>
+<summary><b>Stage 4 — Sources Management</b> ✅</summary>
 
-- ⬜Sources view listing all source folders with manga counts and last-scanned dates
-- ⬜Add/remove source folders directly from the app
-- ⬜Per-source and bulk re-scan
-- ⬜Source ordering and visibility toggle
+- ✅Sources view with row-based layout — manga counts, last-scanned (relative + tooltip), full path
+- ✅Add/remove source folders from anywhere on disk (no longer tied to the root directory)
+- ✅Per-source and `Re-scan all` (parallel) with live scan-status badges
+- ✅Drag-to-reorder rows; order propagates to the Library source filter
+- ✅Hide/show sources — hidden sources drop out of the library, mangas preserved
+- ✅Bulk selection mode (re-scan / hide / remove) with `Ctrl+A` and `Escape`
+- ✅Broken-source detection with inline `Locate` to re-link a moved folder (state re-keyed)
+- ✅Remove warning, inline confirms, editorial empty state, keyboard navigation
 
 </details>
 
 <details open>
-<summary><b>Stage 5 — Advanced</b> 📋</summary>
+<summary><b>Stage 5 — User Experience Enhancements</b> 🚧</summary>
+
+- ✅Search moved to its own toolbar row across Library / Source / Sources, with autofocus
+- ✅Search added to Sources view (filters by name)
+- ✅Polished toolbar dropdowns (filter / sort / display) with per-menu `Reset` buttons
+- ✅Category UX fixes — autofocus on create, stable rename field
+- ⬜Searchable `By source` filter with chips; `read / total` chapter count on cards
+- ⬜Bulk selection mode in Library & Source views (category, mark read/unread, remove)
+- ⬜Manga detail toolbar — sort, select, filter, edit info, refresh
+- ⬜Navigation context preservation (active nav item reflects origin view)
+- ⬜Display settings hierarchy — global defaults with per-view overrides
+
+</details>
+
+<details open>
+<summary><b>Stage 6 — Advanced</b> 📋</summary>
 
 - ⬜CBR (RAR) archive support
 - ⬜Pinch-to-zoom / scroll zoom
@@ -163,6 +183,7 @@ Stage 5 — Advanced            ░░░░░░░░░░  planned
 - ⬜Theme customization
 - ⬜Drag-and-drop files onto window
 - ⬜Auto-detect new manga in watched directories
+- ⬜Import data from a Mihon export file
 
 </details>
 
