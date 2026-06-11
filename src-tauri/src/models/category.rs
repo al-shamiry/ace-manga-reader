@@ -9,8 +9,8 @@ pub struct Category {
     pub sort_order: u32,
 }
 
-impl Category {
-    pub fn default_category() -> Self {
+impl Default for Category {
+    fn default() -> Self {
         Self {
             id: DEFAULT_CATEGORY_ID.to_string(),
             name: "Default".to_string(),
