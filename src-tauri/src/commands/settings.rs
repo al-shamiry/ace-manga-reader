@@ -4,19 +4,17 @@ use tauri::Manager;
 
 use crate::models::category::{Category, DEFAULT_CATEGORY_ID};
 
-// ── Per-manga reader settings (settings/{manga_id}.json) ─────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Settings {
-    #[serde(default)]
+#[serde(default)]
+pub struct ReaderSettings {
     pub fit_mode: Option<String>,
-    #[serde(default)]
     pub reading_mode: Option<String>,
-    #[serde(default)]
     pub webtoon_padding: Option<u8>,
 }
 
-impl Default for Settings {
+impl Default for ReaderSettings {
     fn default() -> Self {
         Self {
             fit_mode: Some("fit-screen".to_string()),
@@ -26,105 +24,26 @@ impl Default for Settings {
     }
 }
 
-fn manga_settings_path(app: &tauri::AppHandle, manga_id: &str) -> std::path::PathBuf {
-    app.path()
-        .app_data_dir()
-        .unwrap()
-        .join("settings")
-        .join(format!("{manga_id}.json"))
-}
-
-fn load_settings(path: &std::path::Path) -> Option<Settings> {
-    fs::read_to_string(path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-}
-
-fn save_settings(path: &std::path::Path, settings: &Settings) -> Result<(), String> {
-    crate::utils::write_atomic_json(path, settings)
-}
-
-/// Returns manga-specific settings merged with global defaults.
-/// Fields set in the manga file take priority; missing fields fall back to global.
-#[tauri::command]
-pub fn get_settings(app: tauri::AppHandle, manga_id: Option<String>) -> Settings {
-    let config = load_config(&app);
-    let global = Settings {
-        fit_mode: config.fit_mode,
-        reading_mode: config.reading_mode,
-        webtoon_padding: config.webtoon_padding,
-    };
-
-    match manga_id {
-        Some(id) => {
-            let manga = load_settings(&manga_settings_path(&app, &id));
-            match manga {
-                Some(m) => Settings {
-                    fit_mode: m.fit_mode.or(global.fit_mode),
-                    reading_mode: m.reading_mode.or(global.reading_mode),
-                    webtoon_padding: m.webtoon_padding.or(global.webtoon_padding),
-                },
-                None => global,
-            }
-        }
-        None => global,
-    }
-}
-
-#[tauri::command]
-pub fn set_settings(
-    app: tauri::AppHandle,
-    settings: Settings,
-    manga_id: Option<String>,
-) -> Result<(), String> {
-    match manga_id {
-        Some(id) => {
-            // Merge patch with existing manga settings so partial updates
-            // don't clobber other fields. Missing file → start from all-None.
-            let path = manga_settings_path(&app, &id);
-            let existing = load_settings(&path).unwrap_or(Settings {
-                fit_mode: None,
-                reading_mode: None,
-                webtoon_padding: None,
-            });
-            let merged = Settings {
-                fit_mode: settings.fit_mode.or(existing.fit_mode),
-                reading_mode: settings.reading_mode.or(existing.reading_mode),
-                webtoon_padding: settings.webtoon_padding.or(existing.webtoon_padding),
-            };
-            save_settings(&path, &merged)
-        }
-        None => {
-            // Merge patch with existing global config so partial updates
-            // don't clobber other reader fields.
-            let mut config = load_config(&app);
-            if settings.fit_mode.is_some() { config.fit_mode = settings.fit_mode; }
-            if settings.reading_mode.is_some() { config.reading_mode = settings.reading_mode; }
-            if settings.webtoon_padding.is_some() { config.webtoon_padding = settings.webtoon_padding; }
-            save_config(&app, &config)
-        }
-    }
-}
-
-// ── Unified config.json ──────────────────────────────────────────────────────
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SortPreference {
-    #[serde(default = "default_sort_field")]
     pub field: String,
-    #[serde(default = "default_sort_direction")]
     pub direction: String,
 }
-
-fn default_sort_field() -> String { "last_read".to_string() }
-fn default_sort_direction() -> String { "desc".to_string() }
 
 impl Default for SortPreference {
     fn default() -> Self {
         Self {
-            field: default_sort_field(),
-            direction: default_sort_direction(),
+            field: "last_read".to_string(),
+            direction: "desc".to_string(),
         }
+    }
+}
+
+fn default_source_sort_preference() -> SortPreference {
+    SortPreference {
+        field: "alphabetical".to_string(),
+        direction: "desc".to_string(),
     }
 }
 
@@ -161,10 +80,6 @@ impl Default for LibraryDisplay {
     }
 }
 
-fn default_categories() -> Vec<Category> {
-    vec![Category::default_category()]
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceDisplay {
     #[serde(default = "default_display_mode")]
@@ -194,13 +109,16 @@ pub struct SourceFilters {
     pub reading_status: Vec<String>,
 }
 
-fn default_source_sort_field() -> String { "alphabetical".to_string() }
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LibraryFilters {
+    #[serde(default)]
+    pub sources: Vec<String>,
+    #[serde(default)]
+    pub reading_status: Vec<String>,
+}
 
-fn default_source_sort_preference() -> SortPreference {
-    SortPreference {
-        field: default_source_sort_field(),
-        direction: default_sort_direction(),
-    }
+fn default_categories() -> Vec<Category> {
+    vec![Category::default_category()]
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -208,11 +126,7 @@ pub struct Config {
     #[serde(default)]
     pub root_directory: Option<String>,
     #[serde(default)]
-    pub fit_mode: Option<String>,
-    #[serde(default)]
-    pub reading_mode: Option<String>,
-    #[serde(default)]
-    pub webtoon_padding: Option<u8>,
+    pub reader_settings: ReaderSettings,
     #[serde(default)]
     pub library_filters: LibraryFilters,
     #[serde(default)]
@@ -231,13 +145,7 @@ pub struct Config {
     pub categories: Vec<Category>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct LibraryFilters {
-    #[serde(default)]
-    pub sources: Vec<String>,
-    #[serde(default)]
-    pub reading_status: Vec<String>,
-}
+// ── Config helpers ───────────────────────────────────────────────────────────
 
 pub fn config_path(app: &tauri::AppHandle) -> std::path::PathBuf {
     app.path().app_data_dir().unwrap().join("config.json")
@@ -247,14 +155,7 @@ pub fn load_config(app: &tauri::AppHandle) -> Config {
     let mut config: Config = fs::read_to_string(config_path(app))
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_else(|| {
-            let defaults = Settings::default();
-            Config {
-                fit_mode: defaults.fit_mode,
-                reading_mode: defaults.reading_mode,
-                ..Default::default()
-            }
-        });
+        .unwrap_or_default();
     // Always ensure default category exists
     if !config.categories.iter().any(|c| c.id == DEFAULT_CATEGORY_ID) {
         config.categories.insert(0, Category::default_category());
@@ -280,17 +181,25 @@ pub fn set_root_directory(app: tauri::AppHandle, path: String) -> Result<(), Str
     save_config(&app, &config)
 }
 
-// ── Library filters ──────────────────────────────────────────────────────────
+// ── Default reader settings ──────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_library_filters(app: tauri::AppHandle) -> LibraryFilters {
-    load_config(&app).library_filters
+pub fn get_default_reader_settings(app: tauri::AppHandle) -> ReaderSettings {
+    load_config(&app).reader_settings
 }
 
+/// Merges a patch into the global default reader settings in `config.json`.
+/// Only fields present in the patch overwrite existing values, so partial
+/// updates don't clobber other reader fields.
 #[tauri::command]
-pub fn set_library_filters(app: tauri::AppHandle, filters: LibraryFilters) -> Result<(), String> {
+pub fn set_default_reader_settings(
+    app: tauri::AppHandle,
+    settings: ReaderSettings,
+) -> Result<(), String> {
     let mut config = load_config(&app);
-    config.library_filters = filters;
+    if settings.fit_mode.is_some() { config.reader_settings.fit_mode = settings.fit_mode; }
+    if settings.reading_mode.is_some() { config.reader_settings.reading_mode = settings.reading_mode; }
+    if settings.webtoon_padding.is_some() { config.reader_settings.webtoon_padding = settings.webtoon_padding; }
     save_config(&app, &config)
 }
 
@@ -322,6 +231,37 @@ pub fn set_library_sort_preference(
 ) -> Result<(), String> {
     let mut config = load_config(&app);
     config.library_sort_preference = preference;
+    save_config(&app, &config)
+}
+
+// ── Library display ──────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_library_display(app: tauri::AppHandle) -> LibraryDisplay {
+    load_config(&app).library_display
+}
+
+#[tauri::command]
+pub fn set_library_display(
+    app: tauri::AppHandle,
+    display: LibraryDisplay,
+) -> Result<(), String> {
+    let mut config = load_config(&app);
+    config.library_display = display;
+    save_config(&app, &config)
+}
+
+// ── Library filters ──────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_library_filters(app: tauri::AppHandle) -> LibraryFilters {
+    load_config(&app).library_filters
+}
+
+#[tauri::command]
+pub fn set_library_filters(app: tauri::AppHandle, filters: LibraryFilters) -> Result<(), String> {
+    let mut config = load_config(&app);
+    config.library_filters = filters;
     save_config(&app, &config)
 }
 
@@ -367,22 +307,5 @@ pub fn get_source_filters(app: tauri::AppHandle) -> SourceFilters {
 pub fn set_source_filters(app: tauri::AppHandle, filters: SourceFilters) -> Result<(), String> {
     let mut config = load_config(&app);
     config.source_filters = filters;
-    save_config(&app, &config)
-}
-
-// ── Library display ─────────────────────────────────────────────────────────
-
-#[tauri::command]
-pub fn get_library_display(app: tauri::AppHandle) -> LibraryDisplay {
-    load_config(&app).library_display
-}
-
-#[tauri::command]
-pub fn set_library_display(
-    app: tauri::AppHandle,
-    display: LibraryDisplay,
-) -> Result<(), String> {
-    let mut config = load_config(&app);
-    config.library_display = display;
     save_config(&app, &config)
 }

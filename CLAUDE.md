@@ -89,7 +89,7 @@ Legacy files (`library.json`, `progress.json`) may exist on older installs but a
 - **Keyboard**: arrows navigate/scroll; webtoon uses rAF continuous scrolling with >2s speed boost; `Backspace`/`Escape` back; `F11` fullscreen
 - **Page flip animations**: direction-aware `slide-in-*` / `slide-out-*` classes (~200ms)
 - **Chapter edge behavior**: extra input at boundary advances to prev/next chapter
-- **Settings**: `get_settings` merges manga-specific values with global defaults
+- **Settings**: `get_manga_reader_settings` merges per-manga values with global defaults (`get_default_reader_settings`)
 - **Progress/history**: progress saved on page turns, history recorded on chapter open
 - **Code pattern**: handlers/helpers above JSX; keep template declarative
 

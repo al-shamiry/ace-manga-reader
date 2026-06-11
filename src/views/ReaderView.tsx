@@ -119,7 +119,7 @@ export function ReaderView() {
   onMount(() => {
     const s = state();
     if (!s) return;
-    invoke<Settings>("get_settings", { mangaId: s.manga.id }).then((settings) => {
+    invoke<Settings>("get_manga_reader_settings", { mangaId: s.manga.id }).then((settings) => {
       if (settings.fit_mode) setFitMode(settings.fit_mode);
       if (settings.reading_mode) setReadingMode(settings.reading_mode);
       if (settings.webtoon_padding !== undefined) setWebtoonPadding(settings.webtoon_padding);
@@ -128,9 +128,10 @@ export function ReaderView() {
 
   function saveSetting(patch: Partial<Settings>) {
     const s = state();
-    invoke("set_settings", {
+    if (!s) return;
+    invoke("set_manga_reader_settings", {
       settings: patch,
-      mangaId: s?.manga.id,
+      mangaId: s.manga.id,
     }).catch(console.error);
   }
 

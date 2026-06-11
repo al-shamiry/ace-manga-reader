@@ -58,7 +58,7 @@ export function SettingsView() {
       console.error("Failed to load root directory:", e);
     }
     try {
-      const s = await invoke<Settings>("get_settings", { mangaId: null });
+      const s = await invoke<Settings>("get_default_reader_settings");
       if (s.fit_mode) setFitMode(s.fit_mode);
       if (s.reading_mode) setReadingMode(s.reading_mode);
     } catch (e) {
@@ -84,9 +84,8 @@ export function SettingsView() {
   // so always send both current values together — sending one alone would
   // wipe the other.
   function saveReadingDefaults(next: { fit_mode: FitMode; reading_mode: ReadingMode }) {
-    invoke("set_settings", {
+    invoke("set_default_reader_settings", {
       settings: { fit_mode: next.fit_mode, reading_mode: next.reading_mode },
-      mangaId: null,
     }).catch((e) => console.error("Failed to save reading defaults:", e));
   }
 

@@ -9,8 +9,64 @@ use tauri::Manager;
 use zip::ZipArchive;
 
 use crate::commands::manga_db::{self, MangaDbCache};
+use crate::commands::settings::{load_config, ReaderSettings};
 use crate::models::chapter::{Chapter, ChapterStatus};
 use crate::utils::{images_in, is_image, now_epoch, normalize, path_id, subdirs_and_cbz, title_from_path};
+
+// ── Per-manga reader settings (settings/{manga_id}.json) ─────────────────────
+
+fn manga_settings_path(app: &tauri::AppHandle, manga_id: &str) -> std::path::PathBuf {
+    app.path()
+        .app_data_dir()
+        .unwrap()
+        .join("settings")
+        .join(format!("{manga_id}.json"))
+}
+
+fn load_settings(path: &std::path::Path) -> Option<ReaderSettings> {
+    fs::read_to_string(path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+}
+
+fn save_settings(path: &std::path::Path, settings: &ReaderSettings) -> Result<(), String> {
+    crate::utils::write_atomic_json(path, settings)
+}
+
+#[tauri::command]
+pub fn get_manga_reader_settings(app: tauri::AppHandle, manga_id: String) -> ReaderSettings {
+    let defaults = load_config(&app).reader_settings;
+    match load_settings(&manga_settings_path(&app, &manga_id)) {
+        Some(m) => ReaderSettings {
+            fit_mode: m.fit_mode.or(defaults.fit_mode),
+            reading_mode: m.reading_mode.or(defaults.reading_mode),
+            webtoon_padding: m.webtoon_padding.or(defaults.webtoon_padding),
+        },
+        None => defaults,
+    }
+}
+
+/// Merges a patch into a manga's saved reader settings so partial updates
+/// don't clobber other fields. Missing file → start from all-None.
+#[tauri::command]
+pub fn set_manga_reader_settings(
+    app: tauri::AppHandle,
+    settings: ReaderSettings,
+    manga_id: String,
+) -> Result<(), String> {
+    let path = manga_settings_path(&app, &manga_id);
+    let existing = load_settings(&path).unwrap_or(ReaderSettings {
+        fit_mode: None,
+        reading_mode: None,
+        webtoon_padding: None,
+    });
+    let merged = ReaderSettings {
+        fit_mode: settings.fit_mode.or(existing.fit_mode),
+        reading_mode: settings.reading_mode.or(existing.reading_mode),
+        webtoon_padding: settings.webtoon_padding.or(existing.webtoon_padding),
+    };
+    save_settings(&path, &merged)
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
