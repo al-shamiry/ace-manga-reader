@@ -58,7 +58,7 @@ export interface LibraryFilters {
 
 export type ReadingStatus = "unread" | "started" | "completed";
 
-export type SortField = "alphabetical" | "total_chapters" | "last_read" | "date_added";
+export type SortField = "alphabetical" | "total-chapters" | "last-read" | "date-added";
 export type SortDirection = "asc" | "desc";
 
 export interface SortPreference {

@@ -20,13 +20,13 @@ interface SortDropdownProps {
 }
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
-  { value: "last_read", label: "Last read" },
+  { value: "last-read", label: "Last read" },
   { value: "alphabetical", label: "Alphabetical" },
-  { value: "date_added", label: "Date added" },
-  { value: "total_chapters", label: "Total chapters" },
+  { value: "date-added", label: "Date added" },
+  { value: "total-chapters", label: "Total chapters" },
 ];
 
-const DEFAULT_PREF: SortPreference = { field: "last_read", direction: "desc" };
+const DEFAULT_PREF: SortPreference = { field: "last-read", direction: "desc" };
 
 export function SortDropdown(props: SortDropdownProps) {
   const effectiveDefault = () => props.defaultPref ?? DEFAULT_PREF;

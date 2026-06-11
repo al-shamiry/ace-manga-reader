@@ -6,51 +6,105 @@ use crate::models::category::{Category, DEFAULT_CATEGORY_ID};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum FitMode {
+    FitWidth,
+    FitHeight,
+    Original,
+    Stretch,
+    #[default]
+    #[serde(other)]
+    FitScreen,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReadingMode {
+    PagedLtr,
+    PagedVertical,
+    Webtoon,
+    #[default]
+    #[serde(other)]
+    PagedRtl,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ReaderSettings {
-    pub fit_mode: Option<String>,
-    pub reading_mode: Option<String>,
+    pub fit_mode: Option<FitMode>,
+    pub reading_mode: Option<ReadingMode>,
     pub webtoon_padding: Option<u8>,
 }
 
 impl Default for ReaderSettings {
     fn default() -> Self {
         Self {
-            fit_mode: Some("fit-screen".to_string()),
-            reading_mode: Some("paged-rtl".to_string()),
+            fit_mode: Some(FitMode::default()),
+            reading_mode: Some(ReadingMode::default()),
             webtoon_padding: None,
         }
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum SortField {
+    Alphabetical,
+    TotalChapters,
+    DateAdded,
+    #[default]
+    #[serde(other)]
+    LastRead,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum SortDirection {
+    Asc,
+    #[default]
+    #[serde(other)]
+    Desc,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum DisplayMode {
+    Compact,
+    CoverOnly,
+    List,
+    #[default]
+    #[serde(other)]
+    Comfortable,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SortPreference {
-    pub field: String,
-    pub direction: String,
+    pub field: SortField,
+    pub direction: SortDirection,
 }
 
 impl Default for SortPreference {
     fn default() -> Self {
         Self {
-            field: "last_read".to_string(),
-            direction: "desc".to_string(),
+            field: SortField::LastRead,
+            direction: SortDirection::Desc,
         }
     }
 }
 
 fn default_source_sort_preference() -> SortPreference {
     SortPreference {
-        field: "alphabetical".to_string(),
-        direction: "desc".to_string(),
+        field: SortField::Alphabetical,
+        direction: SortDirection::Desc,
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryDisplay {
     #[serde(default = "default_display_mode")]
-    pub display_mode: String,
+    pub display_mode: DisplayMode,
     #[serde(default = "default_card_size")]
     pub card_size: u8,
     #[serde(default)]
@@ -63,7 +117,7 @@ pub struct LibraryDisplay {
     pub show_item_count: bool,
 }
 
-fn default_display_mode() -> String { "comfortable".to_string() }
+fn default_display_mode() -> DisplayMode { DisplayMode::Comfortable }
 fn default_card_size() -> u8 { 8 }
 fn default_true() -> bool { true }
 
@@ -83,7 +137,7 @@ impl Default for LibraryDisplay {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceDisplay {
     #[serde(default = "default_display_mode")]
-    pub display_mode: String,
+    pub display_mode: DisplayMode,
     #[serde(default = "default_card_size")]
     pub card_size: u8,
     #[serde(default)]

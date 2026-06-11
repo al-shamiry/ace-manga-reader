@@ -205,9 +205,9 @@ export function SourceView() {
       switch (pref.field) {
         case "alphabetical":
           return dir * a.title.localeCompare(b.title);
-        case "total_chapters":
+        case "total-chapters":
           return dir * (a.chapter_count - b.chapter_count);
-        case "last_read": {
+        case "last-read": {
           const aAt = a.last_read_at ?? 0;
           const bAt = b.last_read_at ?? 0;
           const aRead = aAt > 0;
@@ -234,7 +234,7 @@ export function SourceView() {
           <SortDropdown
             preference={sortPref()}
             onChange={handleSortChange}
-            excludeFields={["date_added"]}
+            excludeFields={["date-added"]}
             defaultPref={{ field: "alphabetical", direction: "asc" }}
           />
           <DisplayOptionsPopover

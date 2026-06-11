@@ -30,7 +30,7 @@ export function LibraryView() {
   const [renaming, setRenaming] = createSignal<{ id: string; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
   const [filters, setFilters] = createSignal<FilterState>({ sources: [], readingStatus: [] });
-  const [sortPref, setSortPref] = createSignal<SortPreference>({ field: "last_read", direction: "desc" });
+  const [sortPref, setSortPref] = createSignal<SortPreference>({ field: "last-read", direction: "desc" });
   const [displayOpts, setDisplayOpts] = createSignal<LibraryDisplay>({
     display_mode: "comfortable",
     card_size: 8,
@@ -249,9 +249,9 @@ export function LibraryView() {
       switch (pref.field) {
         case "alphabetical":
           return dir * a.title.localeCompare(b.title);
-        case "total_chapters":
+        case "total-chapters":
           return dir * (a.chapter_count - b.chapter_count);
-        case "last_read": {
+        case "last-read": {
           const aRead = a.last_read_at > 0;
           const bRead = b.last_read_at > 0;
           // desc: read entries first; asc: unread entries first
@@ -260,7 +260,7 @@ export function LibraryView() {
           if (aRead) return dir * (a.last_read_at - b.last_read_at);
           return -dir * (a.added_at - b.added_at);
         }
-        case "date_added":
+        case "date-added":
           return dir * (a.added_at - b.added_at);
         default:
           return 0;
