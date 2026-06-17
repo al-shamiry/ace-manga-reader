@@ -13,7 +13,7 @@ use crate::utils::{normalize, now_epoch, path_id, write_atomic_json};
 
 const MAX_ENTRIES: usize = 1000;
 
-fn load(app: &AppHandle) -> AppResult<HistoryData> {
+fn load_history(app: &AppHandle) -> AppResult<HistoryData> {
     let path = paths::history_file(app)?;
     // A missing or unreadable file is treated as empty history.
     Ok(fs::read_to_string(&path)
@@ -22,18 +22,18 @@ fn load(app: &AppHandle) -> AppResult<HistoryData> {
         .unwrap_or_default())
 }
 
-fn save(app: &AppHandle, data: &HistoryData) -> AppResult<()> {
+fn save_history(app: &AppHandle, data: &HistoryData) -> AppResult<()> {
     write_atomic_json(&paths::history_file(app)?, data)
 }
 
 #[tauri::command]
 pub fn get_history(app: AppHandle) -> AppResult<Vec<HistoryEntry>> {
-    Ok(load(&app)?.entries)
+    Ok(load_history(&app)?.entries)
 }
 
 #[tauri::command]
 pub fn record_history(entry: HistoryEntry, app: AppHandle) -> AppResult<()> {
-    let mut data = load(&app)?;
+    let mut data = load_history(&app)?;
     // One entry per manga: remove any existing entry for this manga (regardless of chapter)
     // so the fresh one replaces it at the top. "Last chapter I read" is what matters, not
     // the actual chapter order.
@@ -44,19 +44,19 @@ pub fn record_history(entry: HistoryEntry, app: AppHandle) -> AppResult<()> {
     if data.entries.len() > MAX_ENTRIES {
         data.entries.truncate(MAX_ENTRIES);
     }
-    save(&app, &data)
+    save_history(&app, &data)
 }
 
 #[tauri::command]
 pub fn delete_history_entry(chapter_id: String, app: AppHandle) -> AppResult<()> {
-    let mut data = load(&app)?;
+    let mut data = load_history(&app)?;
     data.entries.retain(|e| e.chapter_id != chapter_id);
-    save(&app, &data)
+    save_history(&app, &data)
 }
 
 #[tauri::command]
 pub fn clear_history(app: AppHandle) -> AppResult<()> {
-    save(&app, &HistoryData::default())
+    save_history(&app, &HistoryData::default())
 }
 
 /// Remove history entries for the given manga IDs. Called from `remove_source`.
@@ -64,10 +64,10 @@ pub fn prune_mangas(app: &AppHandle, manga_ids: &[String]) -> AppResult<()> {
     if manga_ids.is_empty() {
         return Ok(());
     }
-    let mut data = load(app)?;
+    let mut data = load_history(app)?;
     let id_set: HashSet<&str> = manga_ids.iter().map(|s| s.as_str()).collect();
     data.entries.retain(|e| !id_set.contains(e.manga_id.as_str()));
-    save(app, &data)
+    save_history(app, &data)
 }
 
 /// Re-key history entries after source relocation changed manga IDs.
@@ -76,7 +76,7 @@ pub fn rekey_mangas(app: &AppHandle, id_map: &HashMap<String, String>) -> AppRes
         return Ok(());
     }
 
-    let mut data = load(app)?;
+    let mut data = load_history(app)?;
     if data.entries.is_empty() {
         return Ok(());
     }
@@ -106,5 +106,5 @@ pub fn rekey_mangas(app: &AppHandle, id_map: &HashMap<String, String>) -> AppRes
     }
 
     drop(guard);
-    save(app, &data)
+    save_history(app, &data)
 }

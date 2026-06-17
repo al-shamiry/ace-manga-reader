@@ -49,6 +49,18 @@ impl Default for ReaderSettings {
     }
 }
 
+impl ReaderSettings {
+    /// Clamp values to the ranges the UI allows, so out-of-band input from a
+    /// command can't be persisted. Webtoon side padding is 0–25%.
+    pub fn clamped(mut self) -> Self {
+        self.webtoon_padding = self.webtoon_padding.map(|p| p.min(25));
+        self
+    }
+}
+
+/// Card size (cover columns) the UI exposes via its slider/zoom controls.
+const CARD_SIZE_RANGE: std::ops::RangeInclusive<u8> = 1..=15;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum SortField {
@@ -245,7 +257,7 @@ pub fn set_default_reader_settings(
     app: tauri::AppHandle,
     settings: ReaderSettings,
 ) -> AppResult<()> {
-    update_config(&app, |c| c.reader_settings = settings)
+    update_config(&app, |c| c.reader_settings = settings.clamped())
 }
 
 // ── Active category tab ──────────────────────────────────────────────────────
@@ -283,7 +295,8 @@ pub fn get_library_display(app: tauri::AppHandle) -> AppResult<LibraryDisplay> {
 }
 
 #[tauri::command]
-pub fn set_library_display(app: tauri::AppHandle, display: LibraryDisplay) -> AppResult<()> {
+pub fn set_library_display(app: tauri::AppHandle, mut display: LibraryDisplay) -> AppResult<()> {
+    display.card_size = display.card_size.clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
     update_config(&app, |c| c.library_display = display)
 }
 
@@ -322,7 +335,8 @@ pub fn get_source_display(app: tauri::AppHandle) -> AppResult<SourceDisplay> {
 }
 
 #[tauri::command]
-pub fn set_source_display(app: tauri::AppHandle, display: SourceDisplay) -> AppResult<()> {
+pub fn set_source_display(app: tauri::AppHandle, mut display: SourceDisplay) -> AppResult<()> {
+    display.card_size = display.card_size.clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
     update_config(&app, |c| c.source_display = display)
 }
 

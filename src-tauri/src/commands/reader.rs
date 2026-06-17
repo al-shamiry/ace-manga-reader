@@ -51,6 +51,7 @@ pub fn set_manga_reader_settings(
     settings: ReaderSettings,
     manga_id: String,
 ) -> AppResult<()> {
+    let settings = settings.clamped();
     let path = paths::manga_settings_file(&app, &manga_id)?;
     let existing = load_settings(&path).unwrap_or(ReaderSettings {
         fit_mode: None,
@@ -165,7 +166,7 @@ pub fn get_chapters(manga_path: String, app: tauri::AppHandle) -> AppResult<Vec<
     let chapters_map: HashMap<String, ChapterStatus> = {
         let guard = manga_db::lock(&cache)?;
         guard.db.mangas.get(&manga_id)
-            .map(|m| m.chapters.clone())
+            .map(|manga| manga.chapters.clone())
             .unwrap_or_default()
     };
 

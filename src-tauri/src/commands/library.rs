@@ -21,7 +21,17 @@ pub fn get_categories(app: tauri::AppHandle) -> AppResult<Vec<Category>> {
 #[tauri::command]
 pub fn create_category(app: tauri::AppHandle, name: String) -> AppResult<Category> {
     let mut config = load_config(&app)?;
-    let id = format!("cat_{}", now_epoch());
+
+    // Derive a unique id, disambiguating if two categories are created within
+    // the same second (epoch granularity).
+    let base = format!("cat_{}", now_epoch());
+    let mut id = base.clone();
+    let mut suffix = 1;
+    while config.categories.iter().any(|c| c.id == id) {
+        id = format!("{}_{}", base, suffix);
+        suffix += 1;
+    }
+
     let sort_order = config.categories.iter().map(|c| c.sort_order).max().unwrap_or(0) + 1;
     let cat = Category { id, name, sort_order };
     config.categories.push(cat.clone());
@@ -46,16 +56,17 @@ pub fn delete_category(app: tauri::AppHandle, category_id: String) -> AppResult<
         ));
     }
 
-    update_config(&app, |c| c.categories.retain(|cat| cat.id != category_id))?;
-
-    // Move orphaned mangas to default
+    // Move mangas off this category first, so a failure can't leave mangas
+    // pointing at a category that no longer exists.
     let cache = app.state::<Mutex<MangaDbCache>>();
     manga_db::mutate(&cache, &app, |db| {
-        for m in db.mangas.values_mut() {
-            m.category_ids.retain(|id| id != &category_id);
-            m.ensure_default_category();
+        for manga in db.mangas.values_mut() {
+            manga.category_ids.retain(|id| id != &category_id);
+            manga.ensure_default_category();
         }
-    })
+    })?;
+
+    update_config(&app, |c| c.categories.retain(|cat| cat.id != category_id))
 }
 
 #[tauri::command]
@@ -77,13 +88,13 @@ pub fn get_library(app: tauri::AppHandle) -> AppResult<Vec<MangaDto>> {
     let cache = app.state::<Mutex<MangaDbCache>>();
     let guard = manga_db::lock(&cache)?;
     let hidden: HashSet<&str> = guard.db.sources.iter()
-        .filter(|(_, s)| s.hidden)
+        .filter(|(_, source)| source.hidden)
         .map(|(id, _)| id.as_str())
         .collect();
 
     let mangas = guard.db.mangas.iter()
-        .filter(|(_, m)| m.added_at.is_some() && !hidden.contains(m.source_id.as_str()))
-        .map(|(id, m)| m.project(id.clone()))
+        .filter(|(_, manga)| manga.added_at.is_some() && !hidden.contains(manga.source_id.as_str()))
+        .map(|(id, manga)| manga.project(id.clone()))
         .collect();
     Ok(mangas)
 }

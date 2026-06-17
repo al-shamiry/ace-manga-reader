@@ -137,8 +137,8 @@ fn mangas_for_source(db: &MangaDb, source_id: &str) -> Vec<MangaDto> {
     let mut mangas: Vec<MangaDto> = db
         .mangas
         .iter()
-        .filter(|(_, m)| m.source_id == source_id)
-        .map(|(id, m)| m.project(id.as_str()))
+        .filter(|(_, manga)| manga.source_id == source_id)
+        .map(|(id, manga)| manga.project(id.as_str()))
         .collect();
     mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
     mangas
@@ -147,15 +147,15 @@ fn mangas_for_source(db: &MangaDb, source_id: &str) -> Vec<MangaDto> {
 #[tauri::command]
 pub fn list_sources(
     include_hidden: Option<bool>,
-    app_handle: tauri::AppHandle,
+    app: tauri::AppHandle,
 ) -> AppResult<Vec<SourceDto>> {
     let include_hidden = include_hidden.unwrap_or(false);
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    let cache = app.state::<Mutex<MangaDbCache>>();
     let guard = manga_db::lock(&cache)?;
 
     let mut sources: Vec<SourceDto> = guard.db.sources.iter()
-        .filter(|(_, meta)| include_hidden || !meta.hidden)
-        .map(|(id, meta)| meta.project(id.as_str()))
+        .filter(|(_, source)| include_hidden || !source.hidden)
+        .map(|(id, source)| source.project(id.as_str()))
         .collect();
 
     sources.sort_by_key(|s| s.sort_order);
@@ -166,7 +166,7 @@ pub fn list_sources(
 pub fn scan_directory(
     path: String,
     force_refresh: bool,
-    app_handle: tauri::AppHandle,
+    app: tauri::AppHandle,
 ) -> AppResult<Vec<MangaDto>> {
     let dir = Path::new(&path);
     if !dir.is_dir() {
@@ -174,7 +174,7 @@ pub fn scan_directory(
     }
 
     let source_id = path_id(dir);
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    let cache = app.state::<Mutex<MangaDbCache>>();
 
     // Cache hit: source is known and we have mangas for it → return directly
     if !force_refresh {
@@ -187,12 +187,12 @@ pub fn scan_directory(
     }
 
     // Full disk scan
-    let covers_dir = paths::covers_dir(&app_handle)?;
+    let covers_dir = paths::covers_dir(&app)?;
     fs::create_dir_all(&covers_dir)?;
     let mangas = collect_mangas(dir, 1, &covers_dir);
 
     let scanned_at = now_epoch();
-    manga_db::mutate(&cache, &app_handle, |db| {
+    manga_db::mutate(&cache, &app, |db| {
         sync_source_mangas(db, &source_id, dir, scanned_at, &mangas);
     })?;
 
@@ -244,10 +244,10 @@ fn sync_source_mangas(
 
 // ── Source CRUD helpers ───────────────────────────────────────────────────────
 
-fn build_source_from_cache(db: &MangaDb, id: &str) -> AppResult<SourceDto> {
+fn project_source(db: &MangaDb, id: &str) -> AppResult<SourceDto> {
     db.sources
         .get(id)
-        .map(|meta| meta.project(id))
+        .map(|source| source.project(id))
         .ok_or_else(|| AppError::NotFound(format!("source '{}' not found", id)))
 }
 
@@ -424,24 +424,24 @@ fn ensure_source(app: &tauri::AppHandle, dir: &Path, name: Option<String>) -> Ap
 pub fn add_source(
     path: String,
     name: Option<String>,
-    app_handle: tauri::AppHandle,
+    app: tauri::AppHandle,
 ) -> AppResult<SourceDto> {
     let dir = Path::new(&path);
     if !dir.is_dir() {
         return Err(AppError::Invalid(format!("'{}' is not a directory", path)));
     }
 
-    let id = ensure_source(&app_handle, dir, name)?;
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    let id = ensure_source(&app, dir, name)?;
+    let cache = app.state::<Mutex<MangaDbCache>>();
     let guard = manga_db::lock(&cache)?;
-    build_source_from_cache(&guard.db, &id)
+    project_source(&guard.db, &id)
 }
 
 #[tauri::command]
 pub fn relocate_source(
     source_id: String,
     new_path: String,
-    app_handle: tauri::AppHandle,
+    app: tauri::AppHandle,
 ) -> AppResult<SourceDto> {
     let new_dir = Path::new(&new_path);
     if !new_dir.is_dir() {
@@ -450,7 +450,7 @@ pub fn relocate_source(
 
     let normalized_new_path = normalize(new_dir);
     let new_source_id = path_id(new_dir);
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    let cache = app.state::<Mutex<MangaDbCache>>();
 
     let id_map: HashMap<String, String> = {
         let mut guard = manga_db::lock(&cache)?;
@@ -468,7 +468,7 @@ pub fn relocate_source(
             .db
             .mangas
             .iter()
-            .filter(|(_, m)| m.source_id == source_id)
+            .filter(|(_, manga)| manga.source_id == source_id)
             .map(|(id, _)| id.clone())
             .collect();
         let source_manga_set: HashSet<String> = source_manga_ids.iter().cloned().collect();
@@ -531,44 +531,44 @@ pub fn relocate_source(
         source_meta.manga_count = source_manga_ids.len();
         guard.db.sources.insert(new_source_id.clone(), source_meta);
 
-        manga_db::save_db(&app_handle, &guard.db)?;
+        manga_db::save_db(&app, &guard.db)?;
         id_map
     };
 
-    history::rekey_mangas(&app_handle, &id_map)?;
-    if let Err(e) = rename_cached_covers(&app_handle, &id_map) {
+    history::rekey_mangas(&app, &id_map)?;
+    if let Err(e) = rename_cached_covers(&app, &id_map) {
         eprintln!("rename_cached_covers failed: {}", e);
     }
 
     let guard = manga_db::lock(&cache)?;
-    build_source_from_cache(&guard.db, &new_source_id)
+    project_source(&guard.db, &new_source_id)
 }
 
 #[tauri::command]
-pub fn remove_source(source_id: String, app_handle: tauri::AppHandle) -> AppResult<()> {
+pub fn remove_source(source_id: String, app: tauri::AppHandle) -> AppResult<()> {
     let (manga_ids, chapter_ids): (Vec<String>, Vec<String>) = {
-        let cache = app_handle.state::<Mutex<MangaDbCache>>();
+        let cache = app.state::<Mutex<MangaDbCache>>();
         let guard = manga_db::lock(&cache)?;
-        let mut mids = Vec::new();
-        let mut cids = Vec::new();
-        for (id, m) in &guard.db.mangas {
-            if m.source_id == source_id {
-                mids.push(id.clone());
-                cids.extend(m.chapters.keys().cloned());
+        let mut manga_ids = Vec::new();
+        let mut chapter_ids = Vec::new();
+        for (id, manga) in &guard.db.mangas {
+            if manga.source_id == source_id {
+                manga_ids.push(id.clone());
+                chapter_ids.extend(manga.chapters.keys().cloned());
             }
         }
-        (mids, cids)
+        (manga_ids, chapter_ids)
     };
 
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    manga_db::mutate(&cache, &app_handle, |db| {
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app, |db| {
         db.sources.remove(&source_id);
         db.mangas.retain(|_, m| m.source_id != source_id);
     })?;
 
-    crate::commands::history::prune_mangas(&app_handle, &manga_ids)?;
+    crate::commands::history::prune_mangas(&app, &manga_ids)?;
 
-    if let Err(e) = cleanup_source_cache(&app_handle, &manga_ids, &chapter_ids) {
+    if let Err(e) = cleanup_source_cache(&app, &manga_ids, &chapter_ids) {
         eprintln!("cleanup_source_cache failed: {}", e);
     }
 
@@ -579,12 +579,12 @@ pub fn remove_source(source_id: String, app_handle: tauri::AppHandle) -> AppResu
 pub fn rename_source(
     source_id: String,
     name: String,
-    app_handle: tauri::AppHandle,
+    app: tauri::AppHandle,
 ) -> AppResult<()> {
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    manga_db::mutate(&cache, &app_handle, |db| {
-        if let Some(meta) = db.sources.get_mut(&source_id) {
-            meta.name = name;
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app, |db| {
+        if let Some(source) = db.sources.get_mut(&source_id) {
+            source.name = name;
         }
     })
 }
@@ -592,13 +592,13 @@ pub fn rename_source(
 #[tauri::command]
 pub fn reorder_sources(
     ordered_ids: Vec<String>,
-    app_handle: tauri::AppHandle,
+    app: tauri::AppHandle,
 ) -> AppResult<()> {
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    manga_db::mutate(&cache, &app_handle, |db| {
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app, |db| {
         for (i, id) in ordered_ids.iter().enumerate() {
-            if let Some(meta) = db.sources.get_mut(id) {
-                meta.sort_order = i as u32;
+            if let Some(source) = db.sources.get_mut(id) {
+                source.sort_order = i as u32;
             }
         }
     })
@@ -608,12 +608,12 @@ pub fn reorder_sources(
 pub fn set_source_hidden(
     source_id: String,
     hidden: bool,
-    app_handle: tauri::AppHandle,
+    app: tauri::AppHandle,
 ) -> AppResult<()> {
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    manga_db::mutate(&cache, &app_handle, |db| {
-        if let Some(meta) = db.sources.get_mut(&source_id) {
-            meta.hidden = hidden;
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app, |db| {
+        if let Some(source) = db.sources.get_mut(&source_id) {
+            source.hidden = hidden;
         }
     })
 }
