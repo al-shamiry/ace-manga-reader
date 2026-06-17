@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "./ui/dropdown-menu";
+import { ChipMultiSelect } from "./ui/chip-multiselect";
 import { toolbarIconButtonClass } from "./ui/toolbar";
 import type { ReadingStatus } from "../types";
 
@@ -35,11 +36,7 @@ export function filterCount(state: FilterState): number {
 }
 
 export function FilterDropdown(props: FilterDropdownProps) {
-  function toggleSource(source: string) {
-    const current = props.state.sources;
-    const next = current.includes(source)
-      ? current.filter((s) => s !== source)
-      : [...current, source];
+  function setSources(next: string[]) {
     props.onChange({ ...props.state, sources: next });
   }
 
@@ -93,18 +90,14 @@ export function FilterDropdown(props: FilterDropdownProps) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuGroupLabel>Source</DropdownMenuGroupLabel>
-            <div class="max-h-40 overflow-y-auto">
-              <For each={props.availableSources}>
-                {(source) => (
-                  <DropdownMenuCheckboxItem
-                    checked={props.state.sources.includes(source)}
-                    onChange={() => toggleSource(source)}
-                    closeOnSelect={false}
-                  >
-                    {source}
-                  </DropdownMenuCheckboxItem>
-                )}
-              </For>
+            <div class="px-1 pb-1 pt-0.5">
+              <ChipMultiSelect
+                options={props.availableSources}
+                selected={props.state.sources}
+                onChange={setSources}
+                placeholder="Search sources…"
+                emptyLabel="No sources match"
+              />
             </div>
           </DropdownMenuGroup>
         </Show>
