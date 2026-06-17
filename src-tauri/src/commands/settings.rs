@@ -210,6 +210,17 @@ pub fn save_config(app: &tauri::AppHandle, config: &Config) -> AppResult<()> {
     write_atomic_json(&paths::config_file(app)?, config)
 }
 
+/// Load the config, apply `f`, and persist the result — the shared
+/// read-modify-write used by every setter.
+pub fn update_config<F>(app: &tauri::AppHandle, f: F) -> AppResult<()>
+where
+    F: FnOnce(&mut Config),
+{
+    let mut config = load_config(app)?;
+    f(&mut config);
+    save_config(app, &config)
+}
+
 // ── Root directory ───────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -219,9 +230,7 @@ pub fn get_root_directory(app: tauri::AppHandle) -> AppResult<Option<String>> {
 
 #[tauri::command]
 pub fn set_root_directory(app: tauri::AppHandle, path: String) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.root_directory = Some(path);
-    save_config(&app, &config)
+    update_config(&app, |c| c.root_directory = Some(path))
 }
 
 // ── Default reader settings ──────────────────────────────────────────────────
@@ -236,9 +245,7 @@ pub fn set_default_reader_settings(
     app: tauri::AppHandle,
     settings: ReaderSettings,
 ) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.reader_settings = settings;
-    save_config(&app, &config)
+    update_config(&app, |c| c.reader_settings = settings)
 }
 
 // ── Active category tab ──────────────────────────────────────────────────────
@@ -250,9 +257,7 @@ pub fn get_active_category(app: tauri::AppHandle) -> AppResult<Option<String>> {
 
 #[tauri::command]
 pub fn set_active_category(app: tauri::AppHandle, category_id: String) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.active_category = Some(category_id);
-    save_config(&app, &config)
+    update_config(&app, |c| c.active_category = Some(category_id))
 }
 
 // ── Library sort preference ──────────────────────────────────────────────────
@@ -267,9 +272,7 @@ pub fn set_library_sort_preference(
     app: tauri::AppHandle,
     preference: LibrarySortPreference,
 ) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.library_sort_preference = preference;
-    save_config(&app, &config)
+    update_config(&app, |c| c.library_sort_preference = preference)
 }
 
 // ── Library display ──────────────────────────────────────────────────────────
@@ -281,9 +284,7 @@ pub fn get_library_display(app: tauri::AppHandle) -> AppResult<LibraryDisplay> {
 
 #[tauri::command]
 pub fn set_library_display(app: tauri::AppHandle, display: LibraryDisplay) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.library_display = display;
-    save_config(&app, &config)
+    update_config(&app, |c| c.library_display = display)
 }
 
 // ── Library filters ──────────────────────────────────────────────────────────
@@ -295,9 +296,7 @@ pub fn get_library_filters(app: tauri::AppHandle) -> AppResult<LibraryFilters> {
 
 #[tauri::command]
 pub fn set_library_filters(app: tauri::AppHandle, filters: LibraryFilters) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.library_filters = filters;
-    save_config(&app, &config)
+    update_config(&app, |c| c.library_filters = filters)
 }
 
 // ── Source sort preference ───────────────────────────────────────────────────
@@ -312,9 +311,7 @@ pub fn set_source_sort_preference(
     app: tauri::AppHandle,
     preference: SourceSortPreference,
 ) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.source_sort_preference = preference;
-    save_config(&app, &config)
+    update_config(&app, |c| c.source_sort_preference = preference)
 }
 
 // ── Source display ───────────────────────────────────────────────────────────
@@ -326,9 +323,7 @@ pub fn get_source_display(app: tauri::AppHandle) -> AppResult<SourceDisplay> {
 
 #[tauri::command]
 pub fn set_source_display(app: tauri::AppHandle, display: SourceDisplay) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.source_display = display;
-    save_config(&app, &config)
+    update_config(&app, |c| c.source_display = display)
 }
 
 // ── Source filters ───────────────────────────────────────────────────────────
@@ -340,7 +335,5 @@ pub fn get_source_filters(app: tauri::AppHandle) -> AppResult<SourceFilters> {
 
 #[tauri::command]
 pub fn set_source_filters(app: tauri::AppHandle, filters: SourceFilters) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    config.source_filters = filters;
-    save_config(&app, &config)
+    update_config(&app, |c| c.source_filters = filters)
 }

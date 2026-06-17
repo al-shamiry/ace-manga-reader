@@ -4,7 +4,7 @@ use std::sync::Mutex;
 use tauri::Manager;
 
 use crate::commands::manga_db::{self, MangaDbCache};
-use crate::commands::settings::{load_config, save_config};
+use crate::commands::settings::{load_config, save_config, update_config};
 use crate::error::{AppError, AppResult};
 use crate::models::{Category, MangaDto, DEFAULT_CATEGORY_ID};
 use crate::utils::now_epoch;
@@ -46,9 +46,7 @@ pub fn delete_category(app: tauri::AppHandle, category_id: String) -> AppResult<
         ));
     }
 
-    let mut config = load_config(&app)?;
-    config.categories.retain(|c| c.id != category_id);
-    save_config(&app, &config)?;
+    update_config(&app, |c| c.categories.retain(|cat| cat.id != category_id))?;
 
     // Move orphaned mangas to default
     let cache = app.state::<Mutex<MangaDbCache>>();
@@ -62,14 +60,14 @@ pub fn delete_category(app: tauri::AppHandle, category_id: String) -> AppResult<
 
 #[tauri::command]
 pub fn reorder_categories(app: tauri::AppHandle, category_ids: Vec<String>) -> AppResult<()> {
-    let mut config = load_config(&app)?;
-    for (i, id) in category_ids.iter().enumerate() {
-        if let Some(cat) = config.categories.iter_mut().find(|c| &c.id == id) {
-            cat.sort_order = i as u32;
+    update_config(&app, |config| {
+        for (i, id) in category_ids.iter().enumerate() {
+            if let Some(cat) = config.categories.iter_mut().find(|c| &c.id == id) {
+                cat.sort_order = i as u32;
+            }
         }
-    }
-    config.categories.sort_by_key(|c| c.sort_order);
-    save_config(&app, &config)
+        config.categories.sort_by_key(|c| c.sort_order);
+    })
 }
 
 // ── Library commands ─────────────────────────────────────────────────────────
