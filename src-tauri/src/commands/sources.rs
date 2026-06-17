@@ -189,45 +189,57 @@ pub fn scan_directory(
     // Full disk scan
     let covers_dir = paths::covers_dir(&app_handle)?;
     fs::create_dir_all(&covers_dir)?;
-
     let mangas = collect_mangas(dir, 1, &covers_dir);
 
-    // Build the set of manga ids present on disk for this source
-    let on_disk_ids: HashSet<String> = mangas.iter().map(|m| m.id.clone()).collect();
-    let manga_count = on_disk_ids.len();
-
-    let source_path_str = normalize(dir);
     let scanned_at = now_epoch();
-
     manga_db::mutate(&cache, &app_handle, |db| {
-        // Update source metadata: preserve user-controlled fields for existing sources
-        if let Some(existing) = db.sources.get_mut(&source_id) {
-            existing.path = source_path_str;
-            existing.scanned_at = scanned_at;
-            existing.manga_count = manga_count;
-        } else {
-            let mut meta =
-                SourceRecord::new(source_path_str, resolve_source_name(dir, None), manga_count, db.next_source_order());
-            meta.scanned_at = scanned_at;
-            db.sources.insert(source_id.clone(), meta);
-        }
-
-        // Drop mangas from this source that no longer exist on disk
-        db.mangas.retain(|id, m| m.source_id != source_id || on_disk_ids.contains(id));
-
-        // Upsert scanned mangas: refresh display fields, preserve reading state
-        for manga in &mangas {
-            let entry = db.mangas.entry(manga.id.clone()).or_default();
-            entry.source_id = source_id.clone();
-            entry.title = manga.title.clone();
-            entry.path = manga.path.clone();
-            entry.cover_path = manga.cover_path.clone();
-            entry.chapter_count = manga.chapter_count;
-        }
+        sync_source_mangas(db, &source_id, dir, scanned_at, &mangas);
     })?;
 
     let guard = manga_db::lock(&cache)?;
     Ok(mangas_for_source(&guard.db, &source_id))
+}
+
+/// Reconcile a source and its mangas against a fresh disk scan: upsert the
+/// source metadata (preserving user-controlled fields), drop mangas that
+/// vanished from disk, and refresh display fields while keeping reading state.
+fn sync_source_mangas(
+    db: &mut MangaDb,
+    source_id: &str,
+    dir: &Path,
+    scanned_at: u64,
+    mangas: &[MangaDto],
+) {
+    let on_disk_ids: HashSet<&str> = mangas.iter().map(|m| m.id.as_str()).collect();
+    let manga_count = on_disk_ids.len();
+    let source_path = normalize(dir);
+
+    if let Some(existing) = db.sources.get_mut(source_id) {
+        existing.path = source_path;
+        existing.scanned_at = scanned_at;
+        existing.manga_count = manga_count;
+    } else {
+        let mut record = SourceRecord::new(
+            source_path,
+            resolve_source_name(dir, None),
+            manga_count,
+            db.next_source_order(),
+        );
+        record.scanned_at = scanned_at;
+        db.sources.insert(source_id.to_string(), record);
+    }
+
+    db.mangas
+        .retain(|id, m| m.source_id != source_id || on_disk_ids.contains(id.as_str()));
+
+    for manga in mangas {
+        let entry = db.mangas.entry(manga.id.clone()).or_default();
+        entry.source_id = source_id.to_string();
+        entry.title = manga.title.clone();
+        entry.path = manga.path.clone();
+        entry.cover_path = manga.cover_path.clone();
+        entry.chapter_count = manga.chapter_count;
+    }
 }
 
 // ── Source CRUD helpers ───────────────────────────────────────────────────────
@@ -296,6 +308,82 @@ fn remap_chapter_statuses(
     }
 
     remapped
+}
+
+/// The on-disk folder name for a manga, falling back to its title.
+fn manga_folder_name(record: &MangaRecord) -> OsString {
+    Path::new(&record.path)
+        .file_name()
+        .map(|name| name.to_os_string())
+        .unwrap_or_else(|| OsString::from(&record.title))
+}
+
+/// Ensure every manga folder for the source still exists under `new_dir`,
+/// reporting the missing ones. Read-only — call before committing a relocation.
+fn validate_relocation_targets(
+    db: &MangaDb,
+    new_dir: &Path,
+    source_manga_ids: &[String],
+) -> AppResult<()> {
+    let missing: Vec<String> = source_manga_ids
+        .iter()
+        .filter_map(|id| db.mangas.get(id))
+        .filter(|record| !new_dir.join(manga_folder_name(record)).is_dir())
+        .map(|record| record.title.clone())
+        .collect();
+
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    let count = missing.len();
+    let preview = missing.iter().take(5).cloned().collect::<Vec<_>>().join(", ");
+    let suffix = if count > 5 { format!(" and {} more", count - 5) } else { String::new() };
+    Err(AppError::Invalid(format!(
+        "Cannot relocate: {} manga folder{} missing at the new path: {}{}",
+        count,
+        if count == 1 { "" } else { "s" },
+        preview,
+        suffix,
+    )))
+}
+
+/// Rewrite one manga record for its new location: new path/id, rebased cover
+/// paths, and remapped chapter statuses. Returns `(new_manga_id, record)`.
+fn remap_manga(
+    existing: &MangaRecord,
+    old_manga_id: &str,
+    new_dir: &Path,
+    old_source_path: &str,
+    new_source_path: &str,
+    new_source_id: &str,
+) -> (String, MangaRecord) {
+    let old_manga_path = PathBuf::from(&existing.path);
+    let new_manga_path = new_dir.join(manga_folder_name(existing));
+    let new_manga_id = path_id(&new_manga_path);
+
+    let mut updated = existing.clone();
+    updated.source_id = new_source_id.to_string();
+    updated.path = normalize(&new_manga_path);
+    updated.cover_path = rekey_cached_cover_path(
+        &rebase_under_root(&existing.cover_path, old_source_path, new_source_path),
+        old_manga_id,
+        &new_manga_id,
+    );
+
+    if let Some(override_path) = &existing.cover_override {
+        let rebased = rebase_under_root(override_path, old_source_path, new_source_path);
+        updated.cover_override = Some(rekey_cached_cover_path(&rebased, old_manga_id, &new_manga_id));
+    }
+
+    updated.chapters = remap_chapter_statuses(&old_manga_path, &new_manga_path, &existing.chapters);
+    updated.read_chapters = updated
+        .chapters
+        .values()
+        .filter(|s| matches!(s, ChapterStatus::Read))
+        .count();
+
+    (new_manga_id, updated)
 }
 
 /// Resolve a source's display name: the trimmed override, else the folder name.
@@ -370,19 +458,11 @@ pub fn relocate_source(
         if !guard.db.sources.contains_key(&source_id) {
             return Err(AppError::NotFound(format!("source '{}' not found", source_id)));
         }
-
         if new_source_id != source_id && guard.db.sources.contains_key(&new_source_id) {
             return Err(AppError::Invalid(
                 "A source already exists for that folder".to_string(),
             ));
         }
-
-        let mut source_meta = guard
-            .db
-            .sources
-            .remove(&source_id)
-            .ok_or_else(|| AppError::NotFound(format!("source '{}' not found", source_id)))?;
-        let old_source_path = source_meta.path.clone();
 
         let source_manga_ids: Vec<String> = guard
             .db
@@ -393,36 +473,11 @@ pub fn relocate_source(
             .collect();
         let source_manga_set: HashSet<String> = source_manga_ids.iter().cloned().collect();
 
-        // Validate all manga folders exist at the new path before committing
-        let mut missing_mangas: Vec<String> = Vec::new();
-        for old_manga_id in &source_manga_ids {
-            let Some(existing) = guard.db.mangas.get(old_manga_id) else {
-                continue;
-            };
-            let folder_name = Path::new(&existing.path)
-                .file_name()
-                .map(|name| name.to_os_string())
-                .unwrap_or_else(|| OsString::from(&existing.title));
-            if !new_dir.join(&folder_name).is_dir() {
-                missing_mangas.push(existing.title.clone());
-            }
-        }
-        if !missing_mangas.is_empty() {
-            // Re-insert the source we removed before validation
-            guard.db.sources.insert(source_id.clone(), source_meta);
-            let count = missing_mangas.len();
-            let preview: Vec<&str> = missing_mangas.iter().take(5).map(|s| s.as_str()).collect();
-            let list = preview.join(", ");
-            let suffix = if count > 5 { format!(" and {} more", count - 5) } else { String::new() };
-            return Err(AppError::Invalid(format!(
-                "Cannot relocate: {} manga folder{} missing at the new path: {}{}",
-                count,
-                if count == 1 { "" } else { "s" },
-                list,
-                suffix,
-            )));
-        }
+        // Validate everything before mutating any state.
+        validate_relocation_targets(&guard.db, new_dir, &source_manga_ids)?;
+        let old_source_path = guard.db.sources[&source_id].path.clone();
 
+        // Build the remapped mangas, rejecting any folder-name collisions.
         let mut remapped_mangas: Vec<(String, MangaRecord)> = Vec::new();
         let mut id_map: HashMap<String, String> = HashMap::new();
         let mut used_new_manga_ids: HashSet<String> = HashSet::new();
@@ -431,23 +486,21 @@ pub fn relocate_source(
             let Some(existing) = guard.db.mangas.get(old_manga_id).cloned() else {
                 continue;
             };
-
-            let folder_name = Path::new(&existing.path)
-                .file_name()
-                .map(|name| name.to_os_string())
-                .unwrap_or_else(|| OsString::from(&existing.title));
-            let old_manga_path = PathBuf::from(&existing.path);
-            let new_manga_path_buf = new_dir.join(folder_name);
-            let new_manga_path = normalize(&new_manga_path_buf);
-            let new_manga_id = path_id(&new_manga_path_buf);
+            let (new_manga_id, updated) = remap_manga(
+                &existing,
+                old_manga_id,
+                new_dir,
+                &old_source_path,
+                &normalized_new_path,
+                &new_source_id,
+            );
 
             if !used_new_manga_ids.insert(new_manga_id.clone()) {
                 return Err(AppError::Invalid(format!(
                     "Multiple mangas would map to '{}'; rename folders before relocating.",
-                    new_manga_path
+                    updated.path
                 )));
             }
-
             if new_manga_id != *old_manga_id
                 && guard.db.mangas.contains_key(&new_manga_id)
                 && !source_manga_set.contains(&new_manga_id)
@@ -458,39 +511,22 @@ pub fn relocate_source(
                 )));
             }
 
-            let mut updated = existing.clone();
-            updated.source_id = new_source_id.clone();
-            updated.path = new_manga_path;
-            updated.cover_path = rebase_under_root(
-                &updated.cover_path,
-                &old_source_path,
-                &normalized_new_path,
-            );
-            updated.cover_path = rekey_cached_cover_path(&updated.cover_path, old_manga_id, &new_manga_id);
-
-            if let Some(override_path) = &existing.cover_override {
-                let rebased = rebase_under_root(override_path, &old_source_path, &normalized_new_path);
-                updated.cover_override = Some(rekey_cached_cover_path(&rebased, old_manga_id, &new_manga_id));
-            }
-
-            updated.chapters = remap_chapter_statuses(&old_manga_path, &new_manga_path_buf, &existing.chapters);
-            updated.read_chapters = updated
-                .chapters
-                .values()
-                .filter(|s| matches!(s, ChapterStatus::Read))
-                .count();
-
             id_map.insert(old_manga_id.clone(), new_manga_id.clone());
             remapped_mangas.push((new_manga_id, updated));
         }
 
+        // Commit: swap the mangas and move the source record to its new id.
+        let mut source_meta = guard
+            .db
+            .sources
+            .remove(&source_id)
+            .ok_or_else(|| AppError::NotFound(format!("source '{}' not found", source_id)))?;
         for old_manga_id in &source_manga_ids {
             guard.db.mangas.remove(old_manga_id);
         }
-        for (new_manga_id, state) in remapped_mangas {
-            guard.db.mangas.insert(new_manga_id, state);
+        for (new_manga_id, record) in remapped_mangas {
+            guard.db.mangas.insert(new_manga_id, record);
         }
-
         source_meta.path = normalized_new_path.clone();
         source_meta.manga_count = source_manga_ids.len();
         guard.db.sources.insert(new_source_id.clone(), source_meta);
