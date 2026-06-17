@@ -12,23 +12,11 @@ use zip::ZipArchive;
 use crate::commands::{history, manga_db};
 use crate::commands::manga_db::MangaDbCache;
 use crate::models::manga::Manga;
-use crate::models::manga_db::{MangaState, SourceMeta};
+use crate::models::manga_db::{MangaDb, MangaState, Source, SourceMeta};
 use crate::utils::{
     images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
     title_from_path,
 };
-
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct Source {
-    id: String,
-    name: String,
-    path: String,
-    path_missing: bool,
-    manga_count: usize,
-    hidden: bool,
-    scanned_at: u64,
-    sort_order: u32,
-}
 
 /// Find the cover from explicit cover files or first issue's first image.
 fn find_folder_cover(manga_path: &Path, sub_dirs: &[PathBuf]) -> Option<String> {
@@ -143,6 +131,18 @@ fn count_mangas(dir: &Path) -> usize {
         .unwrap_or(0)
 }
 
+/// Project all mangas belonging to `source_id`, sorted by natural title order.
+fn mangas_for_source(db: &MangaDb, source_id: &str) -> Vec<Manga> {
+    let mut mangas: Vec<Manga> = db
+        .mangas
+        .iter()
+        .filter(|(_, m)| m.source_id == source_id)
+        .map(|(id, m)| m.project(id.as_str()))
+        .collect();
+    mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
+    mangas
+}
+
 #[tauri::command]
 pub fn list_sources(
     include_hidden: Option<bool>,
@@ -154,16 +154,7 @@ pub fn list_sources(
 
     let mut sources: Vec<Source> = guard.db.sources.iter()
         .filter(|(_, meta)| include_hidden || !meta.hidden)
-        .map(|(id, meta)| Source {
-            id: id.clone(),
-            name: meta.name.clone(),
-            path: meta.source_path.clone(),
-            path_missing: !Path::new(&meta.source_path).is_dir(),
-            manga_count: meta.manga_count,
-            hidden: meta.hidden,
-            scanned_at: meta.scanned_at,
-            sort_order: meta.sort_order,
-        })
+        .map(|(id, meta)| meta.project(id.as_str()))
         .collect();
 
     sources.sort_by_key(|s| s.sort_order);
@@ -190,15 +181,7 @@ pub fn scan_directory(
         if guard.db.sources.contains_key(&source_id)
             && guard.db.mangas.values().any(|m| m.source_id == source_id)
         {
-            let mut mangas: Vec<Manga> = guard
-                .db
-                .mangas
-                .iter()
-                .filter(|(_, m)| m.source_id == source_id)
-                .map(|(id, m)| m.project(id.clone()))
-                .collect();
-            mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
-            return Ok(mangas);
+            return Ok(mangas_for_source(&guard.db, &source_id));
         }
     }
 
@@ -210,8 +193,7 @@ pub fn scan_directory(
     let covers_dir = app_data_dir.join("cache").join("covers");
     fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
 
-    let mut mangas = collect_mangas(dir, 1, &covers_dir);
-    mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
+    let mangas = collect_mangas(dir, 1, &covers_dir);
 
     // Build the set of manga ids present on disk for this source
     let on_disk_ids: HashSet<String> = mangas.iter().map(|m| m.id.clone()).collect();
@@ -227,43 +209,18 @@ pub fn scan_directory(
             existing.scanned_at = scanned_at;
             existing.manga_count = manga_count;
         } else {
-            let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
-            db.sources.insert(
-                source_id.clone(),
-                SourceMeta {
-                    source_path: source_path_str,
-                    scanned_at,
-                    manga_count,
-                    name: dir.file_name()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("")
-                        .to_string(),
-                    added_at: now_epoch(),
-                    hidden: false,
-                    sort_order: next_order,
-                },
-            );
+            let mut meta =
+                SourceMeta::new(source_path_str, resolve_source_name(dir, None), manga_count, db.next_source_order());
+            meta.scanned_at = scanned_at;
+            db.sources.insert(source_id.clone(), meta);
         }
 
         // Drop mangas from this source that no longer exist on disk
         db.mangas.retain(|id, m| m.source_id != source_id || on_disk_ids.contains(id));
 
-        // Merge scanned mangas into the db
+        // Upsert scanned mangas: refresh display fields, preserve reading state
         for manga in &mangas {
-            let entry = db.mangas.entry(manga.id.clone()).or_insert_with(|| MangaState {
-                source_id: source_id.clone(),
-                title: manga.title.clone(),
-                path: manga.path.clone(),
-                cover_path: manga.cover_path.clone(),
-                cover_override: None,
-                chapter_count: manga.chapter_count,
-                read_chapters: 0,
-                last_read_at: 0,
-                added_at: None,
-                category_ids: Vec::new(),
-                chapters: std::collections::HashMap::new(),
-            });
-            // Refresh mutable display fields; preserve reading state
+            let entry = db.mangas.entry(manga.id.clone()).or_default();
             entry.source_id = source_id.clone();
             entry.title = manga.title.clone();
             entry.path = manga.path.clone();
@@ -272,39 +229,17 @@ pub fn scan_directory(
         }
     })?;
 
-    // Enrich the returned mangas with read state from the db
     let guard = cache.lock().map_err(|e| e.to_string())?;
-    let enriched: Vec<Manga> = mangas
-        .into_iter()
-        .map(|mut m| {
-            if let Some(state) = guard.db.mangas.get(&m.id) {
-                m.read_chapters = state.read_chapters;
-                m.last_read_at = state.last_read_at;
-            }
-            m
-        })
-        .collect();
-
-    Ok(enriched)
+    Ok(mangas_for_source(&guard.db, &source_id))
 }
 
 // ── Source CRUD helpers ───────────────────────────────────────────────────────
 
-fn build_source_from_cache(
-    db: &crate::models::manga_db::MangaDb,
-    id: &str,
-) -> Result<Source, String> {
-    let meta = db.sources.get(id).ok_or_else(|| format!("source '{}' not found", id))?;
-    Ok(Source {
-        id: id.to_string(),
-        name: meta.name.clone(),
-        path: meta.source_path.clone(),
-        path_missing: !Path::new(&meta.source_path).is_dir(),
-        manga_count: meta.manga_count,
-        hidden: meta.hidden,
-        scanned_at: meta.scanned_at,
-        sort_order: meta.sort_order,
-    })
+fn build_source_from_cache(db: &MangaDb, id: &str) -> Result<Source, String> {
+    db.sources
+        .get(id)
+        .map(|meta| meta.project(id))
+        .ok_or_else(|| format!("source '{}' not found", id))
 }
 
 fn rebase_under_root(path: &str, old_root: &str, new_root: &str) -> String {
@@ -366,6 +301,42 @@ fn remap_chapter_statuses(
     remapped
 }
 
+/// Resolve a source's display name: the trimmed override, else the folder name.
+fn resolve_source_name(dir: &Path, name: Option<String>) -> String {
+    name.filter(|s| !s.trim().is_empty()).unwrap_or_else(|| {
+        dir.file_name().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string()
+    })
+}
+
+/// Insert a source for `dir` if one doesn't already exist. Returns its id either way.
+fn ensure_source(
+    app: &tauri::AppHandle,
+    dir: &Path,
+    name: Option<String>,
+) -> Result<String, String> {
+    let id = path_id(dir);
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    {
+        let guard = cache.lock().map_err(|e| e.to_string())?;
+        if guard.db.sources.contains_key(&id) {
+            return Ok(id);
+        }
+    }
+
+    let source_path = normalize(dir);
+    let resolved_name = resolve_source_name(dir, name);
+    let manga_count = count_mangas(dir);
+    manga_db::mutate(&cache, app, |db| {
+        // Re-check under the lock: another caller may have inserted it meanwhile.
+        if !db.sources.contains_key(&id) {
+            let order = db.next_source_order();
+            db.sources
+                .insert(id.clone(), SourceMeta::new(source_path, resolved_name, manga_count, order));
+        }
+    })?;
+    Ok(id)
+}
+
 pub(crate) fn add_source_internal(
     app: &tauri::AppHandle,
     dir: &Path,
@@ -374,33 +345,7 @@ pub(crate) fn add_source_internal(
     if !dir.is_dir() {
         return Ok(());
     }
-    let normalized = normalize(dir);
-    let id = path_id(dir);
-    let cache = app.state::<Mutex<MangaDbCache>>();
-    {
-        let guard = cache.lock().map_err(|e| e.to_string())?;
-        if guard.db.sources.contains_key(&id) {
-            return Ok(());
-        }
-    }
-    let resolved_name = name
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| {
-            dir.file_name().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string()
-        });
-    let manga_count = count_mangas(dir);
-    manga_db::mutate(&cache, app, |db| {
-        let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
-        db.sources.insert(id.clone(), SourceMeta {
-            source_path: normalized,
-            scanned_at: 0,
-            manga_count,
-            name: resolved_name,
-            added_at: now_epoch(),
-            hidden: false,
-            sort_order: next_order,
-        });
-    })
+    ensure_source(app, dir, name).map(|_| ())
 }
 
 // ── Source CRUD commands ──────────────────────────────────────────────────────
@@ -416,37 +361,8 @@ pub fn add_source(
         return Err(format!("'{}' is not a directory", path));
     }
 
-    let id = path_id(dir);
+    let id = ensure_source(&app_handle, dir, name)?;
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
-
-    {
-        let guard = cache.lock().map_err(|e| e.to_string())?;
-        if guard.db.sources.contains_key(&id) {
-            return build_source_from_cache(&guard.db, &id);
-        }
-    }
-
-    let normalized = normalize(dir);
-    let resolved_name = name
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| {
-            dir.file_name().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string()
-        });
-    let manga_count = count_mangas(dir);
-
-    manga_db::mutate(&cache, &app_handle, |db| {
-        let next_order = db.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1;
-        db.sources.insert(id.clone(), SourceMeta {
-            source_path: normalized,
-            scanned_at: 0,
-            manga_count,
-            name: resolved_name,
-            added_at: now_epoch(),
-            hidden: false,
-            sort_order: next_order,
-        });
-    })?;
-
     let guard = cache.lock().map_err(|e| e.to_string())?;
     build_source_from_cache(&guard.db, &id)
 }
