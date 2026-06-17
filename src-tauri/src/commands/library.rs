@@ -56,9 +56,7 @@ pub fn delete_category(
     manga_db::mutate(&cache, &app, |db| {
         for m in db.mangas.values_mut() {
             m.category_ids.retain(|id| id != &category_id);
-            if m.added_at.is_some() && m.category_ids.is_empty() {
-                m.category_ids.push(DEFAULT_CATEGORY_ID.to_string());
-            }
+            m.ensure_default_category();
         }
     })
 }
@@ -105,38 +103,19 @@ pub fn add_to_library(
     chapter_count: usize,
     category_ids: Vec<String>,
 ) -> Result<(), String> {
-    let ids = if category_ids.is_empty() {
-        vec![DEFAULT_CATEGORY_ID.to_string()]
-    } else {
-        category_ids
-    };
-
     let cache = app.state::<Mutex<MangaDbCache>>();
     manga_db::mutate(&cache, &app, |db| {
-        let entry = db.mangas.entry(manga_id.clone()).or_insert_with(|| {
-            crate::models::manga_db::MangaState {
-                source_id: String::new(),
-                title: title.clone(),
-                path: path.clone(),
-                cover_path: cover_path.clone(),
-                cover_override: None,
-                chapter_count,
-                read_chapters: 0,
-                last_read_at: 0,
-                added_at: None,
-                category_ids: Vec::new(),
-                chapters: std::collections::HashMap::new(),
-            }
-        });
+        let entry = db.mangas.entry(manga_id).or_default();
         // Refresh display fields
-        entry.title = title.clone();
-        entry.path = path.clone();
-        entry.cover_path = cover_path.clone();
+        entry.title = title;
+        entry.path = path;
+        entry.cover_path = cover_path;
         entry.chapter_count = chapter_count;
-        entry.category_ids = ids.clone();
+        entry.category_ids = category_ids;
         if entry.added_at.is_none() {
             entry.added_at = Some(now_epoch());
         }
+        entry.ensure_default_category();
     })
 }
 

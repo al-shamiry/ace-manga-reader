@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::category::DEFAULT_CATEGORY_ID;
 use crate::models::chapter::ChapterStatus;
 use crate::models::manga::Manga;
 
@@ -54,6 +55,13 @@ impl MangaState {
             last_read_at: self.last_read_at,
             category_ids: self.category_ids.clone(),
             added_at: self.added_at.unwrap_or(0),
+        }
+    }
+
+    /// Ensure a library manga always belongs to at least the default category.
+    pub fn ensure_default_category(&mut self) {
+        if self.added_at.is_some() && self.category_ids.is_empty() {
+            self.category_ids.push(DEFAULT_CATEGORY_ID.to_string());
         }
     }
 }
