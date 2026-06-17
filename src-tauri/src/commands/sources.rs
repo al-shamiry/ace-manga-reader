@@ -11,7 +11,9 @@ use zip::ZipArchive;
 
 use crate::commands::{history, manga_db};
 use crate::commands::manga_db::MangaDbCache;
+use crate::error::{AppError, AppResult};
 use crate::models::{ChapterStatus, MangaDb, MangaDto, MangaRecord, SourceDto, SourceRecord};
+use crate::paths;
 use crate::utils::{
     images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
     title_from_path,
@@ -31,9 +33,9 @@ fn find_folder_cover(manga_path: &Path, sub_dirs: &[PathBuf]) -> Option<String> 
 }
 
 /// Extract the cover image from a CBZ file into `cache_dir`, returning the cached path.
-fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Result<String, String> {
-    let file = fs::File::open(cbz_path).map_err(|e| e.to_string())?;
-    let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
+fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> AppResult<String> {
+    let file = fs::File::open(cbz_path)?;
+    let mut archive = ZipArchive::new(file)?;
 
     let mut image_names: Vec<String> = (0..archive.len())
         .filter_map(|i| {
@@ -46,7 +48,7 @@ fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Resul
     image_names.sort();
 
     if image_names.is_empty() {
-        return Err("No images in CBZ".to_string());
+        return Err(AppError::Invalid("No images in CBZ".to_string()));
     }
 
     let cover_name = &image_names[0];
@@ -54,10 +56,10 @@ fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Resul
     let cover_path = cache_dir.join(format!("{}.{}", cover_id, ext));
 
     if !cover_path.exists() {
-        let mut entry = archive.by_name(cover_name).map_err(|e| e.to_string())?;
+        let mut entry = archive.by_name(cover_name)?;
         let mut bytes = Vec::new();
-        entry.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
-        fs::write(&cover_path, &bytes).map_err(|e| e.to_string())?;
+        entry.read_to_end(&mut bytes)?;
+        fs::write(&cover_path, &bytes)?;
     }
 
     Ok(normalize(&cover_path))
@@ -65,7 +67,7 @@ fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Resul
 
 /// Scan a manga folder that may contain CBZ files, image subdirs, or both.
 /// Returns `None` if the folder has no chapters.
-fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<MangaDto, String>> {
+fn scan_manga(path: &Path, cache_dir: &Path) -> Option<AppResult<MangaDto>> {
     let (sub_dirs, cbz_files) = subdirs_and_cbz(path);
     let chapter_count = sub_dirs.len() + cbz_files.len();
 
@@ -83,7 +85,7 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<MangaDto, String>>
     let cover_path = match cover_result {
         Some(Ok(p)) => p,
         Some(Err(e)) => return Some(Err(e)),
-        None => return Some(Err("No cover found".to_string())),
+        None => return Some(Err(AppError::Invalid("No cover found".to_string()))),
     };
 
     Some(Ok(MangaDto {
@@ -146,10 +148,10 @@ fn mangas_for_source(db: &MangaDb, source_id: &str) -> Vec<MangaDto> {
 pub fn list_sources(
     include_hidden: Option<bool>,
     app_handle: tauri::AppHandle,
-) -> Result<Vec<SourceDto>, String> {
+) -> AppResult<Vec<SourceDto>> {
     let include_hidden = include_hidden.unwrap_or(false);
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    let guard = cache.lock().map_err(|e| e.to_string())?;
+    let guard = manga_db::lock(&cache)?;
 
     let mut sources: Vec<SourceDto> = guard.db.sources.iter()
         .filter(|(_, meta)| include_hidden || !meta.hidden)
@@ -165,10 +167,10 @@ pub fn scan_directory(
     path: String,
     force_refresh: bool,
     app_handle: tauri::AppHandle,
-) -> Result<Vec<MangaDto>, String> {
+) -> AppResult<Vec<MangaDto>> {
     let dir = Path::new(&path);
     if !dir.is_dir() {
-        return Err(format!("'{}' is not a directory", path));
+        return Err(AppError::Invalid(format!("'{}' is not a directory", path)));
     }
 
     let source_id = path_id(dir);
@@ -176,7 +178,7 @@ pub fn scan_directory(
 
     // Cache hit: source is known and we have mangas for it → return directly
     if !force_refresh {
-        let guard = cache.lock().map_err(|e| e.to_string())?;
+        let guard = manga_db::lock(&cache)?;
         if guard.db.sources.contains_key(&source_id)
             && guard.db.mangas.values().any(|m| m.source_id == source_id)
         {
@@ -185,12 +187,8 @@ pub fn scan_directory(
     }
 
     // Full disk scan
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e: tauri::Error| e.to_string())?;
-    let covers_dir = app_data_dir.join("cache").join("covers");
-    fs::create_dir_all(&covers_dir).map_err(|e| e.to_string())?;
+    let covers_dir = paths::covers_dir(&app_handle)?;
+    fs::create_dir_all(&covers_dir)?;
 
     let mangas = collect_mangas(dir, 1, &covers_dir);
 
@@ -228,17 +226,17 @@ pub fn scan_directory(
         }
     })?;
 
-    let guard = cache.lock().map_err(|e| e.to_string())?;
+    let guard = manga_db::lock(&cache)?;
     Ok(mangas_for_source(&guard.db, &source_id))
 }
 
 // ── Source CRUD helpers ───────────────────────────────────────────────────────
 
-fn build_source_from_cache(db: &MangaDb, id: &str) -> Result<SourceDto, String> {
+fn build_source_from_cache(db: &MangaDb, id: &str) -> AppResult<SourceDto> {
     db.sources
         .get(id)
         .map(|meta| meta.project(id))
-        .ok_or_else(|| format!("source '{}' not found", id))
+        .ok_or_else(|| AppError::NotFound(format!("source '{}' not found", id)))
 }
 
 fn rebase_under_root(path: &str, old_root: &str, new_root: &str) -> String {
@@ -308,15 +306,11 @@ fn resolve_source_name(dir: &Path, name: Option<String>) -> String {
 }
 
 /// Insert a source for `dir` if one doesn't already exist. Returns its id either way.
-fn ensure_source(
-    app: &tauri::AppHandle,
-    dir: &Path,
-    name: Option<String>,
-) -> Result<String, String> {
+fn ensure_source(app: &tauri::AppHandle, dir: &Path, name: Option<String>) -> AppResult<String> {
     let id = path_id(dir);
     let cache = app.state::<Mutex<MangaDbCache>>();
     {
-        let guard = cache.lock().map_err(|e| e.to_string())?;
+        let guard = manga_db::lock(&cache)?;
         if guard.db.sources.contains_key(&id) {
             return Ok(id);
         }
@@ -336,17 +330,6 @@ fn ensure_source(
     Ok(id)
 }
 
-pub(crate) fn add_source_internal(
-    app: &tauri::AppHandle,
-    dir: &Path,
-    name: Option<String>,
-) -> Result<(), String> {
-    if !dir.is_dir() {
-        return Ok(());
-    }
-    ensure_source(app, dir, name).map(|_| ())
-}
-
 // ── Source CRUD commands ──────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -354,15 +337,15 @@ pub fn add_source(
     path: String,
     name: Option<String>,
     app_handle: tauri::AppHandle,
-) -> Result<SourceDto, String> {
+) -> AppResult<SourceDto> {
     let dir = Path::new(&path);
     if !dir.is_dir() {
-        return Err(format!("'{}' is not a directory", path));
+        return Err(AppError::Invalid(format!("'{}' is not a directory", path)));
     }
 
     let id = ensure_source(&app_handle, dir, name)?;
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    let guard = cache.lock().map_err(|e| e.to_string())?;
+    let guard = manga_db::lock(&cache)?;
     build_source_from_cache(&guard.db, &id)
 }
 
@@ -371,10 +354,10 @@ pub fn relocate_source(
     source_id: String,
     new_path: String,
     app_handle: tauri::AppHandle,
-) -> Result<SourceDto, String> {
+) -> AppResult<SourceDto> {
     let new_dir = Path::new(&new_path);
     if !new_dir.is_dir() {
-        return Err(format!("'{}' is not a directory", new_path));
+        return Err(AppError::Invalid(format!("'{}' is not a directory", new_path)));
     }
 
     let normalized_new_path = normalize(new_dir);
@@ -382,21 +365,23 @@ pub fn relocate_source(
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
 
     let id_map: HashMap<String, String> = {
-        let mut guard = cache.lock().map_err(|e| e.to_string())?;
+        let mut guard = manga_db::lock(&cache)?;
 
         if !guard.db.sources.contains_key(&source_id) {
-            return Err(format!("source '{}' not found", source_id));
+            return Err(AppError::NotFound(format!("source '{}' not found", source_id)));
         }
 
         if new_source_id != source_id && guard.db.sources.contains_key(&new_source_id) {
-            return Err("A source already exists for that folder".to_string());
+            return Err(AppError::Invalid(
+                "A source already exists for that folder".to_string(),
+            ));
         }
 
         let mut source_meta = guard
             .db
             .sources
             .remove(&source_id)
-            .ok_or_else(|| format!("source '{}' not found", source_id))?;
+            .ok_or_else(|| AppError::NotFound(format!("source '{}' not found", source_id)))?;
         let old_source_path = source_meta.path.clone();
 
         let source_manga_ids: Vec<String> = guard
@@ -429,13 +414,13 @@ pub fn relocate_source(
             let preview: Vec<&str> = missing_mangas.iter().take(5).map(|s| s.as_str()).collect();
             let list = preview.join(", ");
             let suffix = if count > 5 { format!(" and {} more", count - 5) } else { String::new() };
-            return Err(format!(
+            return Err(AppError::Invalid(format!(
                 "Cannot relocate: {} manga folder{} missing at the new path: {}{}",
                 count,
                 if count == 1 { "" } else { "s" },
                 list,
                 suffix,
-            ));
+            )));
         }
 
         let mut remapped_mangas: Vec<(String, MangaRecord)> = Vec::new();
@@ -457,17 +442,20 @@ pub fn relocate_source(
             let new_manga_id = path_id(&new_manga_path_buf);
 
             if !used_new_manga_ids.insert(new_manga_id.clone()) {
-                return Err(format!(
+                return Err(AppError::Invalid(format!(
                     "Multiple mangas would map to '{}'; rename folders before relocating.",
                     new_manga_path
-                ));
+                )));
             }
 
             if new_manga_id != *old_manga_id
                 && guard.db.mangas.contains_key(&new_manga_id)
                 && !source_manga_set.contains(&new_manga_id)
             {
-                return Err(format!("Manga ID collision while relocating '{}'.", existing.title));
+                return Err(AppError::Invalid(format!(
+                    "Manga ID collision while relocating '{}'.",
+                    existing.title
+                )));
             }
 
             let mut updated = existing.clone();
@@ -516,18 +504,15 @@ pub fn relocate_source(
         eprintln!("rename_cached_covers failed: {}", e);
     }
 
-    let guard = cache.lock().map_err(|e| e.to_string())?;
+    let guard = manga_db::lock(&cache)?;
     build_source_from_cache(&guard.db, &new_source_id)
 }
 
 #[tauri::command]
-pub fn remove_source(
-    source_id: String,
-    app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+pub fn remove_source(source_id: String, app_handle: tauri::AppHandle) -> AppResult<()> {
     let (manga_ids, chapter_ids): (Vec<String>, Vec<String>) = {
         let cache = app_handle.state::<Mutex<MangaDbCache>>();
-        let guard = cache.lock().map_err(|e| e.to_string())?;
+        let guard = manga_db::lock(&cache)?;
         let mut mids = Vec::new();
         let mut cids = Vec::new();
         for (id, m) in &guard.db.mangas {
@@ -559,7 +544,7 @@ pub fn rename_source(
     source_id: String,
     name: String,
     app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
     manga_db::mutate(&cache, &app_handle, |db| {
         if let Some(meta) = db.sources.get_mut(&source_id) {
@@ -572,7 +557,7 @@ pub fn rename_source(
 pub fn reorder_sources(
     ordered_ids: Vec<String>,
     app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
     manga_db::mutate(&cache, &app_handle, |db| {
         for (i, id) in ordered_ids.iter().enumerate() {
@@ -588,7 +573,7 @@ pub fn set_source_hidden(
     source_id: String,
     hidden: bool,
     app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
     manga_db::mutate(&cache, &app_handle, |db| {
         if let Some(meta) = db.sources.get_mut(&source_id) {
@@ -601,10 +586,9 @@ fn cleanup_source_cache(
     app: &tauri::AppHandle,
     manga_ids: &[String],
     chapter_ids: &[String],
-) -> Result<(), String> {
-    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    let covers_dir = data_dir.join("cache").join("covers");
-    let pages_dir = data_dir.join("cache").join("pages");
+) -> AppResult<()> {
+    let covers_dir = paths::covers_dir(app)?;
+    let pages_dir = paths::pages_dir(app)?;
 
     if covers_dir.is_dir() {
         let id_set: HashSet<&str> = manga_ids.iter().map(|s| s.as_str()).collect();
@@ -632,20 +616,19 @@ fn cleanup_source_cache(
 fn rename_cached_covers(
     app: &tauri::AppHandle,
     id_map: &HashMap<String, String>,
-) -> Result<(), String> {
+) -> AppResult<()> {
     if id_map.is_empty() {
         return Ok(());
     }
 
-    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    let covers_dir = data_dir.join("cache").join("covers");
+    let covers_dir = paths::covers_dir(app)?;
     if !covers_dir.is_dir() {
         return Ok(());
     }
 
     let mut renames: Vec<(PathBuf, PathBuf)> = Vec::new();
-    for entry in fs::read_dir(&covers_dir).map_err(|e| e.to_string())? {
-        let path = entry.map_err(|e| e.to_string())?.path();
+    for entry in fs::read_dir(&covers_dir)? {
+        let path = entry?.path();
         let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
             continue;
         };

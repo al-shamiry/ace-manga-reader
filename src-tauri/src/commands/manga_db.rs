@@ -1,10 +1,9 @@
-use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
-use tauri::Manager;
-
+use crate::error::{AppError, AppResult};
 use crate::models::{MangaDb, MangaRecord};
-use crate::utils::{natural_cmp, now_epoch, write_atomic_json};
+use crate::paths;
+use crate::utils::write_atomic_json;
 
 // ── Cache struct ─────────────────────────────────────────────────────────────
 
@@ -13,87 +12,48 @@ pub struct MangaDbCache {
 }
 
 impl MangaDbCache {
-    pub fn load(app: &tauri::AppHandle) -> Self {
-        let mut db = load_db(app);
-        if backfill(&mut db) {
-            let _ = save_db(app, &db);
-        }
-        Self { db }
+    pub fn load(app: &tauri::AppHandle) -> AppResult<Self> {
+        Ok(Self { db: load_db(app)? })
     }
-}
-
-fn backfill(db: &mut MangaDb) -> bool {
-    let mut changed = false;
-
-    for meta in db.sources.values_mut() {
-        if meta.name.is_empty() {
-            meta.name = Path::new(&meta.path)
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("")
-                .to_string();
-            changed = true;
-        }
-        if meta.added_at == 0 {
-            meta.added_at = now_epoch();
-            changed = true;
-        }
-    }
-
-    if db.version < 2 {
-        // Assign sort_order by natural sort of names, matching today's UI order
-        let mut id_name_pairs: Vec<(String, String)> = db.sources
-            .iter()
-            .map(|(id, meta)| (id.clone(), meta.name.clone()))
-            .collect();
-        id_name_pairs.sort_by(|a, b| natural_cmp(&a.1, &b.1));
-        for (i, (id, _)) in id_name_pairs.iter().enumerate() {
-            if let Some(meta) = db.sources.get_mut(id) {
-                meta.sort_order = i as u32;
-            }
-        }
-        db.version = 2;
-        changed = true;
-    }
-
-    changed
 }
 
 // ── File I/O ──────────────────────────────────────────────────────────────────
 
-pub(crate) fn db_path(app: &tauri::AppHandle) -> std::path::PathBuf {
-    app.path().app_data_dir().unwrap().join("manga_db.json")
-}
-
-fn load_db(app: &tauri::AppHandle) -> MangaDb {
-    std::fs::read_to_string(db_path(app))
+fn load_db(app: &tauri::AppHandle) -> AppResult<MangaDb> {
+    let path = paths::db_file(app)?;
+    // A missing or unreadable file is treated as an empty database.
+    Ok(std::fs::read_to_string(path)
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+        .unwrap_or_default())
 }
 
-pub(crate) fn save_db(app: &tauri::AppHandle, db: &MangaDb) -> Result<(), String> {
-    write_atomic_json(&db_path(app), db)
+pub(crate) fn save_db(app: &tauri::AppHandle, db: &MangaDb) -> AppResult<()> {
+    write_atomic_json(&paths::db_file(app)?, db)
 }
 
-// ── Mutation API ──────────────────────────────────────────────────────────────
+// ── Locking + mutation API ────────────────────────────────────────────────────
+
+/// Lock the cache, mapping a poisoned mutex to [`AppError::Lock`].
+pub(crate) fn lock(cache: &Mutex<MangaDbCache>) -> AppResult<MutexGuard<'_, MangaDbCache>> {
+    cache.lock().map_err(|_| AppError::Lock)
+}
 
 /// Run `f` under the cache lock and write-through to disk.
-pub(crate) fn mutate<F>(
-    cache: &Mutex<MangaDbCache>,
-    app: &tauri::AppHandle,
-    f: F,
-) -> Result<(), String>
+pub(crate) fn mutate<F>(cache: &Mutex<MangaDbCache>, app: &tauri::AppHandle, f: F) -> AppResult<()>
 where
     F: FnOnce(&mut MangaDb),
 {
-    let mut guard = cache.lock().map_err(|e| e.to_string())?;
+    let mut guard = lock(cache)?;
     f(&mut guard.db);
     save_db(app, &guard.db)
 }
 
 /// Clone the `MangaRecord` for `manga_id`, if it exists.
-pub(crate) fn get_manga(cache: &Mutex<MangaDbCache>, manga_id: &str) -> Option<MangaRecord> {
-    let guard = cache.lock().ok()?;
-    guard.db.mangas.get(manga_id).cloned()
+pub(crate) fn get_manga(
+    cache: &Mutex<MangaDbCache>,
+    manga_id: &str,
+) -> AppResult<Option<MangaRecord>> {
+    let guard = lock(cache)?;
+    Ok(guard.db.mangas.get(manga_id).cloned())
 }

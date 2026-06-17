@@ -10,40 +10,37 @@ use zip::ZipArchive;
 
 use crate::commands::manga_db::{self, MangaDbCache};
 use crate::commands::settings::{load_config, ReaderSettings};
+use crate::error::{AppError, AppResult};
 use crate::models::{Chapter, ChapterStatus};
-use crate::utils::{images_in, is_image, now_epoch, normalize, path_id, subdirs_and_cbz, title_from_path};
+use crate::paths;
+use crate::utils::{
+    images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
+    title_from_path, write_atomic_json,
+};
 
 // ── Per-manga reader settings (settings/{manga_id}.json) ─────────────────────
 
-fn manga_settings_path(app: &tauri::AppHandle, manga_id: &str) -> std::path::PathBuf {
-    app.path()
-        .app_data_dir()
-        .unwrap()
-        .join("settings")
-        .join(format!("{manga_id}.json"))
-}
-
-fn load_settings(path: &std::path::Path) -> Option<ReaderSettings> {
+fn load_settings(path: &Path) -> Option<ReaderSettings> {
     fs::read_to_string(path)
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
 }
 
-fn save_settings(path: &std::path::Path, settings: &ReaderSettings) -> Result<(), String> {
-    crate::utils::write_atomic_json(path, settings)
-}
-
 #[tauri::command]
-pub fn get_manga_reader_settings(app: tauri::AppHandle, manga_id: String) -> ReaderSettings {
-    let defaults = load_config(&app).reader_settings;
-    match load_settings(&manga_settings_path(&app, &manga_id)) {
+pub fn get_manga_reader_settings(
+    app: tauri::AppHandle,
+    manga_id: String,
+) -> AppResult<ReaderSettings> {
+    let defaults = load_config(&app)?.reader_settings;
+    let settings = match load_settings(&paths::manga_settings_file(&app, &manga_id)?) {
         Some(m) => ReaderSettings {
             fit_mode: m.fit_mode.or(defaults.fit_mode),
             reading_mode: m.reading_mode.or(defaults.reading_mode),
             webtoon_padding: m.webtoon_padding.or(defaults.webtoon_padding),
         },
         None => defaults,
-    }
+    };
+    Ok(settings)
 }
 
 /// Merges a patch into a manga's saved reader settings so partial updates
@@ -53,8 +50,8 @@ pub fn set_manga_reader_settings(
     app: tauri::AppHandle,
     settings: ReaderSettings,
     manga_id: String,
-) -> Result<(), String> {
-    let path = manga_settings_path(&app, &manga_id);
+) -> AppResult<()> {
+    let path = paths::manga_settings_file(&app, &manga_id)?;
     let existing = load_settings(&path).unwrap_or(ReaderSettings {
         fit_mode: None,
         reading_mode: None,
@@ -65,7 +62,7 @@ pub fn set_manga_reader_settings(
         reading_mode: settings.reading_mode.or(existing.reading_mode),
         webtoon_padding: settings.webtoon_padding.or(existing.webtoon_padding),
     };
-    save_settings(&path, &merged)
+    write_atomic_json(&path, &merged)
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -87,10 +84,9 @@ fn count_cbz_images(path: &Path) -> usize {
         .unwrap_or(0)
 }
 
-fn extract_cbz_pages(cbz_path: &Path, app_handle: &tauri::AppHandle) -> Result<Vec<String>, String> {
-    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+fn extract_cbz_pages(cbz_path: &Path, app: &tauri::AppHandle) -> AppResult<Vec<String>> {
     let chapter_id = path_id(cbz_path);
-    let extract_dir = app_data_dir.join("cache").join("pages").join(&chapter_id);
+    let extract_dir = paths::pages_dir(app)?.join(&chapter_id);
 
     // Return cached extraction if it already exists
     if extract_dir.is_dir() {
@@ -100,10 +96,10 @@ fn extract_cbz_pages(cbz_path: &Path, app_handle: &tauri::AppHandle) -> Result<V
         }
     }
 
-    fs::create_dir_all(&extract_dir).map_err(|e| e.to_string())?;
+    fs::create_dir_all(&extract_dir)?;
 
-    let file = fs::File::open(cbz_path).map_err(|e| e.to_string())?;
-    let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
+    let file = fs::File::open(cbz_path)?;
+    let mut archive = ZipArchive::new(file)?;
 
     let mut image_names: Vec<String> = (0..archive.len())
         .filter_map(|i| {
@@ -116,7 +112,7 @@ fn extract_cbz_pages(cbz_path: &Path, app_handle: &tauri::AppHandle) -> Result<V
     image_names.sort();
 
     if image_names.is_empty() {
-        return Err("No images found in CBZ".to_string());
+        return Err(AppError::Invalid("No images found in CBZ".to_string()));
     }
 
     let mut extracted_paths = Vec::new();
@@ -128,10 +124,10 @@ fn extract_cbz_pages(cbz_path: &Path, app_handle: &tauri::AppHandle) -> Result<V
         let dest = extract_dir.join(format!("{:05}.{}", i, ext));
 
         if !dest.exists() {
-            let mut entry = archive.by_name(name).map_err(|e| e.to_string())?;
+            let mut entry = archive.by_name(name)?;
             let mut bytes = Vec::new();
-            entry.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
-            fs::write(&dest, &bytes).map_err(|e| e.to_string())?;
+            entry.read_to_end(&mut bytes)?;
+            fs::write(&dest, &bytes)?;
         }
 
         extracted_paths.push(normalize(&dest));
@@ -146,7 +142,7 @@ fn update_chapter_status(
     manga_id: String,
     chapter_id: String,
     status: ChapterStatus,
-) -> Result<(), String> {
+) -> AppResult<()> {
     manga_db::mutate(cache, app, |db| {
         let entry = db.mangas.entry(manga_id).or_default();
         entry.chapters.insert(chapter_id, status);
@@ -160,17 +156,14 @@ fn update_chapter_status(
 // ── Commands ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_chapters(
-    manga_path: String,
-    app_handle: tauri::AppHandle,
-) -> Result<Vec<Chapter>, String> {
+pub fn get_chapters(manga_path: String, app: tauri::AppHandle) -> AppResult<Vec<Chapter>> {
     let dir = Path::new(&manga_path);
     let manga_id = path_id(dir);
 
     // Pull the chapters map out of the cache (no I/O)
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
+    let cache = app.state::<Mutex<MangaDbCache>>();
     let chapters_map: HashMap<String, ChapterStatus> = {
-        let guard = cache.lock().map_err(|e| e.to_string())?;
+        let guard = manga_db::lock(&cache)?;
         guard.db.mangas.get(&manga_id)
             .map(|m| m.chapters.clone())
             .unwrap_or_default()
@@ -210,7 +203,7 @@ pub fn get_chapters(
     });
 
     let mut chapters: Vec<Chapter> = dir_chapters.chain(cbz_chapters).collect();
-    chapters.sort_by(|a, b| crate::utils::natural_cmp(&a.title, &b.title));
+    chapters.sort_by(|a, b| natural_cmp(&a.title, &b.title));
     Ok(chapters)
 }
 
@@ -218,22 +211,22 @@ pub fn get_chapters(
 pub fn open_chapter(
     chapter_path: String,
     file_type: String,
-    app_handle: tauri::AppHandle,
-) -> Result<Vec<String>, String> {
+    app: tauri::AppHandle,
+) -> AppResult<Vec<String>> {
     let path = Path::new(&chapter_path);
 
     match file_type.as_str() {
         "dir" => {
             let pages: Vec<String> = images_in(path).iter().map(|p| normalize(p)).collect();
             if pages.is_empty() {
-                return Err("No images found in chapter".to_string());
+                return Err(AppError::Invalid("No images found in chapter".to_string()));
             }
             Ok(pages)
         }
 
-        "cbz" => extract_cbz_pages(path, &app_handle),
+        "cbz" => extract_cbz_pages(path, &app),
 
-        _ => Err(format!("Unknown file_type: {}", file_type)),
+        _ => Err(AppError::Invalid(format!("Unknown file_type: {}", file_type))),
     }
 }
 
@@ -243,15 +236,15 @@ pub fn set_chapter_progress(
     chapter_id: String,
     page: usize,
     total_pages: usize,
-    app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+    app: tauri::AppHandle,
+) -> AppResult<()> {
     let status = if page >= total_pages.saturating_sub(1) {
         ChapterStatus::Read
     } else {
         ChapterStatus::Ongoing { page }
     };
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    update_chapter_status(&cache, &app_handle, manga_id, chapter_id, status)
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    update_chapter_status(&cache, &app, manga_id, chapter_id, status)
 }
 
 #[tauri::command]
@@ -259,9 +252,9 @@ pub fn mark_chapter_read(
     manga_id: String,
     chapter_id: String,
     read: bool,
-    app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+    app: tauri::AppHandle,
+) -> AppResult<()> {
     let status = if read { ChapterStatus::Read } else { ChapterStatus::Unread };
-    let cache = app_handle.state::<Mutex<MangaDbCache>>();
-    update_chapter_status(&cache, &app_handle, manga_id, chapter_id, status)
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    update_chapter_status(&cache, &app, manga_id, chapter_id, status)
 }

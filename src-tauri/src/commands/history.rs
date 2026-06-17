@@ -1,40 +1,39 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Mutex;
 
 use tauri::{AppHandle, Manager};
 
-use crate::commands::manga_db::MangaDbCache;
-use crate::utils::{normalize, now_epoch, path_id};
+use crate::commands::manga_db::{self, MangaDbCache};
+use crate::error::AppResult;
 use crate::models::{HistoryData, HistoryEntry};
+use crate::paths;
+use crate::utils::{normalize, now_epoch, path_id, write_atomic_json};
 
 const MAX_ENTRIES: usize = 1000;
 
-fn history_path(app: &AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap().join("history.json")
-}
-
-fn load(app: &AppHandle) -> HistoryData {
-    let path = history_path(app);
-    fs::read_to_string(&path)
+fn load(app: &AppHandle) -> AppResult<HistoryData> {
+    let path = paths::history_file(app)?;
+    // A missing or unreadable file is treated as empty history.
+    Ok(fs::read_to_string(&path)
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+        .unwrap_or_default())
 }
 
-fn save(app: &AppHandle, data: &HistoryData) -> Result<(), String> {
-    crate::utils::write_atomic_json(&history_path(app), data)
-}
-
-#[tauri::command]
-pub fn get_history(app: AppHandle) -> Vec<HistoryEntry> {
-    load(&app).entries
+fn save(app: &AppHandle, data: &HistoryData) -> AppResult<()> {
+    write_atomic_json(&paths::history_file(app)?, data)
 }
 
 #[tauri::command]
-pub fn record_history(entry: HistoryEntry, app: AppHandle) -> Result<(), String> {
-    let mut data = load(&app);
+pub fn get_history(app: AppHandle) -> AppResult<Vec<HistoryEntry>> {
+    Ok(load(&app)?.entries)
+}
+
+#[tauri::command]
+pub fn record_history(entry: HistoryEntry, app: AppHandle) -> AppResult<()> {
+    let mut data = load(&app)?;
     // One entry per manga: remove any existing entry for this manga (regardless of chapter)
     // so the fresh one replaces it at the top. "Last chapter I read" is what matters, not
     // the actual chapter order.
@@ -49,41 +48,41 @@ pub fn record_history(entry: HistoryEntry, app: AppHandle) -> Result<(), String>
 }
 
 #[tauri::command]
-pub fn delete_history_entry(chapter_id: String, app: AppHandle) -> Result<(), String> {
-    let mut data = load(&app);
+pub fn delete_history_entry(chapter_id: String, app: AppHandle) -> AppResult<()> {
+    let mut data = load(&app)?;
     data.entries.retain(|e| e.chapter_id != chapter_id);
     save(&app, &data)
 }
 
 #[tauri::command]
-pub fn clear_history(app: AppHandle) -> Result<(), String> {
+pub fn clear_history(app: AppHandle) -> AppResult<()> {
     save(&app, &HistoryData::default())
 }
 
 /// Remove history entries for the given manga IDs. Called from `remove_source`.
-pub fn prune_mangas(app: &AppHandle, manga_ids: &[String]) -> Result<(), String> {
+pub fn prune_mangas(app: &AppHandle, manga_ids: &[String]) -> AppResult<()> {
     if manga_ids.is_empty() {
         return Ok(());
     }
-    let mut data = load(app);
+    let mut data = load(app)?;
     let id_set: HashSet<&str> = manga_ids.iter().map(|s| s.as_str()).collect();
     data.entries.retain(|e| !id_set.contains(e.manga_id.as_str()));
     save(app, &data)
 }
 
 /// Re-key history entries after source relocation changed manga IDs.
-pub fn rekey_mangas(app: &AppHandle, id_map: &HashMap<String, String>) -> Result<(), String> {
+pub fn rekey_mangas(app: &AppHandle, id_map: &HashMap<String, String>) -> AppResult<()> {
     if id_map.is_empty() {
         return Ok(());
     }
 
-    let mut data = load(app);
+    let mut data = load(app)?;
     if data.entries.is_empty() {
         return Ok(());
     }
 
     let cache = app.state::<Mutex<MangaDbCache>>();
-    let guard = cache.lock().map_err(|e| e.to_string())?;
+    let guard = manga_db::lock(&cache)?;
 
     for entry in data.entries.iter_mut() {
         let Some(new_manga_id) = id_map.get(&entry.manga_id) else {

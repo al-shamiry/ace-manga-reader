@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
+use crate::error::AppResult;
+
 const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif", "avif"];
 
 pub(crate) fn is_image(path: &Path) -> bool {
@@ -86,18 +88,19 @@ pub(crate) fn now_epoch() -> u64 {
 
 /// Write `value` as pretty JSON to `path` atomically: write to a `.tmp` sibling,
 /// fsync, then rename over the target. On Windows `fs::rename` uses `MoveFileExW`.
-pub(crate) fn write_atomic_json<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+pub(crate) fn write_atomic_json<T: Serialize>(path: &Path, value: &T) -> AppResult<()> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        fs::create_dir_all(parent)?;
     }
     let tmp = path.with_extension("tmp");
-    let json = serde_json::to_string_pretty(value).map_err(|e| e.to_string())?;
+    let json = serde_json::to_string_pretty(value)?;
     {
-        let mut f = fs::File::create(&tmp).map_err(|e| e.to_string())?;
-        f.write_all(json.as_bytes()).map_err(|e| e.to_string())?;
-        f.sync_all().map_err(|e| e.to_string())?;
+        let mut f = fs::File::create(&tmp)?;
+        f.write_all(json.as_bytes())?;
+        f.sync_all()?;
     }
-    fs::rename(&tmp, path).map_err(|e| e.to_string())
+    fs::rename(&tmp, path)?;
+    Ok(())
 }
 
 /// Returns sorted (subdirectories, CBZ files) from a single directory read.
