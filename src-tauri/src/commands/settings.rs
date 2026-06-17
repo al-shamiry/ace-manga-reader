@@ -236,15 +236,7 @@ pub fn set_default_reader_settings(
     settings: ReaderSettings,
 ) -> Result<(), String> {
     let mut config = load_config(&app);
-    if settings.fit_mode.is_some() {
-        config.reader_settings.fit_mode = settings.fit_mode;
-    }
-    if settings.reading_mode.is_some() {
-        config.reader_settings.reading_mode = settings.reading_mode;
-    }
-    if settings.webtoon_padding.is_some() {
-        config.reader_settings.webtoon_padding = settings.webtoon_padding;
-    }
+    config.reader_settings = settings;
     save_config(&app, &config)
 }
 

@@ -80,23 +80,24 @@ export function SettingsView() {
     }
   }
 
-  // Global reading defaults overwrite both fields in config.json on every save,
-  // so always send both current values together — sending one alone would
-  // wipe the other.
-  function saveReadingDefaults(next: { fit_mode: FitMode; reading_mode: ReadingMode }) {
-    invoke("set_default_reader_settings", {
-      settings: { fit_mode: next.fit_mode, reading_mode: next.reading_mode },
-    }).catch((e) => console.error("Failed to save reading defaults:", e));
+  function saveReadingDefaults() {
+    const settings: Settings = {
+      fit_mode: fitMode(),
+      reading_mode: readingMode(),
+    };
+    invoke("set_default_reader_settings", { settings }).catch((e) =>
+      console.error("Failed to save reading defaults:", e),
+    );
   }
 
   function updateFitMode(mode: FitMode) {
     setFitMode(mode);
-    saveReadingDefaults({ fit_mode: mode, reading_mode: readingMode() });
+    saveReadingDefaults();
   }
 
   function updateReadingMode(mode: ReadingMode) {
     setReadingMode(mode);
-    saveReadingDefaults({ fit_mode: fitMode(), reading_mode: mode });
+    saveReadingDefaults();
   }
 
   function updateDisplay(next: LibraryDisplay) {
