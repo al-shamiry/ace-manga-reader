@@ -3,7 +3,8 @@ use std::sync::Mutex;
 
 use tauri::Manager;
 
-use crate::models::manga_db::{MangaDb, MangaState};
+use crate::models::manga::MangaState;
+use crate::models::manga_db::MangaDb;
 use crate::utils::{natural_cmp, now_epoch, write_atomic_json};
 
 // ── Cache struct ─────────────────────────────────────────────────────────────

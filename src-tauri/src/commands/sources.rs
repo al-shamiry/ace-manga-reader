@@ -11,8 +11,9 @@ use zip::ZipArchive;
 
 use crate::commands::{history, manga_db};
 use crate::commands::manga_db::MangaDbCache;
-use crate::models::manga::Manga;
-use crate::models::manga_db::{MangaDb, MangaState, Source, SourceMeta};
+use crate::models::manga::{Manga, MangaState};
+use crate::models::manga_db::MangaDb;
+use crate::models::source::{Source, SourceMeta};
 use crate::utils::{
     images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
     title_from_path,
