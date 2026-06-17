@@ -293,6 +293,20 @@ export function ReaderView() {
     }
   });
 
+  // Preload neighbouring pages in paged mode
+  createEffect(() => {
+    if (!isPaged()) return;
+    const all = pages();
+    const idx = pageIndex();
+    if (all.length === 0) return;
+    for (let i = idx - 1; i <= idx + 2; i++) {
+      if (i < 0 || i >= all.length || i === idx) continue;
+      const img = new Image();
+      img.src = convertFileSrc(all[i]);
+      img.decode?.().catch(() => {});
+    }
+  });
+
   // ── Keyboard & wheel handlers ─────────────────────────────────────
   onMount(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -662,12 +676,16 @@ export function ReaderView() {
                   class={pageContainerClass()}
                   onAnimationEnd={clearAnim}
                 >
-                  <img
-                    src={convertFileSrc(pages()[pageIndex()])}
-                    alt={`Page ${pageIndex() + 1}`}
-                    class={`select-none ${FIT_CLASSES[fitMode()]}`}
-                    draggable={false}
-                  />
+                  <Show when={pages()[pageIndex()]} keyed>
+                    {(src) => (
+                      <img
+                        src={convertFileSrc(src)}
+                        alt={`Page ${pageIndex() + 1}`}
+                        class={`select-none ${FIT_CLASSES[fitMode()]}`}
+                        draggable={false}
+                      />
+                    )}
+                  </Show>
                 </div>
                 {/* Tap zones — direction depends on mode */}
                 <Show when={isVertical()} fallback={
