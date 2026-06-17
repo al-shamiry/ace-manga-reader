@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::models::category::DEFAULT_CATEGORY_ID;
 use crate::models::chapter::ChapterStatus;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MangaDto {
     pub id: String,
     pub title: String,

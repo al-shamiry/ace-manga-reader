@@ -11,9 +11,7 @@ use zip::ZipArchive;
 
 use crate::commands::{history, manga_db};
 use crate::commands::manga_db::MangaDbCache;
-use crate::models::manga::{MangaDto, MangaRecord};
-use crate::models::manga_db::MangaDb;
-use crate::models::source::{SourceDto, SourceRecord};
+use crate::models::{ChapterStatus, MangaDb, MangaDto, MangaRecord, SourceDto, SourceRecord};
 use crate::utils::{
     images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
     title_from_path,
@@ -206,7 +204,7 @@ pub fn scan_directory(
     manga_db::mutate(&cache, &app_handle, |db| {
         // Update source metadata: preserve user-controlled fields for existing sources
         if let Some(existing) = db.sources.get_mut(&source_id) {
-            existing.source_path = source_path_str;
+            existing.path = source_path_str;
             existing.scanned_at = scanned_at;
             existing.manga_count = manga_count;
         } else {
@@ -280,14 +278,14 @@ fn rekey_cached_cover_path(path: &str, old_manga_id: &str, new_manga_id: &str) -
 fn remap_chapter_statuses(
     old_manga_path: &Path,
     new_manga_path: &Path,
-    old_chapters: &HashMap<String, crate::models::chapter::ChapterStatus>,
-) -> HashMap<String, crate::models::chapter::ChapterStatus> {
+    old_chapters: &HashMap<String, ChapterStatus>,
+) -> HashMap<String, ChapterStatus> {
     if old_chapters.is_empty() {
         return old_chapters.clone();
     }
 
     let (sub_dirs, cbz_files) = subdirs_and_cbz(new_manga_path);
-    let mut remapped: HashMap<String, crate::models::chapter::ChapterStatus> = HashMap::new();
+    let mut remapped: HashMap<String, ChapterStatus> = HashMap::new();
 
     for chapter in sub_dirs.iter().chain(cbz_files.iter()) {
         let Some(name) = chapter.file_name() else {
@@ -399,7 +397,7 @@ pub fn relocate_source(
             .sources
             .remove(&source_id)
             .ok_or_else(|| format!("source '{}' not found", source_id))?;
-        let old_source_path = source_meta.source_path.clone();
+        let old_source_path = source_meta.path.clone();
 
         let source_manga_ids: Vec<String> = guard
             .db
@@ -491,7 +489,7 @@ pub fn relocate_source(
             updated.read_chapters = updated
                 .chapters
                 .values()
-                .filter(|s| matches!(s, crate::models::chapter::ChapterStatus::Read))
+                .filter(|s| matches!(s, ChapterStatus::Read))
                 .count();
 
             id_map.insert(old_manga_id.clone(), new_manga_id.clone());
@@ -505,7 +503,7 @@ pub fn relocate_source(
             guard.db.mangas.insert(new_manga_id, state);
         }
 
-        source_meta.source_path = normalized_new_path.clone();
+        source_meta.path = normalized_new_path.clone();
         source_meta.manga_count = source_manga_ids.len();
         guard.db.sources.insert(new_source_id.clone(), source_meta);
 

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use tauri::Manager;
 
-use crate::models::category::{Category, DEFAULT_CATEGORY_ID};
+use crate::models::{Category, DEFAULT_CATEGORY_ID};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

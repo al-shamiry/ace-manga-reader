@@ -7,7 +7,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::commands::manga_db::MangaDbCache;
 use crate::utils::{normalize, now_epoch, path_id};
-use crate::models::history::{HistoryData, HistoryEntry};
+use crate::models::{HistoryData, HistoryEntry};
 
 const MAX_ENTRIES: usize = 1000;
 

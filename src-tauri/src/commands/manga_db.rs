@@ -3,8 +3,7 @@ use std::sync::Mutex;
 
 use tauri::Manager;
 
-use crate::models::manga::MangaRecord;
-use crate::models::manga_db::MangaDb;
+use crate::models::{MangaDb, MangaRecord};
 use crate::utils::{natural_cmp, now_epoch, write_atomic_json};
 
 // ── Cache struct ─────────────────────────────────────────────────────────────
@@ -28,7 +27,7 @@ fn backfill(db: &mut MangaDb) -> bool {
 
     for meta in db.sources.values_mut() {
         if meta.name.is_empty() {
-            meta.name = Path::new(&meta.source_path)
+            meta.name = Path::new(&meta.path)
                 .file_name()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")

@@ -10,7 +10,7 @@ use zip::ZipArchive;
 
 use crate::commands::manga_db::{self, MangaDbCache};
 use crate::commands::settings::{load_config, ReaderSettings};
-use crate::models::chapter::{Chapter, ChapterStatus};
+use crate::models::{Chapter, ChapterStatus};
 use crate::utils::{images_in, is_image, now_epoch, normalize, path_id, subdirs_and_cbz, title_from_path};
 
 // ── Per-manga reader settings (settings/{manga_id}.json) ─────────────────────

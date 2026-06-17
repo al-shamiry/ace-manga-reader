@@ -20,7 +20,7 @@ pub struct SourceDto {
 /// Persisted state for a source folder, keyed by source id in `MangaDb`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SourceRecord {
-    pub source_path: String,
+    pub path: String,
     pub scanned_at: u64,
     pub manga_count: usize,
     #[serde(default)]
@@ -35,9 +35,9 @@ pub struct SourceRecord {
 
 impl SourceRecord {
     /// Build a freshly-added source: unscanned, visible, stamped now.
-    pub fn new(source_path: String, name: String, manga_count: usize, sort_order: u32) -> Self {
+    pub fn new(path: String, name: String, manga_count: usize, sort_order: u32) -> Self {
         Self {
-            source_path,
+            path,
             scanned_at: 0,
             manga_count,
             name,
@@ -52,8 +52,8 @@ impl SourceRecord {
         SourceDto {
             id: id.into(),
             name: self.name.clone(),
-            path: self.source_path.clone(),
-            path_missing: !Path::new(&self.source_path).is_dir(),
+            path: self.path.clone(),
+            path_missing: !Path::new(&self.path).is_dir(),
             manga_count: self.manga_count,
             hidden: self.hidden,
             scanned_at: self.scanned_at,

@@ -1,4 +1,6 @@
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ChapterStatus {
     Unread,
@@ -6,7 +8,7 @@ pub enum ChapterStatus {
     Read,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chapter {
     pub id: String,
     pub title: String,

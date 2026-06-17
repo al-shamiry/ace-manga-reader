@@ -5,8 +5,7 @@ use tauri::Manager;
 
 use crate::commands::manga_db::{self, MangaDbCache};
 use crate::commands::settings::{load_config, save_config};
-use crate::models::category::{Category, DEFAULT_CATEGORY_ID};
-use crate::models::manga::MangaDto;
+use crate::models::{Category, MangaDto, DEFAULT_CATEGORY_ID};
 use crate::utils::now_epoch;
 
 // ── Category commands ────────────────────────────────────────────────────────
