@@ -14,7 +14,7 @@ import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { TabBar } from "../components/TabBar";
 import { Toolbar, ToolbarActions, ToolbarButton, ToolbarSearchRow } from "../components/ui/toolbar";
 import type { Tab } from "../components/TabBar";
-import type { Chapter, LibraryEntry, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
+import type { Chapter, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 export function LibraryView() {
   const { categories, libraryEntries, refreshCategories, refreshLibrary, initialLoad } = useLibrary();
@@ -151,7 +151,7 @@ export function LibraryView() {
   const unreadByMangaId = createMemo(() => {
     const map = new Map<string, number>();
     for (const e of libraryEntries()) {
-      map.set(e.manga_id, Math.max(0, e.chapter_count - e.read_chapters));
+      map.set(e.id, Math.max(0, e.chapter_count - (e.read_chapters ?? 0)));
     }
     return map;
   });
@@ -189,9 +189,10 @@ export function LibraryView() {
     }
   }
 
-  function readingStatus(e: LibraryEntry): ReadingStatus {
-    if (e.read_chapters === 0) return "unread";
-    if (e.read_chapters >= e.chapter_count) return "completed";
+  function readingStatus(e: Manga): ReadingStatus {
+    const read = e.read_chapters ?? 0;
+    if (read === 0) return "unread";
+    if (read >= e.chapter_count) return "completed";
     return "started";
   }
 
@@ -201,7 +202,7 @@ export function LibraryView() {
     const entries = libraryEntries();
     if (cats.length <= 1 || entries.length === 0) return cats;
 
-    const defaultCount = entries.filter((e) => e.category_ids.includes("default")).length;
+    const defaultCount = entries.filter((e) => e.category_ids?.includes("default")).length;
     if (defaultCount === 0) return cats.filter((c) => c.id !== "default");
     return cats;
   });
@@ -218,11 +219,11 @@ export function LibraryView() {
   const filteredEntries = createMemo(() => {
     const tab = activeTab();
     const entries = libraryEntries();
-    return entries.filter((e) => e.category_ids.includes(tab));
+    return entries.filter((e) => e.category_ids?.includes(tab));
   });
 
   // Apply search + filters to entries
-  function applyFilters(entries: LibraryEntry[]): LibraryEntry[] {
+  function applyFilters(entries: Manga[]): Manga[] {
     const query = searchQuery().toLowerCase().trim();
     const f = filters();
     let result = entries;
@@ -242,7 +243,7 @@ export function LibraryView() {
     return result;
   }
 
-  function sortEntries(entries: LibraryEntry[]): LibraryEntry[] {
+  function sortEntries(entries: Manga[]): Manga[] {
     const pref = sortPref();
     const dir = pref.direction === "asc" ? 1 : -1;
     return [...entries].sort((a, b) => {
@@ -252,31 +253,26 @@ export function LibraryView() {
         case "total-chapters":
           return dir * (a.chapter_count - b.chapter_count);
         case "last-read": {
-          const aRead = a.last_read_at > 0;
-          const bRead = b.last_read_at > 0;
+          const aLastRead = a.last_read_at ?? 0;
+          const bLastRead = b.last_read_at ?? 0;
+          const aRead = aLastRead > 0;
+          const bRead = bLastRead > 0;
           // desc: read entries first; asc: unread entries first
           if (aRead !== bRead) return dir * (aRead ? 1 : -1);
           // Read entries sorted by last_read_at following direction, unread by added_at inverted
-          if (aRead) return dir * (a.last_read_at - b.last_read_at);
-          return -dir * (a.added_at - b.added_at);
+          if (aRead) return dir * (aLastRead - bLastRead);
+          return -dir * ((a.added_at ?? 0) - (b.added_at ?? 0));
         }
         case "date-added":
-          return dir * (a.added_at - b.added_at);
+          return dir * ((a.added_at ?? 0) - (b.added_at ?? 0));
         default:
           return 0;
       }
     });
   }
 
-  // Convert LibraryEntry to Manga for MangaGrid
   const mangasForGrid = createMemo((): Manga[] =>
-    sortEntries(applyFilters(filteredEntries())).map((e) => ({
-      id: e.manga_id,
-      title: e.title,
-      path: e.path,
-      cover_path: e.cover_path,
-      chapter_count: e.chapter_count,
-    }))
+    sortEntries(applyFilters(filteredEntries()))
   );
 
   let switching = false;
@@ -304,7 +300,7 @@ export function LibraryView() {
   }
 
   function countForCategory(categoryId: string): number {
-    return applyFilters(libraryEntries().filter((e) => e.category_ids.includes(categoryId))).length;
+    return applyFilters(libraryEntries().filter((e) => e.category_ids?.includes(categoryId))).length;
   }
 
   const tabs = createMemo((): Tab[] =>

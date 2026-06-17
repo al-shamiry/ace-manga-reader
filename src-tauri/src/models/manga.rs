@@ -11,4 +11,8 @@ pub struct Manga {
     pub read_chapters: usize,
     #[serde(default)]
     pub last_read_at: u64,
+    #[serde(default)]
+    pub category_ids: Vec<String>,
+    #[serde(default)]
+    pub added_at: u64,
 }

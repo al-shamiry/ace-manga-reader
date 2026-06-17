@@ -5,7 +5,8 @@ use tauri::Manager;
 
 use crate::commands::manga_db::{self, MangaDbCache};
 use crate::commands::settings::{load_config, save_config};
-use crate::models::category::{Category, LibraryEntry, DEFAULT_CATEGORY_ID};
+use crate::models::category::{Category, DEFAULT_CATEGORY_ID};
+use crate::models::manga::Manga;
 use crate::utils::now_epoch;
 
 // ── Category commands ────────────────────────────────────────────────────────
@@ -77,7 +78,7 @@ pub fn reorder_categories(app: tauri::AppHandle, category_ids: Vec<String>) -> R
 // ── Library commands ─────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_library(app: tauri::AppHandle) -> Vec<LibraryEntry> {
+pub fn get_library(app: tauri::AppHandle) -> Vec<Manga> {
     let cache = app.state::<Mutex<MangaDbCache>>();
     let guard = match cache.lock() {
         Ok(g) => g,
@@ -90,17 +91,7 @@ pub fn get_library(app: tauri::AppHandle) -> Vec<LibraryEntry> {
 
     guard.db.mangas.iter()
         .filter(|(_, m)| m.added_at.is_some() && !hidden.contains(m.source_id.as_str()))
-        .map(|(id, m)| LibraryEntry {
-            manga_id: id.clone(),
-            title: m.title.clone(),
-            path: m.path.clone(),
-            cover_path: m.cover_path.clone(),
-            chapter_count: m.chapter_count,
-            read_chapters: m.read_chapters,
-            category_ids: m.category_ids.clone(),
-            added_at: m.added_at.unwrap_or(0),
-            last_read_at: m.last_read_at,
-        })
+        .map(|(id, m)| m.project(id.clone()))
         .collect()
 }
 

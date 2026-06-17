@@ -1,11 +1,11 @@
 import { createContext, createEffect, createSignal, on, onMount, useContext, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { useSources } from "./SourcesContext";
-import type { Category, LibraryEntry } from "../types";
+import type { Category, Manga } from "../types";
 
 interface LibraryContextValue {
   categories: () => Category[];
-  libraryEntries: () => LibraryEntry[];
+  libraryEntries: () => Manga[];
   isInLibrary: (mangaId: string) => boolean;
   refreshCategories: () => Promise<void>;
   refreshLibrary: () => Promise<void>;
@@ -18,7 +18,7 @@ const LibraryContext = createContext<LibraryContextValue>();
 export function LibraryProvider(props: { children: JSX.Element }) {
   const { initialLoad: sourcesInitialLoad, sourceMutationCount } = useSources();
   const [categories, setCategories] = createSignal<Category[]>([]);
-  const [libraryEntries, setLibraryEntries] = createSignal<LibraryEntry[]>([]);
+  const [libraryEntries, setLibraryEntries] = createSignal<Manga[]>([]);
 
   let resolveInitial!: () => void;
   const initialLoadPromise = new Promise<void>((resolve) => {
@@ -40,7 +40,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   }, { defer: true }));
 
   function isInLibrary(mangaId: string) {
-    return libraryEntries().some((e) => e.manga_id === mangaId);
+    return libraryEntries().some((e) => e.id === mangaId);
   }
 
   async function refreshCategories() {
@@ -54,7 +54,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   async function refreshLibrary() {
     try {
-      const entries = await invoke<LibraryEntry[]>("get_library");
+      const entries = await invoke<Manga[]>("get_library");
       setLibraryEntries(entries);
     } catch (e) {
       console.error("Failed to load library:", e);

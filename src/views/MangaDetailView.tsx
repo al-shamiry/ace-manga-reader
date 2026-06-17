@@ -102,7 +102,7 @@ export function MangaDetailView() {
 
   // ── Library helpers ──
 
-  const libraryEntry = () => libraryEntries().find((e) => e.manga_id === manga?.id);
+  const libraryEntry = () => libraryEntries().find((e) => e.id === manga?.id);
   const isInLibrary = () => !!libraryEntry();
   const currentCategoryIds = () => libraryEntry()?.category_ids ?? [];
 

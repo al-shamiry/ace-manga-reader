@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::models::chapter::ChapterStatus;
+use crate::models::manga::Manga;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SourceMeta {
@@ -38,6 +39,23 @@ pub struct MangaState {
     pub category_ids: Vec<String>,
     #[serde(default)]
     pub chapters: HashMap<String, ChapterStatus>,
+}
+
+impl MangaState {
+    /// Project this state into the `Manga` DTO returned to the frontend.
+    pub fn project(&self, id: impl Into<String>) -> Manga {
+        Manga {
+            id: id.into(),
+            title: self.title.clone(),
+            path: self.path.clone(),
+            cover_path: self.cover_path.clone(),
+            chapter_count: self.chapter_count,
+            read_chapters: self.read_chapters,
+            last_read_at: self.last_read_at,
+            category_ids: self.category_ids.clone(),
+            added_at: self.added_at.unwrap_or(0),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -107,6 +107,8 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Manga, String>> {
         chapter_count,
         read_chapters: 0,
         last_read_at: 0,
+        category_ids: Vec::new(),
+        added_at: 0,
     }))
 }
 
@@ -193,15 +195,7 @@ pub fn scan_directory(
                 .mangas
                 .iter()
                 .filter(|(_, m)| m.source_id == source_id)
-                .map(|(id, m)| Manga {
-                    id: id.clone(),
-                    title: m.title.clone(),
-                    path: m.path.clone(),
-                    cover_path: m.cover_path.clone(),
-                    chapter_count: m.chapter_count,
-                    read_chapters: m.read_chapters,
-                    last_read_at: m.last_read_at,
-                })
+                .map(|(id, m)| m.project(id.clone()))
                 .collect();
             mangas.sort_by(|a, b| natural_cmp(&a.title, &b.title));
             return Ok(mangas);
