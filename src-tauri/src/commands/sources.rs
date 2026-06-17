@@ -11,9 +11,9 @@ use zip::ZipArchive;
 
 use crate::commands::{history, manga_db};
 use crate::commands::manga_db::MangaDbCache;
-use crate::models::manga::{Manga, MangaState};
+use crate::models::manga::{MangaDto, MangaRecord};
 use crate::models::manga_db::MangaDb;
-use crate::models::source::{Source, SourceMeta};
+use crate::models::source::{SourceDto, SourceRecord};
 use crate::utils::{
     images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
     title_from_path,
@@ -67,7 +67,7 @@ fn extract_cbz_cover(cbz_path: &Path, cover_id: &str, cache_dir: &Path) -> Resul
 
 /// Scan a manga folder that may contain CBZ files, image subdirs, or both.
 /// Returns `None` if the folder has no chapters.
-fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Manga, String>> {
+fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<MangaDto, String>> {
     let (sub_dirs, cbz_files) = subdirs_and_cbz(path);
     let chapter_count = sub_dirs.len() + cbz_files.len();
 
@@ -88,7 +88,7 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Manga, String>> {
         None => return Some(Err("No cover found".to_string())),
     };
 
-    Some(Ok(Manga {
+    Some(Ok(MangaDto {
         id,
         title: title_from_path(path),
         path: normalize(path),
@@ -102,7 +102,7 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<Result<Manga, String>> {
 }
 
 /// Collect all mangas found within `dir`, searching up to `depth` levels deep.
-fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<Manga> {
+fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<MangaDto> {
     let entries: Vec<PathBuf> = match fs::read_dir(dir) {
         Ok(rd) => rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect(),
         Err(e) => {
@@ -133,8 +133,8 @@ fn count_mangas(dir: &Path) -> usize {
 }
 
 /// Project all mangas belonging to `source_id`, sorted by natural title order.
-fn mangas_for_source(db: &MangaDb, source_id: &str) -> Vec<Manga> {
-    let mut mangas: Vec<Manga> = db
+fn mangas_for_source(db: &MangaDb, source_id: &str) -> Vec<MangaDto> {
+    let mut mangas: Vec<MangaDto> = db
         .mangas
         .iter()
         .filter(|(_, m)| m.source_id == source_id)
@@ -148,12 +148,12 @@ fn mangas_for_source(db: &MangaDb, source_id: &str) -> Vec<Manga> {
 pub fn list_sources(
     include_hidden: Option<bool>,
     app_handle: tauri::AppHandle,
-) -> Result<Vec<Source>, String> {
+) -> Result<Vec<SourceDto>, String> {
     let include_hidden = include_hidden.unwrap_or(false);
     let cache = app_handle.state::<Mutex<MangaDbCache>>();
     let guard = cache.lock().map_err(|e| e.to_string())?;
 
-    let mut sources: Vec<Source> = guard.db.sources.iter()
+    let mut sources: Vec<SourceDto> = guard.db.sources.iter()
         .filter(|(_, meta)| include_hidden || !meta.hidden)
         .map(|(id, meta)| meta.project(id.as_str()))
         .collect();
@@ -167,7 +167,7 @@ pub fn scan_directory(
     path: String,
     force_refresh: bool,
     app_handle: tauri::AppHandle,
-) -> Result<Vec<Manga>, String> {
+) -> Result<Vec<MangaDto>, String> {
     let dir = Path::new(&path);
     if !dir.is_dir() {
         return Err(format!("'{}' is not a directory", path));
@@ -211,7 +211,7 @@ pub fn scan_directory(
             existing.manga_count = manga_count;
         } else {
             let mut meta =
-                SourceMeta::new(source_path_str, resolve_source_name(dir, None), manga_count, db.next_source_order());
+                SourceRecord::new(source_path_str, resolve_source_name(dir, None), manga_count, db.next_source_order());
             meta.scanned_at = scanned_at;
             db.sources.insert(source_id.clone(), meta);
         }
@@ -236,7 +236,7 @@ pub fn scan_directory(
 
 // ── Source CRUD helpers ───────────────────────────────────────────────────────
 
-fn build_source_from_cache(db: &MangaDb, id: &str) -> Result<Source, String> {
+fn build_source_from_cache(db: &MangaDb, id: &str) -> Result<SourceDto, String> {
     db.sources
         .get(id)
         .map(|meta| meta.project(id))
@@ -332,7 +332,7 @@ fn ensure_source(
         if !db.sources.contains_key(&id) {
             let order = db.next_source_order();
             db.sources
-                .insert(id.clone(), SourceMeta::new(source_path, resolved_name, manga_count, order));
+                .insert(id.clone(), SourceRecord::new(source_path, resolved_name, manga_count, order));
         }
     })?;
     Ok(id)
@@ -356,7 +356,7 @@ pub fn add_source(
     path: String,
     name: Option<String>,
     app_handle: tauri::AppHandle,
-) -> Result<Source, String> {
+) -> Result<SourceDto, String> {
     let dir = Path::new(&path);
     if !dir.is_dir() {
         return Err(format!("'{}' is not a directory", path));
@@ -373,7 +373,7 @@ pub fn relocate_source(
     source_id: String,
     new_path: String,
     app_handle: tauri::AppHandle,
-) -> Result<Source, String> {
+) -> Result<SourceDto, String> {
     let new_dir = Path::new(&new_path);
     if !new_dir.is_dir() {
         return Err(format!("'{}' is not a directory", new_path));
@@ -440,7 +440,7 @@ pub fn relocate_source(
             ));
         }
 
-        let mut remapped_mangas: Vec<(String, MangaState)> = Vec::new();
+        let mut remapped_mangas: Vec<(String, MangaRecord)> = Vec::new();
         let mut id_map: HashMap<String, String> = HashMap::new();
         let mut used_new_manga_ids: HashSet<String> = HashSet::new();
 

@@ -2,17 +2,17 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::manga::MangaState;
-use crate::models::source::SourceMeta;
+use crate::models::manga::MangaRecord;
+use crate::models::source::SourceRecord;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MangaDb {
     #[serde(default = "default_version")]
     pub version: u32,
     #[serde(default)]
-    pub sources: HashMap<String, SourceMeta>,
+    pub sources: HashMap<String, SourceRecord>,
     #[serde(default)]
-    pub mangas: HashMap<String, MangaState>,
+    pub mangas: HashMap<String, MangaRecord>,
 }
 
 impl MangaDb {

@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use tauri::Manager;
 
-use crate::models::manga::MangaState;
+use crate::models::manga::MangaRecord;
 use crate::models::manga_db::MangaDb;
 use crate::utils::{natural_cmp, now_epoch, write_atomic_json};
 
@@ -93,8 +93,8 @@ where
     save_db(app, &guard.db)
 }
 
-/// Clone the `MangaState` for `manga_id`, if it exists.
-pub(crate) fn get_manga(cache: &Mutex<MangaDbCache>, manga_id: &str) -> Option<MangaState> {
+/// Clone the `MangaRecord` for `manga_id`, if it exists.
+pub(crate) fn get_manga(cache: &Mutex<MangaDbCache>, manga_id: &str) -> Option<MangaRecord> {
     let guard = cache.lock().ok()?;
     guard.db.mangas.get(manga_id).cloned()
 }

@@ -6,7 +6,7 @@ use crate::models::category::DEFAULT_CATEGORY_ID;
 use crate::models::chapter::ChapterStatus;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Manga {
+pub struct MangaDto {
     pub id: String,
     pub title: String,
     pub path: String,
@@ -24,7 +24,7 @@ pub struct Manga {
 
 /// Persisted state for a manga, keyed by manga id in `MangaDb`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct MangaState {
+pub struct MangaRecord {
     pub source_id: String,
     pub title: String,
     pub path: String,
@@ -44,10 +44,10 @@ pub struct MangaState {
     pub chapters: HashMap<String, ChapterStatus>,
 }
 
-impl MangaState {
-    /// Project this state into the `Manga` DTO returned to the frontend.
-    pub fn project(&self, id: impl Into<String>) -> Manga {
-        Manga {
+impl MangaRecord {
+    /// Project this record into the `MangaDto` returned to the frontend.
+    pub fn project(&self, id: impl Into<String>) -> MangaDto {
+        MangaDto {
             id: id.into(),
             title: self.title.clone(),
             path: self.path.clone(),

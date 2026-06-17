@@ -6,7 +6,7 @@ use crate::utils::now_epoch;
 
 /// A source folder as presented to the frontend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Source {
+pub struct SourceDto {
     pub id: String,
     pub name: String,
     pub path: String,
@@ -19,7 +19,7 @@ pub struct Source {
 
 /// Persisted state for a source folder, keyed by source id in `MangaDb`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct SourceMeta {
+pub struct SourceRecord {
     pub source_path: String,
     pub scanned_at: u64,
     pub manga_count: usize,
@@ -33,7 +33,7 @@ pub struct SourceMeta {
     pub sort_order: u32,
 }
 
-impl SourceMeta {
+impl SourceRecord {
     /// Build a freshly-added source: unscanned, visible, stamped now.
     pub fn new(source_path: String, name: String, manga_count: usize, sort_order: u32) -> Self {
         Self {
@@ -47,9 +47,9 @@ impl SourceMeta {
         }
     }
 
-    /// Project this meta into the `Source` DTO returned to the frontend.
-    pub fn project(&self, id: impl Into<String>) -> Source {
-        Source {
+    /// Project this record into the `SourceDto` returned to the frontend.
+    pub fn project(&self, id: impl Into<String>) -> SourceDto {
+        SourceDto {
             id: id.into(),
             name: self.name.clone(),
             path: self.source_path.clone(),

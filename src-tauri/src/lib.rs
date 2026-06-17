@@ -21,7 +21,7 @@ pub fn run() {
             // Stage 4.1 migration: if this install has a root_directory hint but no
             // persisted sources, import every immediate subdir as a source (preserves
             // pre-4.1 installs that lazily populated sources through scan_directory).
-            // Backfill of existing SourceMeta fields is handled inside MangaDbCache::load.
+            // Backfill of existing SourceRecord fields is handled inside MangaDbCache::load.
             let root = commands::settings::load_config(app.handle()).root_directory;
             if let Some(root_path) = root {
                 let cache = app.state::<Mutex<commands::manga_db::MangaDbCache>>();

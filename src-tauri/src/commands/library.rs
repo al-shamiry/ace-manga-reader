@@ -6,7 +6,7 @@ use tauri::Manager;
 use crate::commands::manga_db::{self, MangaDbCache};
 use crate::commands::settings::{load_config, save_config};
 use crate::models::category::{Category, DEFAULT_CATEGORY_ID};
-use crate::models::manga::Manga;
+use crate::models::manga::MangaDto;
 use crate::utils::now_epoch;
 
 // ── Category commands ────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ pub fn reorder_categories(app: tauri::AppHandle, category_ids: Vec<String>) -> R
 // ── Library commands ─────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_library(app: tauri::AppHandle) -> Vec<Manga> {
+pub fn get_library(app: tauri::AppHandle) -> Vec<MangaDto> {
     let cache = app.state::<Mutex<MangaDbCache>>();
     let guard = match cache.lock() {
         Ok(g) => g,
