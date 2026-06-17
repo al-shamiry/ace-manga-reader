@@ -63,7 +63,6 @@ export interface LibraryDisplay {
   card_size: number;
   show_unread_badge: boolean;
   show_continue_button: boolean;
-  show_category_tabs: boolean;
   show_item_count: boolean;
 }
 

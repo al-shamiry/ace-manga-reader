@@ -131,7 +131,6 @@ pub struct LibraryDisplay {
     pub card_size: u8,
     pub show_unread_badge: bool,
     pub show_continue_button: bool,
-    pub show_category_tabs: bool,
     pub show_item_count: bool,
 }
 
@@ -142,7 +141,6 @@ impl Default for LibraryDisplay {
             card_size: 8u8,
             show_unread_badge: false,
             show_continue_button: false,
-            show_category_tabs: true,
             show_item_count: true,
         }
     }

@@ -36,7 +36,6 @@ export function LibraryView() {
     card_size: 8,
     show_unread_badge: false,
     show_continue_button: false,
-    show_category_tabs: true,
     show_item_count: true,
   });
 
