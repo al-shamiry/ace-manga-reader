@@ -154,10 +154,6 @@ export function SourceView() {
     return "started";
   }
 
-  function getUnreadCount(manga: Manga): number {
-    return Math.max(0, manga.chapter_count - (manga.read_chapters ?? 0));
-  }
-
   async function handleContinue(manga: Manga) {
     try {
       const list = await invoke<Chapter[]>("get_chapters", { mangaPath: manga.path });
@@ -295,7 +291,7 @@ export function SourceView() {
             mangas={mangasForDisplay()}
             displayMode={displayOpts().display_mode}
             cardSize={displayOpts().card_size}
-            getUnreadCount={displayOpts().show_unread_badge ? getUnreadCount : undefined}
+            showProgressBadge={displayOpts().show_unread_badge}
             onContinue={displayOpts().show_continue_button ? handleContinue : undefined}
             showLibraryBadge
           />

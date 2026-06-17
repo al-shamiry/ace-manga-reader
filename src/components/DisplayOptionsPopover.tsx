@@ -139,7 +139,7 @@ export function DisplayOptionsPopover(props: Props) {
             onChange={() => toggle("show_unread_badge")}
             closeOnSelect={false}
           >
-            Unread chapters
+            Chapter progress
           </DropdownMenuCheckboxItem>
           <DropdownMenuCheckboxItem
             checked={props.display.show_continue_button}

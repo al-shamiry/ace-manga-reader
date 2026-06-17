@@ -10,7 +10,7 @@ interface Props {
   manga: Manga;
   showLibraryBadge?: boolean;
   displayMode?: DisplayMode;
-  unreadCount?: number;
+  showProgressBadge?: boolean;
   onContinue?: () => void;
 }
 
@@ -22,14 +22,15 @@ export function MangaCard(props: Props) {
   const mode = () => props.displayMode ?? "comfortable";
   const chapterText = () =>
     `${props.manga.chapter_count} ${props.manga.chapter_count === 1 ? "chapter" : "chapters"}`;
-
   function goToManga() {
     navigate("/manga/" + props.manga.id, { state: props.manga });
   }
 
   function CoverImage(p: { class?: string }) {
     return imgError() ? (
-      <div class={`flex items-center justify-center text-ink-600 text-xs bg-ink-800 ${p.class ?? ""}`}>
+      <div
+        class={`flex items-center justify-center text-ink-600 text-xs bg-ink-800 ${p.class ?? ""}`}
+      >
         No Cover
       </div>
     ) : (
@@ -53,11 +54,34 @@ export function MangaCard(props: Props) {
     );
   }
 
-  function UnreadBadge() {
+  function ProgressBadge() {
+    const read = () => props.manga.read_chapters ?? 0;
+    const total = () => props.manga.chapter_count;
     return (
-      <Show when={(props.unreadCount ?? 0) > 0}>
-        <div class="absolute top-1.5 left-1.5 bg-jade-600 text-white text-[0.65rem] font-semibold leading-none px-1.5 py-1 rounded-md shadow-md min-w-5 text-center">
-          {props.unreadCount}
+      <Show when={props.showProgressBadge && total() > 0}>
+        <div class="absolute top-1.5 left-1.5 flex items-stretch overflow-hidden rounded-sm text-2xs font-normal tabular-nums leading-none text-center text-white shadow-md">
+          <Switch>
+            <Match when={read() === 0}>
+              <span class="px-1.5 py-1 bg-jade-600">new</span>
+            </Match>
+            <Match when={read() >= total()}>
+              <span class="px-1.5 py-1 text-ink-300 bg-ink-800">done</span>
+            </Match>
+            <Match when={true}>
+              <span
+                class="py-1 pr-1.5 pl-1 -mr-2 bg-jade-600"
+                style={{
+                  "clip-path":
+                    "polygon(0 0, 100% 0, calc(100% - 4px) 100%, 0 100%)",
+                }}
+              >
+                {read()}
+              </span>
+              <span class="py-1 pr-1 pl-2.5 text-ink-300 bg-ink-800">
+                {total()}
+              </span>
+            </Match>
+          </Switch>
         </div>
       </Show>
     );
@@ -93,10 +117,12 @@ export function MangaCard(props: Props) {
           <div class="relative w-12 h-16 rounded overflow-hidden shrink-0 bg-ink-800">
             <CoverImage class="w-full h-full" />
             <LibraryBadge />
-            <UnreadBadge />
+            <ProgressBadge />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-ink-100 truncate">{props.manga.title}</p>
+            <p class="text-sm font-medium text-ink-100 truncate">
+              {props.manga.title}
+            </p>
             <p class="text-xs text-ink-500 mt-0.5">{chapterText()}</p>
           </div>
           <ContinueButton />
@@ -111,7 +137,7 @@ export function MangaCard(props: Props) {
         >
           <CoverImage class="w-full h-full" />
           <LibraryBadge />
-          <UnreadBadge />
+          <ProgressBadge />
           <ContinueButton />
         </div>
       </Match>
@@ -124,9 +150,11 @@ export function MangaCard(props: Props) {
         >
           <CoverImage class="w-full h-full" />
           <LibraryBadge />
-          <UnreadBadge />
+          <ProgressBadge />
           <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2 pb-1.5 pt-6">
-            <p class="text-[0.75rem] font-medium text-white truncate">{props.manga.title}</p>
+            <p class="text-[0.75rem] font-medium text-white truncate">
+              {props.manga.title}
+            </p>
           </div>
           <ContinueButton />
         </div>
@@ -141,11 +169,14 @@ export function MangaCard(props: Props) {
           <div class="relative bg-ink-800 overflow-hidden cover-h">
             <CoverImage class="w-full h-full" />
             <LibraryBadge />
-            <UnreadBadge />
+            <ProgressBadge />
             <ContinueButton />
           </div>
           <div class="px-2 py-1.5 shrink-0">
-            <p class="text-[0.8rem] font-medium text-ink-100 leading-tight line-clamp-2">{props.manga.title}</p>
+            <p class="text-[0.8rem] font-medium text-ink-100 leading-tight line-clamp-2">
+              {props.manga.title}
+            </p>
+            <p class="text-[0.7rem] text-ink-500 mt-0.5">{chapterText()}</p>
           </div>
         </div>
       </Match>

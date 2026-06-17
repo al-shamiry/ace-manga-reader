@@ -7,7 +7,7 @@ interface Props {
   showLibraryBadge?: boolean;
   displayMode?: DisplayMode;
   cardSize?: number;
-  getUnreadCount?: (manga: Manga) => number;
+  showProgressBadge?: boolean;
   onContinue?: (manga: Manga) => void;
 }
 
@@ -39,7 +39,7 @@ export function MangaGrid(props: Props) {
             manga={manga}
             showLibraryBadge={props.showLibraryBadge}
             displayMode={mode()}
-            unreadCount={props.getUnreadCount?.(manga)}
+            showProgressBadge={props.showProgressBadge}
             onContinue={props.onContinue ? () => props.onContinue!(manga) : undefined}
           />
         )}

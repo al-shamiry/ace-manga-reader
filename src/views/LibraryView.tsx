@@ -146,19 +146,6 @@ export function LibraryView() {
     });
   });
 
-  // Map manga_id → unread count for the badge overlay
-  const unreadByMangaId = createMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of libraryEntries()) {
-      map.set(e.id, Math.max(0, e.chapter_count - (e.read_chapters ?? 0)));
-    }
-    return map;
-  });
-
-  function getUnreadCount(manga: Manga): number {
-    return unreadByMangaId().get(manga.id) ?? 0;
-  }
-
   // Continue button: fetch chapters, jump to first non-read (or first unread).
   // Mirrors MangaDetailView's `primaryChapter` logic so behavior is identical.
   async function handleContinue(manga: Manga) {
@@ -486,7 +473,7 @@ export function LibraryView() {
             mangas={mangasForGrid()}
             displayMode={displayOpts().display_mode}
             cardSize={displayOpts().card_size}
-            getUnreadCount={displayOpts().show_unread_badge ? getUnreadCount : undefined}
+            showProgressBadge={displayOpts().show_unread_badge}
             onContinue={displayOpts().show_continue_button ? handleContinue : undefined}
           />
         </Show>
