@@ -97,25 +97,17 @@ pub fn get_library(app: tauri::AppHandle) -> Vec<Manga> {
 pub fn add_to_library(
     app: tauri::AppHandle,
     manga_id: String,
-    title: String,
-    path: String,
-    cover_path: String,
-    chapter_count: usize,
     category_ids: Vec<String>,
 ) -> Result<(), String> {
     let cache = app.state::<Mutex<MangaDbCache>>();
     manga_db::mutate(&cache, &app, |db| {
-        let entry = db.mangas.entry(manga_id).or_default();
-        // Refresh display fields
-        entry.title = title;
-        entry.path = path;
-        entry.cover_path = cover_path;
-        entry.chapter_count = chapter_count;
-        entry.category_ids = category_ids;
-        if entry.added_at.is_none() {
-            entry.added_at = Some(now_epoch());
+        if let Some(entry) = db.mangas.get_mut(&manga_id) {
+            entry.category_ids = category_ids;
+            if entry.added_at.is_none() {
+                entry.added_at = Some(now_epoch());
+            }
+            entry.ensure_default_category();
         }
-        entry.ensure_default_category();
     })
 }
 

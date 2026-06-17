@@ -128,10 +128,6 @@ export function MangaDetailView() {
     } else {
       await invoke("add_to_library", {
         mangaId: manga.id,
-        title: manga.title,
-        path: manga.path,
-        coverPath: manga.cover_path,
-        chapterCount: manga.chapter_count,
         categoryIds: next,
       });
     }
