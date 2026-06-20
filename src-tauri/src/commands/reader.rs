@@ -259,3 +259,66 @@ pub fn mark_chapter_read(
     let cache = app.state::<Mutex<MangaDbCache>>();
     update_chapter_status(&cache, &app, manga_id, chapter_id, status)
 }
+
+/// Discover readable chapter ids for a manga on disk (image dirs + CBZs),
+/// matching the discovery `get_chapters` uses.
+fn readable_chapter_ids(manga_path: &Path) -> Vec<String> {
+    let (sub_dirs, cbz_files) = subdirs_and_cbz(manga_path);
+    let mut ids = Vec::new();
+    for p in &sub_dirs {
+        if !images_in(p).is_empty() {
+            ids.push(path_id(p));
+        }
+    }
+    for p in &cbz_files {
+        ids.push(path_id(p));
+    }
+    ids
+}
+
+/// Bulk mark every chapter of each manga Read or Unread in a single DB write.
+/// For Read, chapter ids are discovered from disk (in parallel) before taking
+/// the write lock; for Unread the chapter map is simply cleared.
+#[tauri::command]
+pub fn mark_mangas_read(
+    manga_ids: Vec<String>,
+    read: bool,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    let cache = app.state::<Mutex<MangaDbCache>>();
+
+    let chapter_ids: HashMap<String, Vec<String>> = if read {
+        let paths: Vec<(String, String)> = {
+            let guard = manga_db::lock(&cache)?;
+            manga_ids
+                .iter()
+                .filter_map(|id| guard.db.mangas.get(id).map(|m| (id.clone(), m.path.clone())))
+                .collect()
+        };
+        paths
+            .into_par_iter()
+            .map(|(id, path)| (id, readable_chapter_ids(Path::new(&path))))
+            .collect()
+    } else {
+        HashMap::new()
+    };
+
+    let now = now_epoch();
+    manga_db::mutate(&cache, &app, |db| {
+        for id in &manga_ids {
+            let Some(entry) = db.mangas.get_mut(id) else { continue };
+            entry.chapters.clear();
+            if read {
+                if let Some(ids) = chapter_ids.get(id) {
+                    for cid in ids {
+                        entry.chapters.insert(cid.clone(), ChapterStatus::Read);
+                    }
+                }
+                entry.read_chapters = entry.chapters.len();
+                entry.last_read_at = now;
+            } else {
+                entry.read_chapters = 0;
+            }
+        }
+    })
+}

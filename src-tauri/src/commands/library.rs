@@ -128,6 +128,50 @@ pub fn remove_from_library(app: tauri::AppHandle, manga_id: String) -> AppResult
     })
 }
 
+/// Additively add a set of mangas to a set of categories in one DB write.
+/// Existing memberships are preserved; mangas not yet in the library are added.
+#[tauri::command]
+pub fn add_mangas_to_categories(
+    app: tauri::AppHandle,
+    manga_ids: Vec<String>,
+    category_ids: Vec<String>,
+) -> AppResult<()> {
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    let now = now_epoch();
+    manga_db::mutate(&cache, &app, |db| {
+        for id in &manga_ids {
+            if let Some(entry) = db.mangas.get_mut(id) {
+                for cat in &category_ids {
+                    if !entry.category_ids.contains(cat) {
+                        entry.category_ids.push(cat.clone());
+                    }
+                }
+                if entry.added_at.is_none() {
+                    entry.added_at = Some(now);
+                }
+                entry.ensure_default_category();
+            }
+        }
+    })
+}
+
+/// Remove a set of mangas from the library in one DB write.
+#[tauri::command]
+pub fn remove_mangas_from_library(
+    app: tauri::AppHandle,
+    manga_ids: Vec<String>,
+) -> AppResult<()> {
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app, |db| {
+        for id in &manga_ids {
+            if let Some(m) = db.mangas.get_mut(id) {
+                m.added_at = None;
+                m.category_ids.clear();
+            }
+        }
+    })
+}
+
 #[tauri::command]
 pub fn is_in_library(app: tauri::AppHandle, manga_id: String) -> AppResult<bool> {
     let cache = app.state::<Mutex<MangaDbCache>>();
