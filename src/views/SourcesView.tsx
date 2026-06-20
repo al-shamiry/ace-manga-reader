@@ -1,6 +1,6 @@
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Eye, EyeOff, Plus, RefreshCw, Trash2 } from "lucide-solid";
+import { Eye, EyeOff, Plus, RefreshCw, Square, SquareCheck, SquaresIntersect, Trash2 } from "lucide-solid";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { EmptyState } from "../components/EmptyState";
@@ -163,6 +163,27 @@ export function SourcesView() {
       if (next.size === 0) setBulkRemoving(false);
       return next;
     });
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(selectableSources().map((source) => source.id)));
+    setBulkRemoving(false);
+  }
+
+  function selectNone() {
+    setSelectedIds(new Set<string>());
+    setBulkRemoving(false);
+  }
+
+  function invertSelection() {
+    setSelectedIds((prev) => {
+      const next = new Set<string>();
+      for (const source of selectableSources()) {
+        if (!prev.has(source.id)) next.add(source.id);
+      }
+      return next;
+    });
+    setBulkRemoving(false);
   }
 
   async function confirmRemove() {
@@ -423,6 +444,28 @@ export function SourcesView() {
         >
           <ToolbarTitle class="flex-1">{selectedCount()} selected</ToolbarTitle>
           <ToolbarActions>
+            <ToolbarButton
+              onClick={selectAll}
+              title="Select all"
+              disabled={selectableSources().length === 0}
+            >
+              <SquareCheck size={16} />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={selectNone}
+              title="Select none"
+              disabled={selectedCount() === 0}
+            >
+              <Square size={16} />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={invertSelection}
+              title="Invert selection"
+              disabled={selectableSources().length === 0}
+            >
+              <SquaresIntersect size={16} />
+            </ToolbarButton>
+            <div class="mx-1 h-5 w-px shrink-0 bg-ink-800" />
             <ToolbarInlineButton
               onClick={handleBulkRescan}
               disabled={selectedCount() === 0 || bulkRemoving()}
