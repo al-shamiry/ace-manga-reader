@@ -4,6 +4,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
@@ -20,8 +21,11 @@ interface Props {
   onApplyCategories: (categoryIds: string[]) => void;
   onMarkRead: () => void;
   onMarkUnread: () => void;
-  /** Library-only — omit to hide the Remove from library action. */
+  /** Library-only — omit to hide the Remove action entirely. */
   onRemoveFromLibrary?: () => void;
+  /** Library-only — pairs with `currentCategoryName` to offer a per-category remove. */
+  onRemoveFromCategory?: () => void;
+  currentCategoryName?: string;
   onCancel: () => void;
 }
 
@@ -73,13 +77,12 @@ export function SelectionToolbar(props: Props) {
           <Circle size={14} /> Mark unread
         </ToolbarInlineButton>
         <Show when={props.onRemoveFromLibrary}>
-          <ToolbarInlineButton
-            onClick={() => props.onRemoveFromLibrary?.()}
+          <RemoveMenu
             disabled={!hasSelection()}
-            class="text-red-400 hover:bg-red-950/30 hover:text-red-300"
-          >
-            <Trash2 size={14} /> Remove
-          </ToolbarInlineButton>
+            currentCategoryName={props.currentCategoryName}
+            onRemoveFromCategory={props.onRemoveFromCategory}
+            onRemoveFromLibrary={() => props.onRemoveFromLibrary?.()}
+          />
         </Show>
         <ToolbarInlineButton onClick={props.onCancel}>Cancel</ToolbarInlineButton>
       </ToolbarActions>
@@ -166,6 +169,45 @@ function BulkCategoryMenu(props: {
             </button>
           </div>
         </Show>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * Destructive remove action. Offers "remove from current category" (when a
+ * category is in context) and "remove from library" as distinct choices so a
+ * bulk remove can't quietly drop a manga from the whole library.
+ */
+function RemoveMenu(props: {
+  disabled?: boolean;
+  currentCategoryName?: string;
+  onRemoveFromCategory?: () => void;
+  onRemoveFromLibrary: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        as={ToolbarInlineButton}
+        disabled={props.disabled}
+        title="Remove selected"
+        class="text-red-400 hover:bg-red-950/30 hover:text-red-300"
+      >
+        <Trash2 size={14} /> Remove
+      </DropdownMenuTrigger>
+      <DropdownMenuContent class="w-56">
+        <Show when={props.onRemoveFromCategory && props.currentCategoryName}>
+          <DropdownMenuItem onSelect={() => props.onRemoveFromCategory?.()}>
+            Remove from {props.currentCategoryName}
+          </DropdownMenuItem>
+        </Show>
+        <DropdownMenuItem
+          class="gap-2 text-red-400 focus:bg-red-950/40 focus:text-red-300"
+          onSelect={() => props.onRemoveFromLibrary()}
+        >
+          <Trash2 size={14} />
+          Remove from library
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

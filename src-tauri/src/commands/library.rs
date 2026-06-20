@@ -172,6 +172,27 @@ pub fn remove_mangas_from_library(
     })
 }
 
+/// Drop a single category membership from a set of mangas in one DB write.
+/// A manga left with no categories falls out of the library entirely.
+#[tauri::command]
+pub fn remove_mangas_from_category(
+    app: tauri::AppHandle,
+    manga_ids: Vec<String>,
+    category_id: String,
+) -> AppResult<()> {
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app, |db| {
+        for id in &manga_ids {
+            if let Some(m) = db.mangas.get_mut(id) {
+                m.category_ids.retain(|c| c != &category_id);
+                if m.category_ids.is_empty() {
+                    m.added_at = None;
+                }
+            }
+        }
+    })
+}
+
 #[tauri::command]
 pub fn is_in_library(app: tauri::AppHandle, manga_id: String) -> AppResult<bool> {
     let cache = app.state::<Mutex<MangaDbCache>>();

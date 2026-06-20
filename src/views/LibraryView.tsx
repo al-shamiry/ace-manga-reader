@@ -302,6 +302,22 @@ export function LibraryView() {
     selection.exit();
   }
 
+  async function bulkRemoveFromCategory() {
+    const mangaIds = selection.selectedIds();
+    const categoryId = activeTab();
+    if (mangaIds.length === 0 || !categoryId) return;
+    try {
+      await invoke("remove_mangas_from_category", { mangaIds, categoryId });
+      await refreshLibrary();
+    } catch (e) {
+      console.error("Failed to remove from category:", e);
+    }
+    selection.exit();
+  }
+
+  const currentCategoryName = () =>
+    categories().find((c) => c.id === activeTab())?.name;
+
   function handleSelectionKeys(e: KeyboardEvent) {
     if (!selection.active()) return;
     if (e.key === "Escape") {
@@ -519,6 +535,8 @@ export function LibraryView() {
             onMarkRead={() => bulkMarkRead(true)}
             onMarkUnread={() => bulkMarkRead(false)}
             onRemoveFromLibrary={bulkRemoveFromLibrary}
+            onRemoveFromCategory={bulkRemoveFromCategory}
+            currentCategoryName={currentCategoryName()}
             onCancel={selection.exit}
           />
         </Show>
