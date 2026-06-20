@@ -9,6 +9,7 @@ import { MangaGridSkeleton } from "../components/Skeleton";
 import { SortDropdown } from "../components/SortDropdown";
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
+import { SelectionToolbar } from "../components/SelectionToolbar";
 import {
   Toolbar,
   ToolbarActions,
@@ -18,7 +19,9 @@ import {
   ToolbarTitle,
 } from "../components/ui/toolbar";
 import { useSources } from "../context/SourcesContext";
+import { useLibrary } from "../context/LibraryContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
+import { createMangaSelection } from "../lib/createMangaSelection";
 import type { Chapter, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
 type Status = "idle" | "loading" | "error";
@@ -27,6 +30,7 @@ export function SourceView() {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getSource, initialLoad, refreshSources } = useSources();
+  const { categories, refreshLibrary } = useLibrary();
   const view = useViewLoading();
   const loadToken = view.busy();
 
@@ -217,41 +221,117 @@ export function SourceView() {
     });
   });
 
+  // ── Bulk selection ──
+  const selection = createMangaSelection(mangasForDisplay);
+
+  // Reload from the cached DB projection so updated read counts / library
+  // membership surface, then refresh the library context for card badges.
+  async function reloadAfterBulk() {
+    const s = source();
+    if (s) await loadMangas(s.path, false);
+    await refreshLibrary();
+  }
+
+  async function bulkMarkRead(read: boolean) {
+    const mangaIds = selection.selectedIds();
+    if (mangaIds.length === 0) return;
+    try {
+      await invoke("mark_mangas_read", { mangaIds, read });
+      await reloadAfterBulk();
+    } catch (e) {
+      console.error("Failed to mark mangas:", e);
+    }
+    selection.exit();
+  }
+
+  async function bulkApplyCategories(categoryIds: string[]) {
+    const mangaIds = selection.selectedIds();
+    if (mangaIds.length === 0) return;
+    try {
+      await invoke("add_mangas_to_categories", { mangaIds, categoryIds });
+      await reloadAfterBulk();
+    } catch (e) {
+      console.error("Failed to assign categories:", e);
+    }
+    selection.exit();
+  }
+
+  function handleSelectionKeys(e: KeyboardEvent) {
+    if (!selection.active()) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      selection.exit();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      e.stopPropagation();
+      selection.toggleAll();
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener("keydown", handleSelectionKeys, true);
+    onCleanup(() => window.removeEventListener("keydown", handleSelectionKeys, true));
+  });
+
   return (
     <div class="flex flex-col flex-1 overflow-hidden">
       <Toolbar>
-        <ToolbarInlineButton onClick={() => navigate("/sources")}>
-          <ArrowLeft size={14} />
-          Sources
-        </ToolbarInlineButton>
-        <ToolbarTitle class="flex-1">{source()?.name}</ToolbarTitle>
-        <ToolbarActions>
-          <SortDropdown
-            preference={sortPref()}
-            onChange={handleSortChange}
-            excludeFields={["date-added"]}
-            defaultPref={{ field: "alphabetical", direction: "asc" }}
+        <Show
+          when={selection.active()}
+          fallback={
+            <>
+              <ToolbarInlineButton onClick={() => navigate("/sources")}>
+                <ArrowLeft size={14} />
+                Sources
+              </ToolbarInlineButton>
+              <ToolbarTitle class="flex-1">{source()?.name}</ToolbarTitle>
+              <ToolbarActions>
+                <ToolbarInlineButton onClick={selection.enter} disabled={mangasForDisplay().length === 0}>
+                  Select
+                </ToolbarInlineButton>
+                <SortDropdown
+                  preference={sortPref()}
+                  onChange={handleSortChange}
+                  excludeFields={["date-added"]}
+                  defaultPref={{ field: "alphabetical", direction: "asc" }}
+                />
+                <DisplayOptionsPopover
+                  display={displayOpts()}
+                  onChange={handleDisplayChange}
+                  showTabsSection={false}
+                />
+                <FilterDropdown
+                  state={filters()}
+                  availableSources={[]}
+                  onChange={handleFilterChange}
+                />
+                <ToolbarButton
+                  onClick={() => {
+                    const s = source();
+                    if (s) loadMangas(s.path, true);
+                  }}
+                  title="Re-scan folder"
+                >
+                  <RefreshCw size={16} />
+                </ToolbarButton>
+              </ToolbarActions>
+            </>
+          }
+        >
+          <SelectionToolbar
+            count={selection.count()}
+            visibleCount={mangasForDisplay().length}
+            categories={categories()}
+            onSelectAll={selection.selectAll}
+            onSelectNone={selection.selectNone}
+            onInvert={selection.invert}
+            onApplyCategories={bulkApplyCategories}
+            onMarkRead={() => bulkMarkRead(true)}
+            onMarkUnread={() => bulkMarkRead(false)}
+            onCancel={selection.exit}
           />
-          <DisplayOptionsPopover
-            display={displayOpts()}
-            onChange={handleDisplayChange}
-            showTabsSection={false}
-          />
-          <FilterDropdown
-            state={filters()}
-            availableSources={[]}
-            onChange={handleFilterChange}
-          />
-          <ToolbarButton
-            onClick={() => {
-              const s = source();
-              if (s) loadMangas(s.path, true);
-            }}
-            title="Re-scan folder"
-          >
-            <RefreshCw size={16} />
-          </ToolbarButton>
-        </ToolbarActions>
+        </Show>
       </Toolbar>
       <ToolbarSearchRow
         value={searchQuery()}
@@ -294,6 +374,9 @@ export function SourceView() {
             showProgressBadge={displayOpts().show_unread_badge}
             onContinue={displayOpts().show_continue_button ? handleContinue : undefined}
             showLibraryBadge
+            selectionMode={selection.active()}
+            isSelected={selection.isSelected}
+            onToggleSelect={selection.toggle}
           />
         </Show>
       </div>

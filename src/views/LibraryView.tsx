@@ -11,8 +11,10 @@ import { MangaGrid } from "../components/MangaGrid";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
 import { SortDropdown } from "../components/SortDropdown";
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
+import { SelectionToolbar } from "../components/SelectionToolbar";
 import { TabBar } from "../components/TabBar";
-import { Toolbar, ToolbarActions, ToolbarButton, ToolbarSearchRow } from "../components/ui/toolbar";
+import { Toolbar, ToolbarActions, ToolbarButton, ToolbarInlineButton, ToolbarSearchRow } from "../components/ui/toolbar";
+import { createMangaSelection } from "../lib/createMangaSelection";
 import type { Tab } from "../components/TabBar";
 import type { Chapter, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
 
@@ -261,6 +263,63 @@ export function LibraryView() {
     sortEntries(applyFilters(filteredEntries()))
   );
 
+  // ── Bulk selection ──
+  const selection = createMangaSelection(mangasForGrid);
+
+  async function bulkMarkRead(read: boolean) {
+    const mangaIds = selection.selectedIds();
+    if (mangaIds.length === 0) return;
+    try {
+      await invoke("mark_mangas_read", { mangaIds, read });
+      await refreshLibrary();
+    } catch (e) {
+      console.error("Failed to mark mangas:", e);
+    }
+    selection.exit();
+  }
+
+  async function bulkApplyCategories(categoryIds: string[]) {
+    const mangaIds = selection.selectedIds();
+    if (mangaIds.length === 0) return;
+    try {
+      await invoke("add_mangas_to_categories", { mangaIds, categoryIds });
+      await refreshLibrary();
+    } catch (e) {
+      console.error("Failed to assign categories:", e);
+    }
+    selection.exit();
+  }
+
+  async function bulkRemoveFromLibrary() {
+    const mangaIds = selection.selectedIds();
+    if (mangaIds.length === 0) return;
+    try {
+      await invoke("remove_mangas_from_library", { mangaIds });
+      await refreshLibrary();
+    } catch (e) {
+      console.error("Failed to remove from library:", e);
+    }
+    selection.exit();
+  }
+
+  function handleSelectionKeys(e: KeyboardEvent) {
+    if (!selection.active()) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      selection.exit();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      e.stopPropagation();
+      selection.toggleAll();
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener("keydown", handleSelectionKeys, true);
+    onCleanup(() => window.removeEventListener("keydown", handleSelectionKeys, true));
+  });
+
   let switching = false;
   function switchTab(newTab: string) {
     if (switching) return;
@@ -372,73 +431,97 @@ export function LibraryView() {
           the tabs/`+` cluster manages its own spacing inside an overflow
           container. */}
       <Toolbar class="gap-0">
-        <div class="flex h-full items-center overflow-x-auto overflow-y-hidden flex-1 min-w-0">
-          {/* Keyed remount on show_item_count toggle — Kobalte's TabsIndicator
-              only observes the selected tab's resize and reads offsetLeft
-              synchronously, so reflows from other tabs widening leave the
-              indicator misaligned. Remounting forces its onMount path which
-              waits a microtask for layout to settle. */}
-          <Show when={`${displayOpts().show_item_count ? "with" : "without"}\0${visibleCategories().map(c => c.name).join("\0")}`} keyed>
-            {(_key) => (
-              <TabBar
-                tabs={tabs()}
-                activeTab={activeTab()}
-                onSelect={switchTab}
-                onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
-                onDelete={(tab) => handleDeleteCategory(tab.id)}
-                renamingId={renaming()?.id}
-                renamingValue={renaming()?.name}
-                onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
-                onRenameSubmit={handleRenameCategory}
-                onRenameCancel={() => setRenaming(null)}
-              />
-            )}
-          </Show>
-
-          {/* Inline category create — replaces a modal. Commit only on
-              Enter; Escape or focus loss cancels without creating. This
-              keeps the commit path single-entry so there's nothing to
-              race against. */}
-          <Show
-            when={!creatingCategory()}
-            fallback={
-              <form
-                class="flex h-full items-center ml-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  submitCreateCategory();
-                }}
-              >
-                <input
-                  ref={(el) => requestAnimationFrame(() => el.focus())}
-                  placeholder="Category name"
-                  class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-32"
-                  value={newCategoryName()}
-                  onInput={(e) => setNewCategoryName(e.currentTarget.value)}
-                  onBlur={cancelCreateCategory}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") cancelCreateCategory();
-                  }}
+        <Show
+          when={selection.active()}
+          fallback={
+        <>
+          <div class="flex h-full items-center overflow-x-auto overflow-y-hidden flex-1 min-w-0">
+            {/* Keyed remount on show_item_count toggle — Kobalte's TabsIndicator
+                only observes the selected tab's resize and reads offsetLeft
+                synchronously, so reflows from other tabs widening leave the
+                indicator misaligned. Remounting forces its onMount path which
+                waits a microtask for layout to settle. */}
+            <Show when={`${displayOpts().show_item_count ? "with" : "without"}\0${visibleCategories().map(c => c.name).join("\0")}`} keyed>
+              {(_key) => (
+                <TabBar
+                  tabs={tabs()}
+                  activeTab={activeTab()}
+                  onSelect={switchTab}
+                  onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
+                  onDelete={(tab) => handleDeleteCategory(tab.id)}
+                  renamingId={renaming()?.id}
+                  renamingValue={renaming()?.name}
+                  onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
+                  onRenameSubmit={handleRenameCategory}
+                  onRenameCancel={() => setRenaming(null)}
                 />
-              </form>
-            }
-          >
-            <ToolbarButton class="ml-2" onClick={startCreateCategory} title="New category">
-              <Plus size={16} />
-            </ToolbarButton>
-          </Show>
-        </div>
+              )}
+            </Show>
 
-        {/* Sort & filter actions */}
-        <ToolbarActions class="ml-3">
-          <SortDropdown preference={sortPref()} onChange={handleSortChange} />
-          <DisplayOptionsPopover display={displayOpts()} onChange={handleDisplayChange} />
-          <FilterDropdown
-            state={filters()}
-            availableSources={availableSources()}
-            onChange={handleFilterChange}
+            {/* Inline category create — replaces a modal. Commit only on
+                Enter; Escape or focus loss cancels without creating. This
+                keeps the commit path single-entry so there's nothing to
+                race against. */}
+            <Show
+              when={!creatingCategory()}
+              fallback={
+                <form
+                  class="flex h-full items-center ml-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    submitCreateCategory();
+                  }}
+                >
+                  <input
+                    ref={(el) => requestAnimationFrame(() => el.focus())}
+                    placeholder="Category name"
+                    class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-32"
+                    value={newCategoryName()}
+                    onInput={(e) => setNewCategoryName(e.currentTarget.value)}
+                    onBlur={cancelCreateCategory}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") cancelCreateCategory();
+                    }}
+                  />
+                </form>
+              }
+            >
+              <ToolbarButton class="ml-2" onClick={startCreateCategory} title="New category">
+                <Plus size={16} />
+              </ToolbarButton>
+            </Show>
+          </div>
+
+          {/* Sort & filter actions */}
+          <ToolbarActions class="ml-3">
+            <ToolbarInlineButton onClick={selection.enter} disabled={mangasForGrid().length === 0}>
+              Select
+            </ToolbarInlineButton>
+            <SortDropdown preference={sortPref()} onChange={handleSortChange} />
+            <DisplayOptionsPopover display={displayOpts()} onChange={handleDisplayChange} />
+            <FilterDropdown
+              state={filters()}
+              availableSources={availableSources()}
+              onChange={handleFilterChange}
+            />
+          </ToolbarActions>
+        </>
+          }
+        >
+          <SelectionToolbar
+            count={selection.count()}
+            visibleCount={mangasForGrid().length}
+            categories={categories()}
+            onSelectAll={selection.selectAll}
+            onSelectNone={selection.selectNone}
+            onInvert={selection.invert}
+            onApplyCategories={bulkApplyCategories}
+            onMarkRead={() => bulkMarkRead(true)}
+            onMarkUnread={() => bulkMarkRead(false)}
+            onRemoveFromLibrary={bulkRemoveFromLibrary}
+            onCancel={selection.exit}
           />
-        </ToolbarActions>
+        </Show>
       </Toolbar>
 
       <ToolbarSearchRow
@@ -475,6 +558,9 @@ export function LibraryView() {
             cardSize={displayOpts().card_size}
             showProgressBadge={displayOpts().show_unread_badge}
             onContinue={displayOpts().show_continue_button ? handleContinue : undefined}
+            selectionMode={selection.active()}
+            isSelected={selection.isSelected}
+            onToggleSelect={selection.toggle}
           />
         </Show>
       </div>
