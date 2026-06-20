@@ -42,6 +42,19 @@ pub(crate) fn normalize(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
+/// Whether a directory holds at least one image, short-circuiting on the first
+/// match.
+pub(crate) fn has_image(path: &Path) -> bool {
+    let Ok(rd) = fs::read_dir(path) else { return false };
+    for entry in rd.filter_map(|e| e.ok()) {
+        let is_file = entry.file_type().map(|t| t.is_file()).unwrap_or(false);
+        if is_file && is_image(&entry.path()) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Returns sorted image files directly inside a directory.
 pub(crate) fn images_in(path: &Path) -> Vec<PathBuf> {
     let mut imgs: Vec<PathBuf> = match fs::read_dir(path) {

@@ -14,7 +14,7 @@ use crate::error::{AppError, AppResult};
 use crate::models::{Chapter, ChapterStatus};
 use crate::paths;
 use crate::utils::{
-    images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
+    has_image, images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
     title_from_path, write_atomic_json,
 };
 
@@ -264,15 +264,14 @@ pub fn mark_chapter_read(
 /// matching the discovery `get_chapters` uses.
 fn readable_chapter_ids(manga_path: &Path) -> Vec<String> {
     let (sub_dirs, cbz_files) = subdirs_and_cbz(manga_path);
-    let mut ids = Vec::new();
-    for p in &sub_dirs {
-        if !images_in(p).is_empty() {
-            ids.push(path_id(p));
-        }
-    }
-    for p in &cbz_files {
-        ids.push(path_id(p));
-    }
+    // Check chapters in parallel so a single manga with many chapters still
+    // scans fast (nested under the per-manga par_iter at the call site).
+    let mut ids: Vec<String> = sub_dirs
+        .par_iter()
+        .filter(|p| has_image(p))
+        .map(|p| path_id(p))
+        .collect();
+    ids.extend(cbz_files.iter().map(|p| path_id(p)));
     ids
 }
 
