@@ -9,6 +9,9 @@ interface Props {
   cardSize?: number;
   showProgressBadge?: boolean;
   onContinue?: (manga: Manga) => void;
+  selectionMode?: boolean;
+  isSelected?: (manga: Manga) => boolean;
+  onToggleSelect?: (manga: Manga) => void;
 }
 
 const GRID_CLASS: Record<DisplayMode, string> = {
@@ -41,6 +44,9 @@ export function MangaGrid(props: Props) {
             displayMode={mode()}
             showProgressBadge={props.showProgressBadge}
             onContinue={props.onContinue ? () => props.onContinue!(manga) : undefined}
+            selectionMode={props.selectionMode}
+            selected={props.isSelected?.(manga)}
+            onToggleSelect={props.onToggleSelect ? () => props.onToggleSelect!(manga) : undefined}
           />
         )}
       </For>
