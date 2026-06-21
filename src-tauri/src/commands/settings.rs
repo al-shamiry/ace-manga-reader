@@ -1,207 +1,17 @@
-use serde::{Deserialize, Serialize};
+//! Tauri commands for global `Config` (`config.json`): reader defaults, root
+//! directory, active category, and per-view sort/display/filter preferences.
+//! Config types live in `models::settings`; persistence helpers here are
+//! shared with `commands::library`.
+
 use std::fs;
 
 use crate::error::AppResult;
-use crate::models::{Category, DEFAULT_CATEGORY_ID};
 use crate::infra::atomic::write_atomic_json;
 use crate::infra::paths;
-
-// ── Types ────────────────────────────────────────────────────────────────────
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
-pub enum FitMode {
-    FitWidth,
-    FitHeight,
-    Original,
-    Stretch,
-    #[default]
-    #[serde(other)]
-    FitScreen,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
-pub enum ReadingMode {
-    PagedLtr,
-    PagedVertical,
-    Webtoon,
-    #[default]
-    #[serde(other)]
-    PagedRtl,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
-pub struct ReaderSettings {
-    pub fit_mode: Option<FitMode>,
-    pub reading_mode: Option<ReadingMode>,
-    pub webtoon_padding: Option<u8>,
-}
-
-impl Default for ReaderSettings {
-    fn default() -> Self {
-        Self {
-            fit_mode: Some(FitMode::default()),
-            reading_mode: Some(ReadingMode::default()),
-            webtoon_padding: None,
-        }
-    }
-}
-
-impl ReaderSettings {
-    /// Clamp values to the ranges the UI allows, so out-of-band input from a
-    /// command can't be persisted. Webtoon side padding is 0–40%.
-    pub fn clamped(mut self) -> Self {
-        self.webtoon_padding = self.webtoon_padding.map(|p| p.min(40));
-        self
-    }
-}
-
-/// Card size (cover columns) the UI exposes via its slider/zoom controls.
-const CARD_SIZE_RANGE: std::ops::RangeInclusive<u8> = 1..=15;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
-pub enum SortField {
-    Alphabetical,
-    TotalChapters,
-    DateAdded,
-    #[default]
-    #[serde(other)]
-    LastRead,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
-pub enum SortDirection {
-    Asc,
-    #[default]
-    #[serde(other)]
-    Desc,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
-pub enum DisplayMode {
-    Compact,
-    CoverOnly,
-    List,
-    #[default]
-    #[serde(other)]
-    Comfortable,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
-pub struct LibrarySortPreference {
-    pub field: SortField,
-    pub direction: SortDirection,
-}
-
-impl Default for LibrarySortPreference {
-    fn default() -> Self {
-        Self {
-            field: SortField::LastRead,
-            direction: SortDirection::Desc,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
-pub struct SourceSortPreference {
-    pub field: SortField,
-    pub direction: SortDirection,
-}
-
-impl Default for SourceSortPreference {
-    fn default() -> Self {
-        Self {
-            field: SortField::Alphabetical,
-            direction: SortDirection::Asc,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
-pub struct LibraryDisplay {
-    pub display_mode: DisplayMode,
-    pub card_size: u8,
-    pub show_unread_badge: bool,
-    pub show_continue_button: bool,
-    pub show_item_count: bool,
-}
-
-impl Default for LibraryDisplay {
-    fn default() -> Self {
-        Self {
-            display_mode: DisplayMode::Comfortable,
-            card_size: 8u8,
-            show_unread_badge: false,
-            show_continue_button: false,
-            show_item_count: true,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
-pub struct SourceDisplay {
-    pub display_mode: DisplayMode,
-    pub card_size: u8,
-    pub show_unread_badge: bool,
-    pub show_continue_button: bool,
-}
-
-impl Default for SourceDisplay {
-    fn default() -> Self {
-        Self {
-            display_mode: DisplayMode::Comfortable,
-            card_size: 8u8,
-            show_unread_badge: false,
-            show_continue_button: false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct SourceFilters {
-    pub reading_status: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct LibraryFilters {
-    pub sources: Vec<String>,
-    pub reading_status: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct Config {
-    pub root_directory: Option<String>,
-    pub reader_settings: ReaderSettings,
-    pub active_category: Option<String>,
-    pub library_sort_preference: LibrarySortPreference,
-    pub library_display: LibraryDisplay,
-    pub library_filters: LibraryFilters,
-    pub source_sort_preference: SourceSortPreference,
-    pub source_display: SourceDisplay,
-    pub source_filters: SourceFilters,
-    pub categories: Vec<Category>,
-}
-
-impl Config {
-    fn normalize(mut self) -> Self {
-        if !self.categories.iter().any(|c| c.id == DEFAULT_CATEGORY_ID) {
-            self.categories.insert(0, Category::default());
-        }
-        self
-    }
-}
+use crate::models::{
+    Config, LibraryDisplay, LibraryFilters, LibrarySortPreference, ReaderSettings, SourceDisplay,
+    SourceFilters, SourceSortPreference,
+};
 
 // ── Config helpers ───────────────────────────────────────────────────────────
 
@@ -293,9 +103,8 @@ pub fn get_library_display(app: tauri::AppHandle) -> AppResult<LibraryDisplay> {
 }
 
 #[tauri::command]
-pub fn set_library_display(app: tauri::AppHandle, mut display: LibraryDisplay) -> AppResult<()> {
-    display.card_size = display.card_size.clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
-    update_config(&app, |c| c.library_display = display)
+pub fn set_library_display(app: tauri::AppHandle, display: LibraryDisplay) -> AppResult<()> {
+    update_config(&app, |c| c.library_display = display.clamped())
 }
 
 // ── Library filters ──────────────────────────────────────────────────────────
@@ -333,9 +142,8 @@ pub fn get_source_display(app: tauri::AppHandle) -> AppResult<SourceDisplay> {
 }
 
 #[tauri::command]
-pub fn set_source_display(app: tauri::AppHandle, mut display: SourceDisplay) -> AppResult<()> {
-    display.card_size = display.card_size.clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
-    update_config(&app, |c| c.source_display = display)
+pub fn set_source_display(app: tauri::AppHandle, display: SourceDisplay) -> AppResult<()> {
+    update_config(&app, |c| c.source_display = display.clamped())
 }
 
 // ── Source filters ───────────────────────────────────────────────────────────

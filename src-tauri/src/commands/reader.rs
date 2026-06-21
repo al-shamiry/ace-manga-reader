@@ -9,9 +9,9 @@ use tauri::Manager;
 use zip::ZipArchive;
 
 use crate::commands::manga_db::{self, MangaDbCache};
-use crate::commands::settings::{load_config, ReaderSettings};
+use crate::commands::settings::load_config;
 use crate::error::{AppError, AppResult};
-use crate::models::{Chapter, ChapterStatus};
+use crate::models::{Chapter, ChapterStatus, ReaderSettings};
 use crate::infra::atomic::write_atomic_json;
 use crate::infra::image::{has_image, images_in, is_image, subdirs_and_cbz};
 use crate::infra::naming::{natural_cmp, normalize, now_epoch, path_id, title_from_path};
