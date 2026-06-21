@@ -4,5 +4,6 @@
 //! `commands`.
 
 pub mod cache;
+pub mod chapters;
 pub mod relocate;
 pub mod scan;
