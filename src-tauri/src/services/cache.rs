@@ -83,7 +83,10 @@ pub(crate) fn rename_cached_covers(
             continue;
         }
         if let Err(e) = fs::rename(&from, &to) {
-            eprintln!("Failed to rename cached cover {:?} -> {:?}: {}", from, to, e);
+            eprintln!(
+                "Failed to rename cached cover {:?} -> {:?}: {}",
+                from, to, e
+            );
         }
     }
 

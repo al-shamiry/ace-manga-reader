@@ -1,12 +1,20 @@
-import { createSignal, createMemo, onMount, For, Show } from "solid-js";
+import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
-import { useViewLoading } from "../context/ViewLoadingContext";
+
 import { EmptyState } from "../components/EmptyState";
-import { Toolbar, ToolbarActions, ToolbarButton, ToolbarSearchRow, ToolbarTitle } from "../components/ui/toolbar";
-import type { Chapter, HistoryEntry, Manga } from "../types";
+import {
+  Toolbar,
+  ToolbarActions,
+  ToolbarButton,
+  ToolbarSearchRow,
+  ToolbarTitle,
+} from "../components/ui/toolbar";
+import { useViewLoading } from "../context/ViewLoadingContext";
 import { formatRelativeDay, formatTime } from "../lib/date";
+import type { Chapter, HistoryEntry, Manga } from "../types";
 
 export function HistoryView() {
   const navigate = useNavigate();
@@ -61,7 +69,9 @@ export function HistoryView() {
       chapter_count: e.manga_chapter_count,
     };
     try {
-      const list = await invoke<Chapter[]>("list_chapters", { mangaPath: manga.path });
+      const list = await invoke<Chapter[]>("list_chapters", {
+        mangaPath: manga.path,
+      });
       const idx = list.findIndex((c) => c.id === e.chapter_id);
       if (idx === -1) {
         // Chapter no longer exists on disk — drop the dead entry.
@@ -70,7 +80,8 @@ export function HistoryView() {
         return;
       }
       const target = list[idx];
-      const initialPage = target.status.type === "ongoing" ? target.status.page : 0;
+      const initialPage =
+        target.status.type === "ongoing" ? target.status.page : 0;
       navigate("/reader/" + target.id, {
         state: {
           chapter: target,
@@ -106,7 +117,7 @@ export function HistoryView() {
   }
 
   return (
-    <div class="flex flex-col flex-1 overflow-hidden">
+    <div class="flex flex-1 flex-col overflow-hidden">
       <Toolbar>
         <ToolbarTitle>History</ToolbarTitle>
         <div class="flex-1" />
@@ -131,7 +142,10 @@ export function HistoryView() {
         >
           <Show when={entries().length > 0}>
             <ToolbarActions>
-              <ToolbarButton onClick={() => setConfirmingClear(true)} title="Clear all history">
+              <ToolbarButton
+                onClick={() => setConfirmingClear(true)}
+                title="Clear all history"
+              >
                 <Trash2 size={16} />
               </ToolbarButton>
             </ToolbarActions>
@@ -166,11 +180,11 @@ export function HistoryView() {
               )
             }
           >
-            <div class="max-w-3xl mx-auto px-8 pb-12">
+            <div class="mx-auto max-w-3xl px-8 pb-12">
               <For each={groups()}>
                 {(group, i) => (
                   <section class={i() === 0 ? "mt-10" : "mt-12"}>
-                    <h2 class="text-[0.7rem] uppercase tracking-[0.2em] text-ink-600 font-medium mb-3">
+                    <h2 class="mb-3 text-[0.7rem] font-medium tracking-[0.2em] text-ink-600 uppercase">
                       {group.label}
                     </h2>
                     <For each={group.entries}>
@@ -200,26 +214,30 @@ function HistoryRow(props: {
 }) {
   return (
     <div
-      class="group flex items-center gap-4 py-3 border-b border-ink-900/60 cursor-pointer hover:bg-ink-900/40 transition-colors"
+      class="group flex cursor-pointer items-center gap-4 border-b border-ink-900/60 py-3 transition-colors hover:bg-ink-900/40"
       onClick={() => props.onResume(props.entry)}
     >
       <img
         src={convertFileSrc(props.entry.manga_cover_path)}
         alt=""
-        class="w-12 h-16 rounded-sm object-cover bg-ink-900 shrink-0"
+        class="h-16 w-12 shrink-0 rounded-sm bg-ink-900 object-cover"
         loading="lazy"
         draggable={false}
       />
-      <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium text-ink-100 truncate">{props.entry.manga_title}</p>
-        <p class="text-xs text-ink-500 mt-0.5 truncate">
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-medium text-ink-100">
+          {props.entry.manga_title}
+        </p>
+        <p class="mt-0.5 truncate text-xs text-ink-500">
           {props.entry.chapter_title}
           <span class="text-ink-700"> · </span>
-          <span class="tabular-nums">{formatTime(props.entry.last_read_at)}</span>
+          <span class="tabular-nums">
+            {formatTime(props.entry.last_read_at)}
+          </span>
         </p>
       </div>
       <button
-        class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-1.5 rounded text-ink-600 hover:text-red-400 hover:bg-ink-800 transition-all cursor-pointer shrink-0"
+        class="shrink-0 cursor-pointer rounded p-1.5 text-ink-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-ink-800 hover:text-red-400 focus-visible:opacity-100"
         onClick={(e) => {
           e.stopPropagation();
           props.onDelete(props.entry);

@@ -1,18 +1,21 @@
-import { Show, For } from "solid-js";
+import { For, Show } from "solid-js";
+
 import { SlidersHorizontal } from "lucide-solid";
+
+import type { ReadingStatus } from "../types";
+
+import { ChipMultiSelect } from "./ui/chip-multiselect";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuGroupLabel,
   DropdownMenuHeader,
   DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { ChipMultiSelect } from "./ui/chip-multiselect";
 import { toolbarIconButtonClass } from "./ui/toolbar";
-import type { ReadingStatus } from "../types";
 
 export interface FilterState {
   sources: string[];
@@ -59,7 +62,7 @@ export function FilterDropdown(props: FilterDropdownProps) {
       <DropdownMenuTrigger class={toolbarIconButtonClass} title="Filters">
         <SlidersHorizontal size={16} />
         <Show when={activeCount() > 0}>
-          <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-jade-500 px-1 text-[10px] font-bold text-ink-950">
+          <span class="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-jade-500 px-1 text-[10px] font-bold text-ink-950">
             {activeCount()}
           </span>
         </Show>
@@ -90,7 +93,7 @@ export function FilterDropdown(props: FilterDropdownProps) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuGroupLabel>Source</DropdownMenuGroupLabel>
-            <div class="px-1 pb-1 pt-0.5">
+            <div class="px-1 pt-0.5 pb-1">
               <ChipMultiSelect
                 options={props.availableSources}
                 selected={props.state.sources}

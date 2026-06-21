@@ -1,7 +1,7 @@
-import { createSignal, onMount, onCleanup } from "solid-js";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Minus, Square, Copy, X } from "lucide-solid";
+import { createSignal, onCleanup, onMount } from "solid-js";
 
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Copy, Minus, Square, X } from "lucide-solid";
 
 export function TitleBar() {
   const win = getCurrentWindow();
@@ -18,26 +18,26 @@ export function TitleBar() {
   return (
     <div
       data-tauri-drag-region
-      class="flex items-center h-8 shrink-0 bg-ink-900 border-b border-ink-800 select-none"
+      class="flex h-8 shrink-0 items-center border-b border-ink-800 bg-ink-900 select-none"
     >
       <div
         data-tauri-drag-region
-        class="flex-1 h-full flex items-center pl-3 text-2xs font-medium tracking-[0.12em] uppercase text-ink-500"
+        class="flex h-full flex-1 items-center pl-3 text-2xs font-medium tracking-[0.12em] text-ink-500 uppercase"
       >
         Ace Manga Reader
       </div>
 
-      <div class="flex items-stretch h-full">
+      <div class="flex h-full items-stretch">
         <button
           onClick={() => win.minimize()}
-          class="w-11.5 flex items-center justify-center text-ink-400 hover:bg-ink-800 hover:text-ink-100 transition-colors cursor-pointer"
+          class="flex w-11.5 cursor-pointer items-center justify-center text-ink-400 transition-colors hover:bg-ink-800 hover:text-ink-100"
           title="Minimize"
         >
           <Minus size={14} strokeWidth={1.75} />
         </button>
         <button
           onClick={() => win.toggleMaximize()}
-          class="w-11.5 flex items-center justify-center text-ink-400 hover:bg-ink-800 hover:text-ink-100 transition-colors cursor-pointer"
+          class="flex w-11.5 cursor-pointer items-center justify-center text-ink-400 transition-colors hover:bg-ink-800 hover:text-ink-100"
           title={maximized() ? "Restore" : "Maximize"}
         >
           {maximized() ? (
@@ -48,7 +48,7 @@ export function TitleBar() {
         </button>
         <button
           onClick={() => win.close()}
-          class="w-11.5 flex items-center justify-center text-ink-400 hover:bg-red-600 hover:text-white transition-colors cursor-pointer"
+          class="flex w-11.5 cursor-pointer items-center justify-center text-ink-400 transition-colors hover:bg-red-600 hover:text-white"
           title="Close"
         >
           <X size={15} strokeWidth={1.75} />

@@ -1,14 +1,15 @@
 /* @refresh reload */
 import { render } from "solid-js/web";
-import { Router, Route } from "@solidjs/router";
+import { Route, Router } from "@solidjs/router";
+
 import App from "./App";
+import { HistoryView } from "./views/HistoryView";
 import { LibraryView } from "./views/LibraryView";
-import { SourceView } from "./views/SourceView";
 import { MangaDetailView } from "./views/MangaDetailView";
 import { ReaderView } from "./views/ReaderView";
-import { HistoryView } from "./views/HistoryView";
-import { SourcesView } from "./views/SourcesView";
 import { SettingsView } from "./views/SettingsView";
+import { SourcesView } from "./views/SourcesView";
+import { SourceView } from "./views/SourceView";
 
 // Clear the inline loader from index.html before Solid mounts — render()
 // appends to the target, it does not replace its children.
@@ -27,5 +28,5 @@ render(
       <Route path="/settings" component={SettingsView} />
     </Router>
   ),
-  root
+  root,
 );

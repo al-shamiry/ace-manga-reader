@@ -28,6 +28,7 @@ No test infrastructure exists yet (no Vitest, no Rust tests). CI releases run vi
 **Tauri v2 + SolidJS** desktop manga reader. Rust backend handles file I/O and persistence; frontend is display/navigation with router-state-driven flows.
 
 ### Library structure on disk (current model: source-first)
+
 ```
 Source folder/              ← add directly in Sources view
   Manga title/              ← one Manga entry in the grid
@@ -47,6 +48,7 @@ Source folder/              ← add directly in Sources view
 5. Reader updates progress via `set_chapter_progress` and history via `record_history`
 
 ### Backend architecture (layered)
+
 Strict layers with downward-only dependencies (`commands → services → store → models`; `infra` is a leaf). Registered commands live in `src-tauri/src/lib.rs` — check `generate_handler!` for the canonical list.
 
 - `commands/` — thin Tauri IPC handlers; validate input and delegate. Modules: `sources`, `reader`, `library` (categories + library membership), `settings`, `history`.
@@ -57,9 +59,11 @@ Strict layers with downward-only dependencies (`commands → services → store 
 - `app.rs` — Tauri `setup` (data-dir + cache state init); `lib.rs` holds the builder chain + handler list.
 
 ### DB access pattern
+
 Use the `app.db()` extension trait (`store::db::DbExt`) instead of `app.state::<Mutex<MangaDbCache>>()`, then go through `store::db::{lock, mutate, save_db}` — never read/write `manga_db.json` directly.
 
 ### Frontend contexts (`src/context/`)
+
 - `SourcesContext` — source list, CRUD, scan status, `initialLoad`, mutation counter
 - `LibraryContext` — categories/library-entry signals, refresh helpers, `initialLoad`
 - `ViewLoadingContext` — sequence-token busy/ready API used by `LoadingOverlay`
@@ -67,26 +71,31 @@ Use the `app.db()` extension trait (`store::db::DbExt`) instead of `app.state::<
 Router state is the primary cross-view payload mechanism (no global "current chapter" store). Routes in `src/index.tsx`. `ReaderView` receives `{ chapter, manga, prevChapter?, nextChapter?, initialPage? }`; `MangaDetailView` receives `Manga`.
 
 ### Asset protocol
+
 Pages/covers served via Tauri asset protocol. Use `convertFileSrc(path)` from `@tauri-apps/api/core` (resolves to `http://asset.localhost/...` — note `http://` not `https://`).
 
 ### Title normalisation (`infra::naming::title_from_path`)
+
 - Strips trailing `_HEXSTRING` suffixes (4–16 hex chars) — download-tool dedup hashes
 - Replaces `_ ` with `: ` — Windows-safe filename restoration
 
 ### Persistent storage (`app_data_dir`, typically `%APPDATA%\ace-manga-reader\` on Windows)
-| Path | Contents |
-|---|---|
-| `config.json` | Global config: root directory, reading defaults, filters, sort/display prefs, categories, active category |
-| `manga_db.json` | Central DB: sources + manga state (progress, categories per manga, metadata) |
-| `history.json` | Recently-read entries (1000 cap, deduped by manga) |
-| `cache/covers/` | Extracted CBZ cover cache |
-| `cache/pages/{chapter_id}/` | Extracted CBZ page cache |
-| `settings/{manga_id}.json` | Per-manga reader overrides (`fit_mode`, `reading_mode`, `webtoon_padding`) |
+
+| Path                        | Contents                                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `config.json`               | Global config: root directory, reading defaults, filters, sort/display prefs, categories, active category |
+| `manga_db.json`             | Central DB: sources + manga state (progress, categories per manga, metadata)                              |
+| `history.json`              | Recently-read entries (1000 cap, deduped by manga)                                                        |
+| `cache/covers/`             | Extracted CBZ cover cache                                                                                 |
+| `cache/pages/{chapter_id}/` | Extracted CBZ page cache                                                                                  |
+| `settings/{manga_id}.json`  | Per-manga reader overrides (`fit_mode`, `reading_mode`, `webtoon_padding`)                                |
 
 Legacy files (`library.json`, `progress.json`) may exist on older installs but are not part of the active persistence model.
 
 ### ReaderView — architectural hotspot
+
 `src/views/ReaderView.tsx`:
+
 - **4 reading modes**: `paged-ltr`, `paged-rtl`, `paged-vertical`, `webtoon` (cycle: `m`)
 - **5 fit modes** (paged only): `fit-screen`, `fit-width`, `fit-height`, `original`, `stretch` (cycle: `f`)
 - **Webtoon side padding**: 0–25%, persisted in settings; adjustable via UI slider and `Ctrl+Wheel`
@@ -99,6 +108,7 @@ Legacy files (`library.json`, `progress.json`) may exist on older installs but a
 - **Code pattern**: handlers/helpers above JSX; keep template declarative
 
 ### Conventions
+
 - Conventional Commits (`feat`, `fix`, `refactor`, `perf`, `docs`, `chore`)
 - IDs = first 8 bytes of SHA-256(path), hex-encoded (`path_id`)
 - Rust normalizes paths to forward slashes before sending to frontend
@@ -106,6 +116,7 @@ Legacy files (`library.json`, `progress.json`) may exist on older installs but a
 - `src/types.ts` must stay aligned with Rust command payloads
 
 ### Cross-agent guardrails
+
 - Keep frontend/backend contracts in sync: if a Rust command payload changes, update `src/types.ts` and all frontend consumers
 - Preserve config compatibility: prefer additive changes to persisted keys (`config.json`, per-manga settings) and avoid breaking existing installs
 - Keep TypeScript strictness intact; avoid `any` unless unavoidable
@@ -113,6 +124,7 @@ Legacy files (`library.json`, `progress.json`) may exist on older installs but a
 - Register all new commands in `tauri::generate_handler!` (`src-tauri/src/lib.rs`)
 
 ### UI/UX constraints
+
 - Dark-first aesthetic using `ink-*` + `jade-*` tokens from `global.css` (avoid stock Tailwind palette)
 - Motion purposeful/short (generally <=200ms)
 - Keyboard-first workflows for core actions

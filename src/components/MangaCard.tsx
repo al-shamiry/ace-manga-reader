@@ -1,10 +1,13 @@
-import { createSignal, Show, Switch, Match } from "solid-js";
+import { createSignal, Match, Show, Switch } from "solid-js";
 import { useNavigate } from "@solidjs/router";
+
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Bookmark, Check, Play } from "lucide-solid";
+
 import { useLibrary } from "../context/LibraryContext";
-import { Button } from "./ui/button";
 import type { DisplayMode, Manga, NavOrigin } from "../types";
+
+import { Button } from "./ui/button";
 
 interface Props {
   manga: Manga;
@@ -63,7 +66,7 @@ export function MangaCard(props: Props) {
   function SelectionRing(p: { tint?: boolean }) {
     return (
       <Show when={selectable() && props.selected}>
-        <div class="pointer-events-none absolute inset-0 z-30 rounded-[inherit] ring-2 ring-inset ring-jade-700">
+        <div class="pointer-events-none absolute inset-0 z-30 rounded-[inherit] ring-2 ring-jade-700 ring-inset">
           <Show when={p.tint}>
             <div class="absolute inset-0 rounded-[inherit] bg-jade-500/10" />
           </Show>
@@ -73,19 +76,23 @@ export function MangaCard(props: Props) {
   }
 
   function CoverImage(p: { class?: string }) {
-    return imgError() ? (
-      <div
-        class={`flex items-center justify-center text-ink-600 text-xs bg-ink-800 ${p.class ?? ""}`}
-      >
-        No Cover
-      </div>
-    ) : (
-      <img
-        src={coverSrc()}
-        alt={props.manga.title}
-        onError={() => setImgError(true)}
-        class={`object-cover block ${p.class ?? ""}`}
-      />
+    return (
+      <>
+        {imgError() ? (
+          <div
+            class={`flex items-center justify-center bg-ink-800 text-xs text-ink-600 ${p.class ?? ""}`}
+          >
+            No Cover
+          </div>
+        ) : (
+          <img
+            src={coverSrc()}
+            alt={props.manga.title}
+            onError={() => setImgError(true)}
+            class={`block object-cover ${p.class ?? ""}`}
+          />
+        )}
+      </>
     );
   }
 
@@ -93,7 +100,7 @@ export function MangaCard(props: Props) {
     return (
       <Show when={props.showLibraryBadge && isInLibrary(props.manga.id)}>
         <div class="absolute inset-0 bg-black/70" />
-        <div class="absolute top-1.5 right-1.5 bg-jade-600 rounded-full p-1 shadow-md">
+        <div class="absolute top-1.5 right-1.5 rounded-full bg-jade-600 p-1 shadow-md">
           <Bookmark size={12} fill="currentColor" class="text-white" />
         </div>
       </Show>
@@ -105,17 +112,17 @@ export function MangaCard(props: Props) {
     const total = () => props.manga.chapter_count;
     return (
       <Show when={props.showProgressBadge && total() > 0 && !selectable()}>
-        <div class="absolute top-1.5 left-1.5 flex items-stretch overflow-hidden rounded-sm text-2xs font-normal tabular-nums leading-none text-center text-white shadow-md">
+        <div class="absolute top-1.5 left-1.5 flex items-stretch overflow-hidden rounded-sm text-center text-2xs leading-none font-normal text-white tabular-nums shadow-md">
           <Switch>
             <Match when={read() === 0}>
-              <span class="px-1.5 py-1 bg-jade-600">new</span>
+              <span class="bg-jade-600 px-1.5 py-1">new</span>
             </Match>
             <Match when={read() >= total()}>
-              <span class="px-1.5 py-1 text-ink-300 bg-ink-800">done</span>
+              <span class="bg-ink-800 px-1.5 py-1 text-ink-300">done</span>
             </Match>
             <Match when={true}>
               <span
-                class="py-1 pr-1.5 pl-1 -mr-2 bg-jade-600"
+                class="-mr-2 bg-jade-600 py-1 pr-1.5 pl-1"
                 style={{
                   "clip-path":
                     "polygon(0 0, 100% 0, calc(100% - 4px) 100%, 0 100%)",
@@ -123,7 +130,7 @@ export function MangaCard(props: Props) {
               >
                 {read()}
               </span>
-              <span class="py-1 pr-1 pl-2.5 text-ink-300 bg-ink-800">
+              <span class="bg-ink-800 py-1 pr-1 pl-2.5 text-ink-300">
                 {total()}
               </span>
             </Match>
@@ -139,7 +146,7 @@ export function MangaCard(props: Props) {
         <Button
           variant="primary"
           iconOnly
-          class="absolute bottom-1.5 right-1.5 shadow-md"
+          class="absolute right-1.5 bottom-1.5 shadow-md"
           title="Continue reading"
           onClick={(e: MouseEvent) => {
             e.stopPropagation();
@@ -157,7 +164,7 @@ export function MangaCard(props: Props) {
       {/* ── List mode ── */}
       <Match when={mode() === "list"}>
         <div
-          class="relative flex items-center gap-3 px-3 py-2 bg-ink-900 rounded-lg cursor-pointer transition-colors hover:bg-ink-800"
+          class="relative flex cursor-pointer items-center gap-3 rounded-lg bg-ink-900 px-3 py-2 transition-colors hover:bg-ink-800"
           onClick={handleActivate}
         >
           <SelectionRing />
@@ -172,16 +179,16 @@ export function MangaCard(props: Props) {
               <Check size={12} strokeWidth={3} />
             </div>
           </Show>
-          <div class="relative w-12 h-16 rounded overflow-hidden shrink-0 bg-ink-800">
-            <CoverImage class="w-full h-full" />
+          <div class="relative h-16 w-12 shrink-0 overflow-hidden rounded bg-ink-800">
+            <CoverImage class="h-full w-full" />
             <LibraryBadge />
             <ProgressBadge />
           </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-ink-100 truncate">
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-ink-100">
               {props.manga.title}
             </p>
-            <p class="text-xs text-ink-500 mt-0.5">{chapterText()}</p>
+            <p class="mt-0.5 text-xs text-ink-500">{chapterText()}</p>
           </div>
           <ContinueButton />
         </div>
@@ -190,10 +197,10 @@ export function MangaCard(props: Props) {
       {/* ── Cover-only mode — same as compact without text ── */}
       <Match when={mode() === "cover-only"}>
         <div
-          class="relative bg-ink-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
+          class="relative cursor-pointer overflow-hidden rounded-lg bg-ink-800 transition-all duration-150 will-change-transform hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50"
           onClick={handleActivate}
         >
-          <CoverImage class="w-full h-full" />
+          <CoverImage class="h-full w-full" />
           <LibraryBadge />
           <ProgressBadge />
           <ContinueButton />
@@ -205,14 +212,14 @@ export function MangaCard(props: Props) {
       {/* ── Compact mode — title overlaid on cover with gradient ── */}
       <Match when={mode() === "compact"}>
         <div
-          class="relative bg-ink-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
+          class="relative cursor-pointer overflow-hidden rounded-lg bg-ink-800 transition-all duration-150 will-change-transform hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50"
           onClick={handleActivate}
         >
-          <CoverImage class="w-full h-full" />
+          <CoverImage class="h-full w-full" />
           <LibraryBadge />
           <ProgressBadge />
-          <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2 pb-1.5 pt-6">
-            <p class="text-[0.75rem] font-medium text-white truncate">
+          <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-2 pt-6 pb-1.5">
+            <p class="truncate text-[0.75rem] font-medium text-white">
               {props.manga.title}
             </p>
           </div>
@@ -225,21 +232,21 @@ export function MangaCard(props: Props) {
       {/* ── Comfortable mode (default) — title below cover, wraps ── */}
       <Match when={true}>
         <div
-          class="relative flex flex-col bg-ink-900 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50 will-change-transform"
+          class="relative flex cursor-pointer flex-col overflow-hidden rounded-lg bg-ink-900 transition-all duration-150 will-change-transform hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50"
           onClick={handleActivate}
         >
-          <div class="relative bg-ink-800 overflow-hidden cover-h">
-            <CoverImage class="w-full h-full" />
+          <div class="cover-h relative overflow-hidden bg-ink-800">
+            <CoverImage class="h-full w-full" />
             <LibraryBadge />
             <ProgressBadge />
             <ContinueButton />
             <SelectionMark class="top-1.5 left-1.5" />
           </div>
-          <div class="px-2 py-1.5 shrink-0">
-            <p class="text-[0.8rem] font-medium text-ink-100 leading-tight line-clamp-2">
+          <div class="shrink-0 px-2 py-1.5">
+            <p class="line-clamp-2 text-[0.8rem] leading-tight font-medium text-ink-100">
               {props.manga.title}
             </p>
-            <p class="text-[0.7rem] text-ink-500 mt-0.5">{chapterText()}</p>
+            <p class="mt-0.5 text-[0.7rem] text-ink-500">{chapterText()}</p>
           </div>
           <SelectionRing tint />
         </div>

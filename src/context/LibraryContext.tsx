@@ -1,7 +1,18 @@
-import { createContext, createEffect, createSignal, on, onMount, useContext, JSX } from "solid-js";
+import {
+  createContext,
+  createEffect,
+  createSignal,
+  JSX,
+  on,
+  onMount,
+  useContext,
+} from "solid-js";
+
 import { invoke } from "@tauri-apps/api/core";
-import { useSources } from "./SourcesContext";
+
 import type { Category, Manga } from "../types";
+
+import { useSources } from "./SourcesContext";
 
 interface LibraryContextValue {
   categories: () => Category[];
@@ -35,9 +46,15 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     }
   });
 
-  createEffect(on(sourceMutationCount, () => {
-    void refreshLibrary();
-  }, { defer: true }));
+  createEffect(
+    on(
+      sourceMutationCount,
+      () => {
+        void refreshLibrary();
+      },
+      { defer: true },
+    ),
+  );
 
   function isInLibrary(mangaId: string) {
     return libraryEntries().some((e) => e.id === mangaId);
@@ -62,14 +79,16 @@ export function LibraryProvider(props: { children: JSX.Element }) {
   }
 
   return (
-    <LibraryContext.Provider value={{
-      categories,
-      libraryEntries,
-      isInLibrary,
-      refreshCategories,
-      refreshLibrary,
-      initialLoad: () => initialLoadPromise,
-    }}>
+    <LibraryContext.Provider
+      value={{
+        categories,
+        libraryEntries,
+        isInLibrary,
+        refreshCategories,
+        refreshLibrary,
+        initialLoad: () => initialLoadPromise,
+      }}
+    >
       {props.children}
     </LibraryContext.Provider>
   );

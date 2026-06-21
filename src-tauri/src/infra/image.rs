@@ -17,7 +17,9 @@ pub(crate) fn is_image(path: &Path) -> bool {
 /// Whether a directory holds at least one image, short-circuiting on the first
 /// match.
 pub(crate) fn has_image(path: &Path) -> bool {
-    let Ok(rd) = fs::read_dir(path) else { return false };
+    let Ok(rd) = fs::read_dir(path) else {
+        return false;
+    };
     for entry in rd.filter_map(|e| e.ok()) {
         let is_file = entry.file_type().map(|t| t.is_file()).unwrap_or(false);
         if is_file && is_image(&entry.path()) {

@@ -1,9 +1,9 @@
 import type { JSX, ValidComponent } from "solid-js";
-import { Show, onMount, splitProps } from "solid-js";
-import { Search, X } from "lucide-solid";
+import { onMount, Show, splitProps } from "solid-js";
 
 import * as ButtonPrimitive from "@kobalte/core/button";
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
+import { Search, X } from "lucide-solid";
 
 import { cn } from "~/lib/utils";
 
@@ -64,7 +64,7 @@ export function ToolbarTitle(props: ToolbarTitleProps) {
   return (
     <p
       class={cn(
-        "min-w-0 truncate text-xs font-medium uppercase tracking-[0.2em] text-ink-500",
+        "min-w-0 truncate text-xs font-medium tracking-[0.2em] text-ink-500 uppercase",
         props.class,
       )}
     >
@@ -85,7 +85,10 @@ export function ToolbarSpacer() {
 // Trailing cluster of icon buttons (Search/Sort/Filter etc.). Tight
 // gap-1 so they read as a single zone and don't fight the toolbar gap.
 
-export function ToolbarActions(props: { class?: string; children?: JSX.Element }) {
+export function ToolbarActions(props: {
+  class?: string;
+  children?: JSX.Element;
+}) {
   return (
     <div class={cn("flex shrink-0 items-center gap-1", props.class)}>
       {props.children}
@@ -166,7 +169,7 @@ export function ToolbarSearchRow(props: ToolbarSearchRowProps) {
     >
       <Search
         size={15}
-        class="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2 text-ink-500"
+        class="pointer-events-none absolute top-1/2 left-6 -translate-y-1/2 text-ink-500"
       />
       <input
         ref={inputEl}
@@ -180,12 +183,12 @@ export function ToolbarSearchRow(props: ToolbarSearchRowProps) {
             props.onInput("");
           }
         }}
-        class="h-8 w-full rounded-md bg-ink-800/60 pl-8 pr-8 text-sm text-ink-100 placeholder:text-ink-600 outline-none transition-colors focus:bg-ink-800 focus-visible:ring-2 focus-visible:ring-jade-500/60"
+        class="h-8 w-full rounded-md bg-ink-800/60 pr-8 pl-8 text-sm text-ink-100 transition-colors outline-none placeholder:text-ink-600 focus:bg-ink-800 focus-visible:ring-2 focus-visible:ring-jade-500/60"
       />
       <Show when={props.value}>
         <button
           type="button"
-          class="absolute right-6 top-1/2 -translate-y-1/2 cursor-pointer text-ink-500 hover:text-ink-300"
+          class="absolute top-1/2 right-6 -translate-y-1/2 cursor-pointer text-ink-500 hover:text-ink-300"
           onClick={() => props.onInput("")}
           title="Clear search"
         >

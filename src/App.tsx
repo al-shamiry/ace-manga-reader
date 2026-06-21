@@ -1,13 +1,18 @@
-import { Show, JSX } from "solid-js";
+import "./styles/global.css";
+
+import { JSX, Show } from "solid-js";
 import type { RouteSectionProps } from "@solidjs/router";
 import { useLocation } from "@solidjs/router";
-import { LibraryProvider } from "./context/LibraryContext";
-import { SourcesProvider } from "./context/SourcesContext";
-import { ViewLoadingProvider, useViewLoading } from "./context/ViewLoadingContext";
+
+import { LoadingOverlay } from "./components/LoadingOverlay";
 import { SideNav } from "./components/SideNav";
 import { TitleBar } from "./components/TitleBar";
-import { LoadingOverlay } from "./components/LoadingOverlay";
-import "./styles/global.css";
+import { LibraryProvider } from "./context/LibraryContext";
+import { SourcesProvider } from "./context/SourcesContext";
+import {
+  useViewLoading,
+  ViewLoadingProvider,
+} from "./context/ViewLoadingContext";
 
 /**
  * Main content area. Children stay mounted but are hidden via
@@ -25,9 +30,9 @@ import "./styles/global.css";
 function MainArea(props: { children: JSX.Element }) {
   const view = useViewLoading();
   return (
-    <main class="relative flex flex-col flex-1 min-w-0 overflow-hidden">
+    <main class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
       <div
-        class="flex flex-col flex-1 min-w-0 overflow-hidden"
+        class="flex min-w-0 flex-1 flex-col overflow-hidden"
         style={{ visibility: view.isBusy() ? "hidden" : "visible" }}
       >
         {props.children}
@@ -45,9 +50,9 @@ function App(props: RouteSectionProps) {
     <SourcesProvider>
       <LibraryProvider>
         <ViewLoadingProvider>
-          <div class="flex flex-col h-screen overflow-hidden bg-background text-foreground">
+          <div class="flex h-screen flex-col overflow-hidden bg-background text-foreground">
             <TitleBar />
-            <div class="flex flex-1 min-h-0 overflow-hidden">
+            <div class="flex min-h-0 flex-1 overflow-hidden">
               <Show when={!isReader()}>
                 <SideNav />
               </Show>

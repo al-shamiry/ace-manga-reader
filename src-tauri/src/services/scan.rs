@@ -72,8 +72,10 @@ pub(crate) fn ensure_source(
         // Re-check under the lock: another caller may have inserted it meanwhile.
         if !db.sources.contains_key(&id) {
             let order = db.next_source_order();
-            db.sources
-                .insert(id.clone(), SourceRecord::new(source_path, resolved_name, manga_count, order));
+            db.sources.insert(
+                id.clone(),
+                SourceRecord::new(source_path, resolved_name, manga_count, order),
+            );
         }
     })?;
     Ok(id)
@@ -115,9 +117,11 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<AppResult<MangaDto>> {
     let id = path_id(path);
 
     // Cover priority: explicit cover file > first image subdir > first CBZ
-    let cover_result = find_folder_cover(path, &sub_dirs)
-        .map(Ok)
-        .or_else(|| cbz_files.first().map(|cbz| archive::extract_cover(cbz, &id, cache_dir)));
+    let cover_result = find_folder_cover(path, &sub_dirs).map(Ok).or_else(|| {
+        cbz_files
+            .first()
+            .map(|cbz| archive::extract_cover(cbz, &id, cache_dir))
+    });
 
     let cover_path = match cover_result {
         Some(Ok(p)) => p,
@@ -141,7 +145,11 @@ fn scan_manga(path: &Path, cache_dir: &Path) -> Option<AppResult<MangaDto>> {
 /// Collect all mangas found within `dir`, searching up to `depth` levels deep.
 fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<MangaDto> {
     let entries: Vec<PathBuf> = match fs::read_dir(dir) {
-        Ok(rd) => rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect(),
+        Ok(rd) => rd
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.is_dir())
+            .collect(),
         Err(e) => {
             eprintln!("Cannot read {:?}: {}", dir, e);
             return Vec::new();
@@ -165,7 +173,11 @@ fn collect_mangas(dir: &Path, depth: u32, cache_dir: &Path) -> Vec<MangaDto> {
 /// Count mangas by immediate subdirectory count in the source directory.
 fn count_mangas(dir: &Path) -> usize {
     fs::read_dir(dir)
-        .map(|rd| rd.filter_map(|e| e.ok()).filter(|e| e.path().is_dir()).count())
+        .map(|rd| {
+            rd.filter_map(|e| e.ok())
+                .filter(|e| e.path().is_dir())
+                .count()
+        })
         .unwrap_or(0)
 }
 
@@ -226,6 +238,9 @@ fn sync_source_mangas(
 /// Resolve a source's display name: the trimmed override, else the folder name.
 fn resolve_source_name(dir: &Path, name: Option<String>) -> String {
     name.filter(|s| !s.trim().is_empty()).unwrap_or_else(|| {
-        dir.file_name().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string()
+        dir.file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Untitled")
+            .to_string()
     })
 }

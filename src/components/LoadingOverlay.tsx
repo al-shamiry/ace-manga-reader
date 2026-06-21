@@ -1,5 +1,7 @@
-import { Show, createSignal, createEffect, onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+
 import { Loader2 } from "lucide-solid";
+
 import { useViewLoading } from "../context/ViewLoadingContext";
 
 /**
@@ -86,7 +88,7 @@ export function LoadingOverlay() {
         aria-busy="true"
         aria-live="polite"
       >
-        <Loader2 size={32} class="text-jade-500 animate-spin" />
+        <Loader2 size={32} class="animate-spin text-jade-500" />
       </div>
     </Show>
   );

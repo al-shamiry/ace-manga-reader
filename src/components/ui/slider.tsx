@@ -16,7 +16,7 @@ const Slider = <T extends ValidComponent = "div">(
   return (
     <SliderPrimitive.Root
       class={cn(
-        "relative flex w-full touch-none select-none items-center",
+        "relative flex w-full touch-none items-center select-none",
         local.class,
       )}
       {...others}
@@ -33,7 +33,10 @@ const SliderTrack = <T extends ValidComponent = "div">(
   const [local, others] = splitProps(props as SliderTrackProps, ["class"]);
   return (
     <SliderPrimitive.Track
-      class={cn("relative h-1 w-full grow rounded-full bg-ink-700", local.class)}
+      class={cn(
+        "relative h-1 w-full grow rounded-full bg-ink-700",
+        local.class,
+      )}
       {...others}
     />
   );
@@ -70,7 +73,7 @@ const SliderThumb = <T extends ValidComponent = "span">(
   return (
     <SliderPrimitive.Thumb
       class={cn(
-        "block size-3 -translate-y-1 rounded-full bg-jade-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
+        "block size-3 -translate-y-1 rounded-full bg-jade-500 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         local.class,
       )}
       {...others}
@@ -80,4 +83,4 @@ const SliderThumb = <T extends ValidComponent = "span">(
   );
 };
 
-export { Slider, SliderTrack, SliderFill, SliderThumb };
+export { Slider, SliderFill, SliderThumb, SliderTrack };

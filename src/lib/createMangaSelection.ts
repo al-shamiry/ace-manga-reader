@@ -1,4 +1,5 @@
 import { createMemo, createSignal } from "solid-js";
+
 import type { Manga } from "../types";
 
 /**

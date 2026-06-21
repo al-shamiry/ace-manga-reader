@@ -30,7 +30,10 @@ type TextFieldInputProps<T extends ValidComponent = "input"> =
 const TextFieldInput = <T extends ValidComponent = "input">(
   rawProps: PolymorphicProps<T, TextFieldInputProps<T>>,
 ) => {
-  const props = mergeProps<TextFieldInputProps<T>[]>({ type: "text" }, rawProps);
+  const props = mergeProps<TextFieldInputProps<T>[]>(
+    { type: "text" },
+    rawProps,
+  );
   const [local, others] = splitProps(props as TextFieldInputProps, [
     "type",
     "class",
@@ -39,7 +42,7 @@ const TextFieldInput = <T extends ValidComponent = "input">(
     <TextFieldPrimitive.Input
       type={local.type}
       class={cn(
-        "h-8 w-full rounded-md border border-input bg-popover px-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50",
+        "h-8 w-full rounded-md border border-input bg-popover px-2 text-sm text-foreground transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50",
         local.class,
       )}
       {...others}

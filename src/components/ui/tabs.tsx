@@ -17,10 +17,7 @@ const TabsList = <T extends ValidComponent = "div">(
   const [local, others] = splitProps(props as TabsListProps, ["class"]);
   return (
     <TabsPrimitive.List
-      class={cn(
-        "relative flex items-center gap-6 shrink-0",
-        local.class,
-      )}
+      class={cn("relative flex shrink-0 items-center gap-6", local.class)}
       {...others}
     />
   );
@@ -36,7 +33,7 @@ const TabsTrigger = <T extends ValidComponent = "button">(
   return (
     <TabsPrimitive.Trigger
       class={cn(
-        "relative flex h-13 items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer outline-none text-ink-500 hover:text-ink-300 data-selected:text-jade-400 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-jade-500/60 rounded-sm",
+        "relative flex h-13 cursor-pointer items-center gap-2 rounded-sm text-sm font-medium whitespace-nowrap text-ink-500 transition-colors outline-none hover:text-ink-300 focus-visible:ring-2 focus-visible:ring-jade-500/60 focus-visible:ring-inset data-selected:text-jade-400",
         local.class,
       )}
       {...others}
@@ -71,8 +68,10 @@ const TabsIndicator = <T extends ValidComponent = "div">(
   return (
     <TabsPrimitive.Indicator
       class={cn(
-        "absolute bottom-0 h-0.5 bg-jade-500 rounded-full",
-        mounted() ? "transition-all duration-300 ease-in-out" : "transition-none",
+        "absolute bottom-0 h-0.5 rounded-full bg-jade-500",
+        mounted()
+          ? "transition-all duration-300 ease-in-out"
+          : "transition-none",
         local.class,
       )}
       {...others}
@@ -80,4 +79,4 @@ const TabsIndicator = <T extends ValidComponent = "div">(
   );
 };
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, TabsIndicator };
+export { Tabs, TabsContent, TabsIndicator, TabsList, TabsTrigger };

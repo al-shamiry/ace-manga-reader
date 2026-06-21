@@ -1,11 +1,18 @@
-import { For, JSX, Show, createSignal, onMount } from "solid-js";
+import { createSignal, For, JSX, onMount, Show } from "solid-js";
+
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Folder } from "lucide-solid";
-import { useSources } from "../context/SourcesContext";
-import { Slider, SliderFill, SliderThumb, SliderTrack } from "../components/ui/slider";
+
 import { Checkbox } from "../components/ui/checkbox";
+import {
+  Slider,
+  SliderFill,
+  SliderThumb,
+  SliderTrack,
+} from "../components/ui/slider";
 import { Toolbar, ToolbarTitle } from "../components/ui/toolbar";
+import { useSources } from "../context/SourcesContext";
 import type {
   DisplayMode,
   FitMode,
@@ -113,30 +120,32 @@ export function SettingsView() {
   }
 
   return (
-    <div class="flex flex-col flex-1 overflow-hidden">
+    <div class="flex flex-1 flex-col overflow-hidden">
       <Toolbar>
         <ToolbarTitle>Settings</ToolbarTitle>
       </Toolbar>
 
       {/* Body */}
       <div class="flex-1 overflow-y-auto">
-        <div class="max-w-2xl mx-auto px-10 py-12 flex flex-col gap-12">
+        <div class="mx-auto flex max-w-2xl flex-col gap-12 px-10 py-12">
           <Section
             title="General"
             description="Where Ace looks for your library on disk."
           >
             <Field label="Library folder">
               <div class="flex items-center gap-3">
-                <div class="flex-1 min-w-0 h-9 px-3 flex items-center bg-ink-900 border border-ink-800 rounded-md text-sm text-ink-300 font-mono truncate">
+                <div class="flex h-9 min-w-0 flex-1 items-center truncate rounded-md border border-ink-800 bg-ink-900 px-3 font-mono text-sm text-ink-300">
                   <Show
                     when={rootDir()}
-                    fallback={<span class="text-ink-600">No folder selected</span>}
+                    fallback={
+                      <span class="text-ink-600">No folder selected</span>
+                    }
                   >
                     {rootDir()}
                   </Show>
                 </div>
                 <button
-                  class="h-9 px-3 inline-flex items-center gap-2 rounded-md bg-ink-800 hover:bg-ink-700 text-ink-200 text-sm font-medium transition-colors cursor-pointer shrink-0"
+                  class="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-md bg-ink-800 px-3 text-sm font-medium text-ink-200 transition-colors hover:bg-ink-700"
                   onClick={pickRoot}
                 >
                   <Folder size={14} />
@@ -174,12 +183,14 @@ export function SettingsView() {
               <SegmentedControl
                 options={DISPLAY_MODE_OPTIONS}
                 value={display().display_mode}
-                onChange={(mode) => updateDisplay({ ...display(), display_mode: mode })}
+                onChange={(mode) =>
+                  updateDisplay({ ...display(), display_mode: mode })
+                }
               />
             </Field>
             <Field label="Card size">
               <div class="flex items-center gap-3">
-                <span class="text-[0.7rem] text-ink-600 shrink-0">Small</span>
+                <span class="shrink-0 text-[0.7rem] text-ink-600">Small</span>
                 <Slider
                   minValue={1}
                   maxValue={15}
@@ -195,7 +206,7 @@ export function SettingsView() {
                     <SliderThumb />
                   </SliderTrack>
                 </Slider>
-                <span class="text-[0.7rem] text-ink-600 shrink-0">Large</span>
+                <span class="shrink-0 text-[0.7rem] text-ink-600">Large</span>
               </div>
             </Field>
             <Field label="Badges">
@@ -237,9 +248,9 @@ function Section(props: {
     <section class="flex flex-col gap-5">
       <div>
         <h2 class="font-display text-xl text-ink-100">{props.title}</h2>
-        <p class="text-sm text-ink-500 mt-1">{props.description}</p>
+        <p class="mt-1 text-sm text-ink-500">{props.description}</p>
       </div>
-      <div class="flex flex-col gap-5 pt-5 border-t border-ink-800/80">
+      <div class="flex flex-col gap-5 border-t border-ink-800/80 pt-5">
         {props.children}
       </div>
     </section>
@@ -249,7 +260,7 @@ function Section(props: {
 function Field(props: { label: string; children: JSX.Element }) {
   return (
     <div class="flex flex-col gap-2">
-      <label class="text-[0.7rem] uppercase tracking-[0.15em] text-ink-600 font-medium">
+      <label class="text-[0.7rem] font-medium tracking-[0.15em] text-ink-600 uppercase">
         {props.label}
       </label>
       {props.children}
@@ -269,9 +280,10 @@ function SegmentedControl<T extends string>(props: {
           const isActive = () => props.value === opt.value;
           return (
             <button
-              class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer"
+              class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
               classList={{
-                "bg-jade-600 text-white shadow-sm shadow-jade-950/40": isActive(),
+                "bg-jade-600 text-white shadow-sm shadow-jade-950/40":
+                  isActive(),
                 "bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100":
                   !isActive(),
               }}

@@ -28,9 +28,9 @@
  */
 @theme {
   /* ── Tinted ink neutrals ────────────────────────────────────────── */
-  --color-ink-50:  oklch(97% 0.006 215);
+  --color-ink-50: oklch(97% 0.006 215);
   --color-ink-100: oklch(93% 0.008 215);
-  --color-ink-200: oklch(85% 0.010 215);
+  --color-ink-200: oklch(85% 0.01 215);
   --color-ink-300: oklch(76% 0.011 215);
   --color-ink-400: oklch(65% 0.012 215);
   --color-ink-500: oklch(53% 0.013 215);
@@ -41,13 +41,13 @@
   --color-ink-950: oklch(12% 0.012 215);
 
   /* ── Jade accent ────────────────────────────────────────────────── */
-  --color-jade-300: oklch(82% 0.11  175);
-  --color-jade-400: oklch(74% 0.13  175);
-  --color-jade-500: oklch(66% 0.14  175);
-  --color-jade-600: oklch(58% 0.13  175);
-  --color-jade-700: oklch(48% 0.11  175);
-  --color-jade-900: oklch(28% 0.06  175);
-  --color-jade-950: oklch(20% 0.04  175);
+  --color-jade-300: oklch(82% 0.11 175);
+  --color-jade-400: oklch(74% 0.13 175);
+  --color-jade-500: oklch(66% 0.14 175);
+  --color-jade-600: oklch(58% 0.13 175);
+  --color-jade-700: oklch(48% 0.11 175);
+  --color-jade-900: oklch(28% 0.06 175);
+  --color-jade-950: oklch(20% 0.04 175);
 
   /* ── Semantic tokens (Kobalte + shared components) ──────────────── */
   --color-background: var(--color-ink-950);
@@ -94,20 +94,21 @@
    * ──────────────────────────────────────────────────────────────── */
   --font-display: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
   --font-sans: "Hanken Grotesk Variable", -apple-system, system-ui, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono",
-    Consolas, monospace;
+  --font-mono:
+    ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas,
+    monospace;
 
   /* ── Type scale (fixed rem — desktop UI density) ─────────────────
    * Dense desktop app: 14px is the dominant UI size, 16px is body
    * prose. Hero display is the only fluid element so the manga title
    * grows on a wide window without breaking the rest of the chrome.
    * ──────────────────────────────────────────────────────────────── */
-  --text-2xs: 0.6875rem;   /* 11px — micro-badges (Done/New/Page N) */
-  --text-xs:  0.75rem;     /* 12px — captions, secondary metadata    */
-  --text-sm:  0.875rem;    /* 14px — toolbar labels, list items, UI  */
-  --text-base: 1rem;       /* 16px — body / readable prose           */
-  --text-lg:  1.125rem;    /* 18px — subheadings                     */
-  --text-xl:  1.5rem;      /* 24px — section headings                */
+  --text-2xs: 0.6875rem; /* 11px — micro-badges (Done/New/Page N) */
+  --text-xs: 0.75rem; /* 12px — captions, secondary metadata    */
+  --text-sm: 0.875rem; /* 14px — toolbar labels, list items, UI  */
+  --text-base: 1rem; /* 16px — body / readable prose           */
+  --text-lg: 1.125rem; /* 18px — subheadings                     */
+  --text-xl: 1.5rem; /* 24px — section headings                */
   --text-display: clamp(1.75rem, 1.4rem + 1.2vw, 2.375rem); /* hero  */
 }
 
@@ -137,8 +138,12 @@
 }
 
 @keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton {
@@ -232,7 +237,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-
 /* Side navigation */
 .side-nav {
   width: 52px;
@@ -252,7 +256,9 @@
 .side-nav-label {
   opacity: 0;
   width: 0;
-  transition: opacity 150ms ease, width 200ms ease;
+  transition:
+    opacity 150ms ease,
+    width 200ms ease;
 }
 .side-nav.expanded .side-nav-label {
   opacity: 1;
@@ -260,36 +266,117 @@
 }
 
 /* Tap zone cursors — Lucide Chevron icons (24x24) */
-.cursor-left  { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") 12 12, w-resize; }
-.cursor-right { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") 12 12, e-resize; }
-.cursor-up    { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m18 15-6-6-6 6'/%3E%3C/svg%3E") 12 12, n-resize; }
-.cursor-down  { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") 12 12, s-resize; }
+.cursor-left {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E")
+      12 12,
+    w-resize;
+}
+.cursor-right {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E")
+      12 12,
+    e-resize;
+}
+.cursor-up {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m18 15-6-6-6 6'/%3E%3C/svg%3E")
+      12 12,
+    n-resize;
+}
+.cursor-down {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+      12 12,
+    s-resize;
+}
 
 /* Page flip animations */
-@keyframes slide-out-left  { to   { transform: translateX(-100%); } }
-@keyframes slide-in-left   { from { transform: translateX(100%);  } }
-@keyframes slide-out-right { to   { transform: translateX(100%);  } }
-@keyframes slide-in-right  { from { transform: translateX(-100%); } }
-@keyframes slide-out-up    { to   { transform: translateY(-100%); } }
-@keyframes slide-in-up     { from { transform: translateY(100%);  } }
-@keyframes slide-out-down  { to   { transform: translateY(100%);  } }
-@keyframes slide-in-down   { from { transform: translateY(-100%); } }
+@keyframes slide-out-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes slide-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes slide-out-up {
+  to {
+    transform: translateY(-100%);
+  }
+}
+@keyframes slide-in-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes slide-out-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes slide-in-down {
+  from {
+    transform: translateY(-100%);
+  }
+}
 
-.slide-out-left  { animation: slide-out-left  200ms ease-out forwards; }
-.slide-in-left   { animation: slide-in-left   200ms ease-out forwards; }
-.slide-out-right { animation: slide-out-right 200ms ease-out forwards; }
-.slide-in-right  { animation: slide-in-right  200ms ease-out forwards; }
-.slide-out-up    { animation: slide-out-up    200ms ease-out forwards; }
-.slide-in-up     { animation: slide-in-up     200ms ease-out forwards; }
-.slide-out-down  { animation: slide-out-down  200ms ease-out forwards; }
+.slide-out-left {
+  animation: slide-out-left 200ms ease-out forwards;
+}
+.slide-in-left {
+  animation: slide-in-left 200ms ease-out forwards;
+}
+.slide-out-right {
+  animation: slide-out-right 200ms ease-out forwards;
+}
+.slide-in-right {
+  animation: slide-in-right 200ms ease-out forwards;
+}
+.slide-out-up {
+  animation: slide-out-up 200ms ease-out forwards;
+}
+.slide-in-up {
+  animation: slide-in-up 200ms ease-out forwards;
+}
+.slide-out-down {
+  animation: slide-out-down 200ms ease-out forwards;
+}
 
 /* Tab switch fade */
-@keyframes tab-fade-out { to { opacity: 0; } }
-.tab-fade-out { animation: tab-fade-out 100ms ease-out forwards; }
+@keyframes tab-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+.tab-fade-out {
+  animation: tab-fade-out 100ms ease-out forwards;
+}
 
 /* Scan-status badge fade-in */
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-.animate-fade-in { animation: fade-in 150ms ease-out; }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 150ms ease-out;
+}
 
 /* Source row removal — opacity + height collapse */
 .source-row-fade-out {
@@ -300,10 +387,13 @@
   margin-top: 0 !important;
   margin-bottom: 0 !important;
   border-width: 0 !important;
-  transition: opacity 200ms ease-out,
-              max-height 200ms ease-out 50ms,
-              padding 200ms ease-out 50ms,
-              margin 200ms ease-out 50ms,
-              border-width 200ms ease-out 50ms;
+  transition:
+    opacity 200ms ease-out,
+    max-height 200ms ease-out 50ms,
+    padding 200ms ease-out 50ms,
+    margin 200ms ease-out 50ms,
+    border-width 200ms ease-out 50ms;
 }
-.slide-in-down   { animation: slide-in-down   200ms ease-out forwards; }
+.slide-in-down {
+  animation: slide-in-down 200ms ease-out forwards;
+}

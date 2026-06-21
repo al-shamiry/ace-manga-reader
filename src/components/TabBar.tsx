@@ -1,12 +1,14 @@
-import { For, Show, createSignal } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
+
 import { Pencil, Trash2 } from "lucide-solid";
-import { Tabs, TabsList, TabsTrigger, TabsIndicator } from "./ui/tabs";
+
 import {
   DropdownMenu,
-  DropdownMenuPortal,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
 } from "./ui/dropdown-menu";
+import { Tabs, TabsIndicator, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface Tab {
   id: string;
@@ -39,7 +41,12 @@ export function TabBar(props: Props) {
   const [menuOpen, setMenuOpen] = createSignal(false);
   const [menuTab, setMenuTab] = createSignal<Tab | null>(null);
   const [anchor, setAnchor] = createSignal({ x: 0, y: 0, width: 0, height: 0 });
-  const [renameAnchor, setRenameAnchor] = createSignal({ x: 0, y: 0, width: 0, height: 0 });
+  const [renameAnchor, setRenameAnchor] = createSignal({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
 
   // Map of tab id → TabsTrigger DOM element, used to anchor the rename popover.
   const tabRefs = new Map<string, HTMLElement>();
@@ -77,7 +84,7 @@ export function TabBar(props: Props) {
               {tab.label}
               {tab.count !== undefined && (
                 <span
-                  class="text-xs px-1.5 py-0.5 rounded-full"
+                  class="rounded-full px-1.5 py-0.5 text-xs"
                   classList={{
                     "bg-ink-700 text-ink-300": props.activeTab === tab.id,
                     "bg-ink-800 text-ink-500": props.activeTab !== tab.id,
@@ -95,11 +102,13 @@ export function TabBar(props: Props) {
       {/* Rename popover — anchored to the tab element, outside click cancels */}
       <DropdownMenu
         open={props.renamingId != null}
-        onOpenChange={(open) => { if (!open) props.onRenameCancel?.(); }}
+        onOpenChange={(open) => {
+          if (!open) props.onRenameCancel?.();
+        }}
         getAnchorRect={() => renameAnchor()}
       >
         <DropdownMenuPortal>
-          <DropdownMenuContent class="p-2 min-w-0">
+          <DropdownMenuContent class="min-w-0 p-2">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -107,9 +116,11 @@ export function TabBar(props: Props) {
               }}
             >
               <input
-                ref={(el) => requestAnimationFrame(() => setTimeout(() => el.focus(), 50))}
+                ref={(el) =>
+                  requestAnimationFrame(() => setTimeout(() => el.focus(), 50))
+                }
                 placeholder="Category name"
-                class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-40"
+                class="h-7 w-40 rounded border border-jade-500 bg-ink-800 px-2 text-sm text-ink-100 outline-none placeholder:text-ink-600"
                 value={props.renamingValue ?? ""}
                 onInput={(e) => props.onRenameInput?.(e.currentTarget.value)}
                 onKeyDown={(e) => {
@@ -128,9 +139,9 @@ export function TabBar(props: Props) {
         getAnchorRect={() => anchor()}
       >
         <DropdownMenuPortal>
-          <DropdownMenuContent class="py-1 min-w-36">
+          <DropdownMenuContent class="min-w-36 py-1">
             <DropdownMenuItem
-              class="flex items-center gap-2 px-3 py-1.5 text-sm text-ink-300 cursor-pointer outline-none data-highlighted:bg-ink-700 data-highlighted:text-ink-100"
+              class="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-ink-300 outline-none data-highlighted:bg-ink-700 data-highlighted:text-ink-100"
               onSelect={() => {
                 const t = menuTab();
                 if (t) startRename(t);
@@ -141,7 +152,7 @@ export function TabBar(props: Props) {
             </DropdownMenuItem>
             <Show when={menuTab()?.deletable !== false}>
               <DropdownMenuItem
-                class="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 cursor-pointer outline-none data-highlighted:bg-ink-700"
+                class="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-red-400 outline-none data-highlighted:bg-ink-700"
                 onSelect={() => {
                   const t = menuTab();
                   if (t) props.onDelete?.(t);

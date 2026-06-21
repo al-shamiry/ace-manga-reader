@@ -6,12 +6,13 @@ import type { PolymorphicProps } from "@kobalte/core/polymorphic";
 
 import { cn } from "~/lib/utils";
 
-type ButtonProps<T extends ValidComponent = "button"> = ButtonPrimitive.ButtonRootProps<T> & {
-  class?: string | undefined;
-  children?: JSX.Element;
-  variant?: "primary" | "ghost";
-  iconOnly?: boolean;
-};
+type ButtonProps<T extends ValidComponent = "button"> =
+  ButtonPrimitive.ButtonRootProps<T> & {
+    class?: string | undefined;
+    children?: JSX.Element;
+    variant?: "primary" | "ghost";
+    iconOnly?: boolean;
+  };
 
 const Button = <T extends ValidComponent = "button">(
   props: PolymorphicProps<T, ButtonProps<T>>,
@@ -32,7 +33,7 @@ const Button = <T extends ValidComponent = "button">(
   return (
     <ButtonPrimitive.Root
       class={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         sizeClass(),
         variantClass(),
         local.class,

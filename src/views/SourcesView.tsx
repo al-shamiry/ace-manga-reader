@@ -1,11 +1,29 @@
-import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Eye, EyeOff, Plus, RefreshCw, Square, SquareCheck, SquaresIntersect, Trash2 } from "lucide-solid";
+
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import {
+  Eye,
+  EyeOff,
+  Plus,
+  RefreshCw,
+  Square,
+  SquareCheck,
+  SquaresIntersect,
+  Trash2,
+} from "lucide-solid";
+
 import { EmptyState } from "../components/EmptyState";
-import { SourceRow } from "../components/SourceRow";
 import { SourceListSkeleton } from "../components/Skeleton";
+import { SourceRow } from "../components/SourceRow";
 import {
   Toolbar,
   ToolbarActions,
@@ -19,7 +37,20 @@ import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Source } from "../types";
 
 export function SourcesView() {
-  const { sources, status, error, addSource, removeSource, relocateSource, setSourceHidden, refreshSources, initialLoad, scanStatus, scanSource, scanAllSources } = useSources();
+  const {
+    sources,
+    status,
+    error,
+    addSource,
+    removeSource,
+    relocateSource,
+    setSourceHidden,
+    refreshSources,
+    initialLoad,
+    scanStatus,
+    scanSource,
+    scanAllSources,
+  } = useSources();
   const view = useViewLoading();
   const loadToken = view.busy();
   const navigate = useNavigate();
@@ -32,7 +63,7 @@ export function SourcesView() {
   });
 
   const sortedSources = createMemo(() =>
-    [...sources()].sort((a, b) => a.sort_order - b.sort_order)
+    [...sources()].sort((a, b) => a.sort_order - b.sort_order),
   );
 
   const filteredSources = createMemo(() => {
@@ -42,15 +73,15 @@ export function SourcesView() {
   });
 
   const visibleSources = createMemo(() =>
-    filteredSources().filter((s) => !s.hidden)
+    filteredSources().filter((s) => !s.hidden),
   );
 
   const hiddenSources = createMemo(() =>
-    filteredSources().filter((s) => s.hidden)
+    filteredSources().filter((s) => s.hidden),
   );
 
   const isAnyScanning = createMemo(() =>
-    Object.values(scanStatus()).some((s) => s.status === "scanning")
+    Object.values(scanStatus()).some((s) => s.status === "scanning"),
   );
 
   function openSource(source: Source) {
@@ -101,7 +132,10 @@ export function SourcesView() {
   async function confirmRename() {
     const id = renamingId();
     const name = renameValue().trim();
-    if (!id || !name) { setRenamingId(null); return; }
+    if (!id || !name) {
+      setRenamingId(null);
+      return;
+    }
     try {
       await invoke("rename_source", { sourceId: id, name });
       await refreshSources();
@@ -118,15 +152,17 @@ export function SourcesView() {
   const [fadingOutId, setFadingOutId] = createSignal<string | null>(null);
 
   const [selectionMode, setSelectionMode] = createSignal(false);
-  const [selectedIds, setSelectedIds] = createSignal<Set<string>>(new Set<string>());
+  const [selectedIds, setSelectedIds] = createSignal<Set<string>>(
+    new Set<string>(),
+  );
   const [bulkRemoving, setBulkRemoving] = createSignal(false);
 
   const selectedSources = createMemo(() =>
-    sortedSources().filter((source) => selectedIds().has(source.id))
+    sortedSources().filter((source) => selectedIds().has(source.id)),
   );
 
   const selectableSources = createMemo(() =>
-    showHidden() ? [...visibleSources(), ...hiddenSources()] : visibleSources()
+    showHidden() ? [...visibleSources(), ...hiddenSources()] : visibleSources(),
   );
 
   const selectedCount = createMemo(() => selectedIds().size);
@@ -274,7 +310,11 @@ export function SourcesView() {
       return;
     }
 
-    if (selectionMode() && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+    if (
+      selectionMode() &&
+      (e.ctrlKey || e.metaKey) &&
+      e.key.toLowerCase() === "a"
+    ) {
       e.preventDefault();
       e.stopPropagation();
       const selectable = selectableSources();
@@ -309,7 +349,9 @@ export function SourcesView() {
 
   const [draggingId, setDraggingId] = createSignal<string | null>(null);
   const [dropTargetId, setDropTargetId] = createSignal<string | null>(null);
-  const [dropPosition, setDropPosition] = createSignal<"above" | "below">("below");
+  const [dropPosition, setDropPosition] = createSignal<"above" | "below">(
+    "below",
+  );
 
   function handleDragStart(e: DragEvent, sourceId: string) {
     setDraggingId(sourceId);
@@ -374,7 +416,9 @@ export function SourcesView() {
         selectionMode={selectionMode()}
         selected={selectedIds().has(source.id)}
         onToggleSelect={() => toggleSelected(source.id)}
-        onClick={() => source.path_missing ? startLocate(source) : openSource(source)}
+        onClick={() =>
+          source.path_missing ? startLocate(source) : openSource(source)
+        }
         onLocate={() => handleLocate(source)}
         onRescan={() => scanSource(source.id)}
         onRename={() => startRename(source)}
@@ -384,25 +428,44 @@ export function SourcesView() {
           setSourceHidden(source.id, !hidden);
         }}
         onRemove={() => startRemove(source.id)}
-        renaming={renamingId() === source.id ? {
-          value: renameValue(),
-          onChange: setRenameValue,
-          onConfirm: confirmRename,
-          onCancel: () => setRenamingId(null),
-        } : undefined}
-        removing={removingId() === source.id ? {
-          onConfirm: confirmRemove,
-          onCancel: () => setRemovingId(null),
-        } : undefined}
-        locating={locatingId() === source.id ? {
-          onConfirm: () => handleLocate(source),
-          onCancel: () => { setLocatingId(null); setLocateError(null); },
-          error: locateError() ?? undefined,
-        } : undefined}
+        renaming={
+          renamingId() === source.id
+            ? {
+                value: renameValue(),
+                onChange: setRenameValue,
+                onConfirm: confirmRename,
+                onCancel: () => setRenamingId(null),
+              }
+            : undefined
+        }
+        removing={
+          removingId() === source.id
+            ? {
+                onConfirm: confirmRemove,
+                onCancel: () => setRemovingId(null),
+              }
+            : undefined
+        }
+        locating={
+          locatingId() === source.id
+            ? {
+                onConfirm: () => handleLocate(source),
+                onCancel: () => {
+                  setLocatingId(null);
+                  setLocateError(null);
+                },
+                error: locateError() ?? undefined,
+              }
+            : undefined
+        }
         fadingOut={fadingOutId() === source.id}
         onFadeOutDone={() => handleFadeOutDone(source.id)}
         dragging={!hidden ? draggingId() === source.id : undefined}
-        dropIndicator={!hidden && dropTargetId() === source.id && draggingId() !== source.id ? dropPosition() : undefined}
+        dropIndicator={
+          !hidden && dropTargetId() === source.id && draggingId() !== source.id
+            ? dropPosition()
+            : undefined
+        }
         onDragStart={!hidden ? (e) => handleDragStart(e, source.id) : undefined}
         onDragOver={!hidden ? (e) => handleDragOver(e, source.id) : undefined}
         onDragEnd={!hidden ? handleDragEnd : undefined}
@@ -412,7 +475,10 @@ export function SourcesView() {
   }
 
   return (
-    <div class="flex flex-col flex-1 overflow-hidden" onKeyDown={handleViewKeyDown}>
+    <div
+      class="flex flex-1 flex-col overflow-hidden"
+      onKeyDown={handleViewKeyDown}
+    >
       <Toolbar>
         <Show
           when={selectionMode()}
@@ -426,12 +492,21 @@ export function SourcesView() {
                 <ToolbarInlineButton onClick={enterSelectionMode}>
                   Select
                 </ToolbarInlineButton>
-                <ToolbarButton onClick={handleRescanAll} title="Re-scan all sources" disabled={isAnyScanning()}>
-                  <RefreshCw size={16} class={isAnyScanning() ? "animate-spin" : ""} />
+                <ToolbarButton
+                  onClick={handleRescanAll}
+                  title="Re-scan all sources"
+                  disabled={isAnyScanning()}
+                >
+                  <RefreshCw
+                    size={16}
+                    class={isAnyScanning() ? "animate-spin" : ""}
+                  />
                 </ToolbarButton>
                 <ToolbarButton
                   onClick={handleToggleHidden}
-                  title={showHidden() ? "Hide hidden sources" : "Show hidden sources"}
+                  title={
+                    showHidden() ? "Hide hidden sources" : "Show hidden sources"
+                  }
                   class={showHidden() ? "text-jade-400" : ""}
                 >
                   <Show when={showHidden()} fallback={<Eye size={16} />}>
@@ -476,7 +551,14 @@ export function SourcesView() {
               onClick={handleBulkHideShow}
               disabled={selectedCount() === 0 || bulkRemoving()}
             >
-              <Show when={bulkHideLabel() === "Show"} fallback={<><EyeOff size={14} /> Hide</>}>
+              <Show
+                when={bulkHideLabel() === "Show"}
+                fallback={
+                  <>
+                    <EyeOff size={14} /> Hide
+                  </>
+                }
+              >
                 <Eye size={14} /> Show
               </Show>
             </ToolbarInlineButton>
@@ -505,7 +587,12 @@ export function SourcesView() {
         <div class="border-b border-red-900/30 bg-red-950/20 px-4 py-2">
           <div class="mx-auto flex max-w-3xl items-start justify-between gap-3">
             <p class="text-xs leading-relaxed text-red-300/85">
-              Remove {selectedCount()} {selectedCount() === 1 ? "source" : "sources"}? All manga from {selectedCount() === 1 ? "this source" : "these sources"} will be removed from your library and history. Reading progress will be lost and will not return even if you re-add {selectedCount() === 1 ? "it" : "them"} later.
+              Remove {selectedCount()}{" "}
+              {selectedCount() === 1 ? "source" : "sources"}? All manga from{" "}
+              {selectedCount() === 1 ? "this source" : "these sources"} will be
+              removed from your library and history. Reading progress will be
+              lost and will not return even if you re-add{" "}
+              {selectedCount() === 1 ? "it" : "them"} later.
             </p>
             <div class="flex shrink-0 items-center gap-2">
               <button
@@ -525,10 +612,10 @@ export function SourcesView() {
         </div>
       </Show>
 
-      <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <Show when={status() === "loading"}>
           <div class="flex-1 overflow-y-auto">
-            <div class="max-w-3xl mx-auto px-4 py-2">
+            <div class="mx-auto max-w-3xl px-4 py-2">
               <SourceListSkeleton count={3} />
             </div>
           </div>
@@ -543,12 +630,12 @@ export function SourcesView() {
             description="A source is a folder that contains manga. Pick a folder and Ace will treat each subfolder inside it as a manga title."
             action={{ label: "Add source folder", onClick: handleAddSource }}
           >
-            <div class="mt-6 pt-6 border-t border-ink-800/80 w-full max-w-md">
-              <p class="text-[0.7rem] uppercase tracking-wider text-ink-600 font-medium mb-3">
+            <div class="mt-6 w-full max-w-md border-t border-ink-800/80 pt-6">
+              <p class="mb-3 text-[0.7rem] font-medium tracking-wider text-ink-600 uppercase">
                 Expected layout
               </p>
-              <pre class="text-xs text-ink-500 leading-relaxed font-mono">
-{`source/           ← the folder you pick (a collection of manga)
+              <pre class="font-mono text-xs leading-relaxed text-ink-500">
+                {`source/           ← the folder you pick (a collection of manga)
   Manga Title/    ← the manga
     Chapter 01/   ← folders that contain images (pages)
     Chapter 02/
@@ -558,23 +645,34 @@ export function SourcesView() {
             </div>
           </EmptyState>
         </Show>
-        <Show when={sources().length > 0 && visibleSources().length === 0 && hiddenSources().length === 0}>
+        <Show
+          when={
+            sources().length > 0 &&
+            visibleSources().length === 0 &&
+            hiddenSources().length === 0
+          }
+        >
           <EmptyState
             eyebrow="No results"
             title="No sources match your search."
             description="Try a different query or clear the search to see all sources."
           />
         </Show>
-        <Show when={sources().length > 0 && (visibleSources().length > 0 || hiddenSources().length > 0)}>
+        <Show
+          when={
+            sources().length > 0 &&
+            (visibleSources().length > 0 || hiddenSources().length > 0)
+          }
+        >
           <div class="flex-1 overflow-y-auto">
-            <div class="max-w-3xl mx-auto px-4 py-2">
+            <div class="mx-auto max-w-3xl px-4 py-2">
               <For each={visibleSources()}>
                 {(source) => renderSourceRow(source)}
               </For>
 
               <Show when={showHidden() && hiddenSources().length > 0}>
-                <div class="mt-4 pt-4 border-t border-ink-800/40">
-                  <p class="text-xs uppercase tracking-wider text-ink-600 font-medium mb-2 px-4">
+                <div class="mt-4 border-t border-ink-800/40 pt-4">
+                  <p class="mb-2 px-4 text-xs font-medium tracking-wider text-ink-600 uppercase">
                     Hidden
                   </p>
                   <For each={hiddenSources()}>

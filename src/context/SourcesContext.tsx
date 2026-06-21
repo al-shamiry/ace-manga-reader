@@ -1,5 +1,13 @@
-import { createContext, createSignal, onMount, useContext, JSX } from "solid-js";
+import {
+  createContext,
+  createSignal,
+  JSX,
+  onMount,
+  useContext,
+} from "solid-js";
+
 import { invoke } from "@tauri-apps/api/core";
+
 import type { Source } from "../types";
 
 type Status = "idle" | "loading" | "error";
@@ -32,7 +40,9 @@ export function SourcesProvider(props: { children: JSX.Element }) {
   const [sources, setSources] = createSignal<Source[]>([]);
   const [status, setStatus] = createSignal<Status>("idle");
   const [error, setError] = createSignal("");
-  const [scanStatus, setScanStatus] = createSignal<Record<string, ScanEntry>>({});
+  const [scanStatus, setScanStatus] = createSignal<Record<string, ScanEntry>>(
+    {},
+  );
   const [sourceMutationCount, setSourceMutationCount] = createSignal(0);
 
   let resolveInitial!: () => void;
@@ -55,7 +65,9 @@ export function SourcesProvider(props: { children: JSX.Element }) {
   });
 
   async function refreshSources() {
-    const srcs = await invoke<Source[]>("list_sources", { includeHidden: true });
+    const srcs = await invoke<Source[]>("list_sources", {
+      includeHidden: true,
+    });
     setSources(srcs);
   }
 
@@ -109,7 +121,10 @@ export function SourcesProvider(props: { children: JSX.Element }) {
     if (!source) return;
     if (scanStatus()[sourceId]?.status === "scanning") return;
     if (source.path_missing) {
-      setScanStatusFor(sourceId, { status: "error", error: "Source folder is missing" });
+      setScanStatusFor(sourceId, {
+        status: "error",
+        error: "Source folder is missing",
+      });
       setTimeout(() => setScanStatusFor(sourceId, undefined), 1500);
       return;
     }
@@ -140,23 +155,25 @@ export function SourcesProvider(props: { children: JSX.Element }) {
   }
 
   return (
-    <SourcesContext.Provider value={{
-      sources,
-      status,
-      error,
-      loadRoot,
-      addSource,
-      removeSource,
-      relocateSource,
-      setSourceHidden,
-      refreshSources,
-      getSource,
-      scanStatus,
-      scanSource,
-      scanAllSources,
-      initialLoad: () => initialLoadPromise,
-      sourceMutationCount,
-    }}>
+    <SourcesContext.Provider
+      value={{
+        sources,
+        status,
+        error,
+        loadRoot,
+        addSource,
+        removeSource,
+        relocateSource,
+        setSourceHidden,
+        refreshSources,
+        getSource,
+        scanStatus,
+        scanSource,
+        scanAllSources,
+        initialLoad: () => initialLoadPromise,
+        sourceMutationCount,
+      }}
+    >
       {props.children}
     </SourcesContext.Provider>
   );

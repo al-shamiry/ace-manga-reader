@@ -27,7 +27,10 @@ pub(crate) fn relocate_source(
     let mut guard = db::lock(&cache)?;
 
     if !guard.db.sources.contains_key(source_id) {
-        return Err(AppError::NotFound(format!("source '{}' not found", source_id)));
+        return Err(AppError::NotFound(format!(
+            "source '{}' not found",
+            source_id
+        )));
     }
     if new_source_id != source_id && guard.db.sources.contains_key(&new_source_id) {
         return Err(AppError::Invalid(
@@ -127,8 +130,17 @@ fn validate_relocation_targets(
     }
 
     let count = missing.len();
-    let preview = missing.iter().take(5).cloned().collect::<Vec<_>>().join(", ");
-    let suffix = if count > 5 { format!(" and {} more", count - 5) } else { String::new() };
+    let preview = missing
+        .iter()
+        .take(5)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    let suffix = if count > 5 {
+        format!(" and {} more", count - 5)
+    } else {
+        String::new()
+    };
     Err(AppError::Invalid(format!(
         "Cannot relocate: {} manga folder{} missing at the new path: {}{}",
         count,
@@ -163,7 +175,11 @@ fn remap_manga(
 
     if let Some(override_path) = &existing.cover_override {
         let rebased = rebase_under_root(override_path, old_source_path, new_source_path);
-        updated.cover_override = Some(rekey_cached_cover_path(&rebased, old_manga_id, &new_manga_id));
+        updated.cover_override = Some(rekey_cached_cover_path(
+            &rebased,
+            old_manga_id,
+            &new_manga_id,
+        ));
     }
 
     updated.chapters = remap_chapter_statuses(&old_manga_path, &new_manga_path, &existing.chapters);

@@ -34,7 +34,8 @@ pub(crate) fn prune_mangas(app: &AppHandle, manga_ids: &[String]) -> AppResult<(
     }
     let mut data = load(app)?;
     let id_set: HashSet<&str> = manga_ids.iter().map(|s| s.as_str()).collect();
-    data.entries.retain(|e| !id_set.contains(e.manga_id.as_str()));
+    data.entries
+        .retain(|e| !id_set.contains(e.manga_id.as_str()));
     save(app, &data)
 }
 

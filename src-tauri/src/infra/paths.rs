@@ -26,7 +26,9 @@ pub(crate) fn history_file(app: &AppHandle) -> AppResult<PathBuf> {
 }
 
 pub(crate) fn manga_settings_file(app: &AppHandle, manga_id: &str) -> AppResult<PathBuf> {
-    Ok(data_dir(app)?.join("settings").join(format!("{manga_id}.json")))
+    Ok(data_dir(app)?
+        .join("settings")
+        .join(format!("{manga_id}.json")))
 }
 
 pub(crate) fn covers_dir(app: &AppHandle) -> AppResult<PathBuf> {

@@ -72,7 +72,10 @@ pub fn relocate_source(
 ) -> AppResult<SourceDto> {
     let new_dir = Path::new(&new_path);
     if !new_dir.is_dir() {
-        return Err(AppError::Invalid(format!("'{}' is not a directory", new_path)));
+        return Err(AppError::Invalid(format!(
+            "'{}' is not a directory",
+            new_path
+        )));
     }
 
     let id_map = relocate::relocate_source(&app, &source_id, new_dir)?;

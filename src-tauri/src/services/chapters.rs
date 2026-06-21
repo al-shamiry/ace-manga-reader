@@ -39,7 +39,9 @@ pub(crate) fn rescan(app: &tauri::AppHandle, manga_path: &str) -> AppResult<Vec<
     let cache = app.db();
     db::mutate(&cache, app, |db| {
         if let Some(entry) = db.mangas.get_mut(&manga_id) {
-            entry.chapters.retain(|id, _| on_disk_ids.contains(id.as_str()));
+            entry
+                .chapters
+                .retain(|id, _| on_disk_ids.contains(id.as_str()));
             entry.chapter_count = chapter_count;
             entry.read_chapters = entry
                 .chapters
@@ -74,7 +76,10 @@ pub(crate) fn open(
             archive::extract_pages(path, &extract_dir)
         }
 
-        _ => Err(AppError::Invalid(format!("Unknown file_type: {}", file_type))),
+        _ => Err(AppError::Invalid(format!(
+            "Unknown file_type: {}",
+            file_type
+        ))),
     }
 }
 
@@ -111,7 +116,13 @@ pub(crate) fn set_mangas_read(
             let guard = db::lock(&cache)?;
             manga_ids
                 .iter()
-                .filter_map(|id| guard.db.mangas.get(id).map(|m| (id.clone(), m.path.clone())))
+                .filter_map(|id| {
+                    guard
+                        .db
+                        .mangas
+                        .get(id)
+                        .map(|m| (id.clone(), m.path.clone()))
+                })
                 .collect()
         };
         paths
@@ -125,7 +136,9 @@ pub(crate) fn set_mangas_read(
     let now = now_epoch();
     db::mutate(&cache, app, |db| {
         for id in &manga_ids {
-            let Some(entry) = db.mangas.get_mut(id) else { continue };
+            let Some(entry) = db.mangas.get_mut(id) else {
+                continue;
+            };
             entry.chapters.clear();
             if read {
                 if let Some(ids) = chapter_ids.get(id) {
@@ -185,7 +198,10 @@ fn discover_chapters(dir: &Path, chapters_map: &HashMap<String, ChapterStatus>) 
             return None;
         }
         let id = path_id(p);
-        let status = chapters_map.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
+        let status = chapters_map
+            .get(&id)
+            .cloned()
+            .unwrap_or(ChapterStatus::Unread);
         Some(Chapter {
             id,
             title: title_from_path(p),
@@ -198,7 +214,10 @@ fn discover_chapters(dir: &Path, chapters_map: &HashMap<String, ChapterStatus>) 
 
     let cbz_chapters = cbz_files.par_iter().map(|p| {
         let id = path_id(p);
-        let status = chapters_map.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
+        let status = chapters_map
+            .get(&id)
+            .cloned()
+            .unwrap_or(ChapterStatus::Unread);
         let page_count = archive::count_images(p);
         Chapter {
             id,

@@ -26,9 +26,9 @@ export type EmptyStateProps = {
 
 export function EmptyState(props: EmptyStateProps) {
   return (
-    <div class="flex flex-col items-start justify-center h-full w-full max-w-xl mx-auto px-10 gap-5">
+    <div class="mx-auto flex h-full w-full max-w-xl flex-col items-start justify-center gap-5 px-10">
       <p
-        class="text-xs uppercase tracking-[0.2em] font-medium"
+        class="text-xs font-medium tracking-[0.2em] uppercase"
         classList={{
           "text-jade-400": props.accent,
           "text-ink-600": !props.accent,
@@ -36,11 +36,11 @@ export function EmptyState(props: EmptyStateProps) {
       >
         {props.eyebrow}
       </p>
-      <h2 class="font-display text-display text-ink-100 leading-tight">
+      <h2 class="font-display text-display leading-tight text-ink-100">
         {props.title}
       </h2>
       <Show when={props.description}>
-        <p class="text-base text-ink-400 leading-relaxed max-w-md">
+        <p class="max-w-md text-base leading-relaxed text-ink-400">
           {props.description}
         </p>
       </Show>
@@ -48,7 +48,7 @@ export function EmptyState(props: EmptyStateProps) {
         {(action) => (
           <button
             onClick={action().onClick}
-            class="mt-2 px-5 py-2.5 rounded-md bg-jade-600 hover:bg-jade-500 text-white text-sm font-medium transition-colors cursor-pointer shadow-lg shadow-jade-950/40"
+            class="mt-2 cursor-pointer rounded-md bg-jade-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-jade-950/40 transition-colors hover:bg-jade-500"
           >
             {action().label}
           </button>

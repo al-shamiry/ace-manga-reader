@@ -1,4 +1,5 @@
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
+
 import { Check, Search, X } from "lucide-solid";
 
 import { cn } from "~/lib/utils";
@@ -82,7 +83,7 @@ const ChipMultiSelect = (props: ChipMultiSelectProps) => {
         <div class="flex flex-wrap gap-1.5">
           <For each={props.selected}>
             {(value) => (
-              <span class="inline-flex max-w-full items-center gap-1 rounded-md bg-jade-500/15 py-0.5 pl-2 pr-1 text-xs font-medium text-jade-300 ring-1 ring-inset ring-jade-500/30">
+              <span class="inline-flex max-w-full items-center gap-1 rounded-md bg-jade-500/15 py-0.5 pr-1 pl-2 text-xs font-medium text-jade-300 ring-1 ring-jade-500/30 ring-inset">
                 <span class="truncate">{value}</span>
                 <button
                   type="button"
@@ -103,7 +104,7 @@ const ChipMultiSelect = (props: ChipMultiSelectProps) => {
       <div class="relative">
         <Search
           size={14}
-          class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-ink-500"
+          class="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-ink-500"
         />
         <input
           type="text"
@@ -116,7 +117,7 @@ const ChipMultiSelect = (props: ChipMultiSelectProps) => {
             setHighlight(0);
           }}
           onKeyDown={onKeyDown}
-          class="h-8 w-full rounded-md border border-ink-600 bg-ink-900 pl-7 pr-2 text-sm text-ink-100 outline-none transition-colors placeholder:text-ink-500 focus:border-jade-500/60"
+          class="h-8 w-full rounded-md border border-ink-600 bg-ink-900 pr-2 pl-7 text-sm text-ink-100 transition-colors outline-none placeholder:text-ink-500 focus:border-jade-500/60"
         />
       </div>
 
@@ -131,37 +132,41 @@ const ChipMultiSelect = (props: ChipMultiSelectProps) => {
             }
           >
             <For each={filtered()}>
-            {(value, i) => {
-              const active = () => isSelected(value);
-              const highlighted = () => highlight() === i();
-              return (
-                <button
-                  type="button"
-                  // Preserve input focus so typing keeps working after a click.
-                  onMouseDown={(e) => e.preventDefault()}
-                  onMouseEnter={() => setHighlight(i())}
-                  onClick={() => toggle(value)}
-                  class={cn(
-                    "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-ink-200 transition-colors",
-                    highlighted() && "bg-ink-700/70 text-ink-50",
-                  )}
-                >
-                  <span
+              {(value, i) => {
+                const active = () => isSelected(value);
+                const highlighted = () => highlight() === i();
+                return (
+                  <button
+                    type="button"
+                    // Preserve input focus so typing keeps working after a click.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setHighlight(i())}
+                    onClick={() => toggle(value)}
                     class={cn(
-                      "grid size-4 shrink-0 place-items-center rounded-[3px] border transition-colors",
-                      active()
-                        ? "border-jade-500 bg-jade-500"
-                        : "border-ink-600 bg-ink-900",
+                      "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-ink-200 transition-colors",
+                      highlighted() && "bg-ink-700/70 text-ink-50",
                     )}
                   >
-                    <Show when={active()}>
-                      <Check size={12} stroke-width={3} class="text-ink-950" />
-                    </Show>
-                  </span>
-                  <span class="truncate">{value}</span>
-                </button>
-              );
-            }}
+                    <span
+                      class={cn(
+                        "grid size-4 shrink-0 place-items-center rounded-[3px] border transition-colors",
+                        active()
+                          ? "border-jade-500 bg-jade-500"
+                          : "border-ink-600 bg-ink-900",
+                      )}
+                    >
+                      <Show when={active()}>
+                        <Check
+                          size={12}
+                          stroke-width={3}
+                          class="text-ink-950"
+                        />
+                      </Show>
+                    </span>
+                    <span class="truncate">{value}</span>
+                  </button>
+                );
+              }}
             </For>
           </Show>
         </div>

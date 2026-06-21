@@ -1,25 +1,54 @@
-import { Show, createSignal, createMemo, createEffect, on, onMount, onCleanup } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  on,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { Plus } from "lucide-solid";
+
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { Plus } from "lucide-solid";
+
+import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
+import { EmptyState } from "../components/EmptyState";
+import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
+import { MangaGrid } from "../components/MangaGrid";
+import { SelectionToolbar } from "../components/SelectionToolbar";
+import { SortDropdown } from "../components/SortDropdown";
+import type { Tab } from "../components/TabBar";
+import { TabBar } from "../components/TabBar";
+import {
+  Toolbar,
+  ToolbarActions,
+  ToolbarButton,
+  ToolbarInlineButton,
+  ToolbarSearchRow,
+} from "../components/ui/toolbar";
 import { useLibrary } from "../context/LibraryContext";
 import { useSources } from "../context/SourcesContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
-import { EmptyState } from "../components/EmptyState";
-import { MangaGrid } from "../components/MangaGrid";
-import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
-import { SortDropdown } from "../components/SortDropdown";
-import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
-import { SelectionToolbar } from "../components/SelectionToolbar";
-import { TabBar } from "../components/TabBar";
-import { Toolbar, ToolbarActions, ToolbarButton, ToolbarInlineButton, ToolbarSearchRow } from "../components/ui/toolbar";
 import { createMangaSelection } from "../lib/createMangaSelection";
-import type { Tab } from "../components/TabBar";
-import type { Chapter, LibraryFilters, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
+import type {
+  Chapter,
+  LibraryDisplay,
+  LibraryFilters,
+  Manga,
+  ReadingStatus,
+  SortPreference,
+} from "../types";
 
 export function LibraryView() {
-  const { categories, libraryEntries, refreshCategories, refreshLibrary, initialLoad } = useLibrary();
+  const {
+    categories,
+    libraryEntries,
+    refreshCategories,
+    refreshLibrary,
+    initialLoad,
+  } = useLibrary();
   const { sources, addSource } = useSources();
   const view = useViewLoading();
   // Mark busy synchronously so the overlay paints on the first frame.
@@ -29,10 +58,19 @@ export function LibraryView() {
   const [slideClass, setSlideClass] = createSignal("");
   const [creatingCategory, setCreatingCategory] = createSignal(false);
   const [newCategoryName, setNewCategoryName] = createSignal("");
-  const [renaming, setRenaming] = createSignal<{ id: string; name: string } | null>(null);
+  const [renaming, setRenaming] = createSignal<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [filters, setFilters] = createSignal<FilterState>({ sources: [], readingStatus: [] });
-  const [sortPref, setSortPref] = createSignal<SortPreference>({ field: "last-read", direction: "desc" });
+  const [filters, setFilters] = createSignal<FilterState>({
+    sources: [],
+    readingStatus: [],
+  });
+  const [sortPref, setSortPref] = createSignal<SortPreference>({
+    field: "last-read",
+    direction: "desc",
+  });
   const [displayOpts, setDisplayOpts] = createSignal<LibraryDisplay>({
     display_mode: "comfortable",
     card_size: 8,
@@ -48,20 +86,32 @@ export function LibraryView() {
   // so we swallow errors per-call and resolve them all together.
   onMount(async () => {
     const persistedFilters = invoke<LibraryFilters>("get_library_filters")
-      .then((saved) => setFilters({
-        sources: saved.sources,
-        readingStatus: saved.reading_status as ReadingStatus[],
-      }))
-      .catch(() => { /* no saved filters */ });
+      .then((saved) =>
+        setFilters({
+          sources: saved.sources,
+          readingStatus: saved.reading_status as ReadingStatus[],
+        }),
+      )
+      .catch(() => {
+        /* no saved filters */
+      });
     const persistedTab = invoke<string | null>("get_active_category")
-      .then((savedTab) => { if (savedTab) setActiveTab(savedTab); })
-      .catch(() => { /* no saved tab */ });
+      .then((savedTab) => {
+        if (savedTab) setActiveTab(savedTab);
+      })
+      .catch(() => {
+        /* no saved tab */
+      });
     const persistedSort = invoke<SortPreference>("get_library_sort_preference")
       .then((pref) => setSortPref(pref))
-      .catch(() => { /* no saved sort */ });
+      .catch(() => {
+        /* no saved sort */
+      });
     const persistedDisplay = invoke<LibraryDisplay>("get_library_display")
       .then((disp) => setDisplayOpts(disp))
-      .catch(() => { /* no saved display */ });
+      .catch(() => {
+        /* no saved display */
+      });
 
     await Promise.all([
       initialLoad(),
@@ -152,17 +202,22 @@ export function LibraryView() {
   // Mirrors MangaDetailView's `primaryChapter` logic so behavior is identical.
   async function handleContinue(manga: Manga) {
     try {
-      const list = await invoke<Chapter[]>("list_chapters", { mangaPath: manga.path });
+      const list = await invoke<Chapter[]>("list_chapters", {
+        mangaPath: manga.path,
+      });
       if (list.length === 0) return;
       const allUnread = list.every((c) => c.status.type === "unread");
-      const target = allUnread ? list[0] : list.find((c) => c.status.type !== "read");
+      const target = allUnread
+        ? list[0]
+        : list.find((c) => c.status.type !== "read");
       if (!target) {
         // All chapters read — fall through to manga detail
         navigate("/manga/" + manga.id, { state: { manga, from: "library" } });
         return;
       }
       const idx = list.findIndex((c) => c.id === target.id);
-      const initialPage = target.status.type === "ongoing" ? target.status.page : 0;
+      const initialPage =
+        target.status.type === "ongoing" ? target.status.page : 0;
       navigate("/reader/" + target.id, {
         state: {
           chapter: target,
@@ -190,18 +245,22 @@ export function LibraryView() {
     const entries = libraryEntries();
     if (cats.length <= 1 || entries.length === 0) return cats;
 
-    const defaultCount = entries.filter((e) => e.category_ids?.includes("default")).length;
+    const defaultCount = entries.filter((e) =>
+      e.category_ids?.includes("default"),
+    ).length;
     if (defaultCount === 0) return cats.filter((c) => c.id !== "default");
     return cats;
   });
 
   // Default to first visible category; update if current tab becomes hidden
-  createEffect(on(visibleCategories, (cats) => {
-    const current = activeTab();
-    if (current === "" || !cats.some((c) => c.id === current)) {
-      if (cats.length > 0) setActiveTab(cats[0].id);
-    }
-  }));
+  createEffect(
+    on(visibleCategories, (cats) => {
+      const current = activeTab();
+      if (current === "" || !cats.some((c) => c.id === current)) {
+        if (cats.length > 0) setActiveTab(cats[0].id);
+      }
+    }),
+  );
 
   // Manga entries filtered by active tab
   const filteredEntries = createMemo(() => {
@@ -260,7 +319,7 @@ export function LibraryView() {
   }
 
   const mangasForGrid = createMemo((): Manga[] =>
-    sortEntries(applyFilters(filteredEntries()))
+    sortEntries(applyFilters(filteredEntries())),
   );
 
   // ── Bulk selection ──
@@ -333,7 +392,9 @@ export function LibraryView() {
 
   onMount(() => {
     window.addEventListener("keydown", handleSelectionKeys, true);
-    onCleanup(() => window.removeEventListener("keydown", handleSelectionKeys, true));
+    onCleanup(() =>
+      window.removeEventListener("keydown", handleSelectionKeys, true),
+    );
   });
 
   let switching = false;
@@ -361,16 +422,20 @@ export function LibraryView() {
   }
 
   function countForCategory(categoryId: string): number {
-    return applyFilters(libraryEntries().filter((e) => e.category_ids?.includes(categoryId))).length;
+    return applyFilters(
+      libraryEntries().filter((e) => e.category_ids?.includes(categoryId)),
+    ).length;
   }
 
   const tabs = createMemo((): Tab[] =>
     visibleCategories().map((cat) => ({
       id: cat.id,
       label: cat.name,
-      count: displayOpts().show_item_count ? countForCategory(cat.id) : undefined,
+      count: displayOpts().show_item_count
+        ? countForCategory(cat.id)
+        : undefined,
       deletable: cat.id !== "default",
-    }))
+    })),
   );
 
   // ── Category management ──
@@ -404,7 +469,10 @@ export function LibraryView() {
     const r = renaming();
     if (!r || !r.name.trim()) return;
     try {
-      await invoke("rename_category", { categoryId: r.id, name: r.name.trim() });
+      await invoke("rename_category", {
+        categoryId: r.id,
+        name: r.name.trim(),
+      });
       setRenaming(null);
       await refreshCategories();
     } catch (e) {
@@ -417,7 +485,8 @@ export function LibraryView() {
   // The root is the only piece of state that distinguishes "fresh install" from
   // "user has a library but cleared it" — we treat both as empty-with-root if
   // sources is non-empty, and as first-run otherwise.
-  const isFirstRun = () => sources().length === 0 && libraryEntries().length === 0;
+  const isFirstRun = () =>
+    sources().length === 0 && libraryEntries().length === 0;
 
   async function handleChooseFolder() {
     const selected = await open({ directory: true, multiple: false });
@@ -442,7 +511,7 @@ export function LibraryView() {
   }
 
   return (
-    <div class="flex flex-col flex-1 overflow-hidden">
+    <div class="flex flex-1 flex-col overflow-hidden">
       {/* Library toolbar — tabs left, action cluster right. gap-0 because
           the tabs/`+` cluster manages its own spacing inside an overflow
           container. */}
@@ -450,78 +519,102 @@ export function LibraryView() {
         <Show
           when={selection.active()}
           fallback={
-        <>
-          <div class="flex h-full items-center overflow-x-auto overflow-y-hidden flex-1 min-w-0">
-            {/* Keyed remount on show_item_count toggle — Kobalte's TabsIndicator
+            <>
+              <div class="flex h-full min-w-0 flex-1 items-center overflow-x-auto overflow-y-hidden">
+                {/* Keyed remount on show_item_count toggle — Kobalte's TabsIndicator
                 only observes the selected tab's resize and reads offsetLeft
                 synchronously, so reflows from other tabs widening leave the
                 indicator misaligned. Remounting forces its onMount path which
                 waits a microtask for layout to settle. */}
-            <Show when={`${displayOpts().show_item_count ? "with" : "without"}\0${visibleCategories().map(c => c.name).join("\0")}`} keyed>
-              {(_key) => (
-                <TabBar
-                  tabs={tabs()}
-                  activeTab={activeTab()}
-                  onSelect={switchTab}
-                  onRenameStart={(tab) => setRenaming({ id: tab.id, name: tab.label })}
-                  onDelete={(tab) => handleDeleteCategory(tab.id)}
-                  renamingId={renaming()?.id}
-                  renamingValue={renaming()?.name}
-                  onRenameInput={(value) => setRenaming({ ...renaming()!, name: value })}
-                  onRenameSubmit={handleRenameCategory}
-                  onRenameCancel={() => setRenaming(null)}
-                />
-              )}
-            </Show>
+                <Show
+                  when={`${displayOpts().show_item_count ? "with" : "without"}\0${visibleCategories()
+                    .map((c) => c.name)
+                    .join("\0")}`}
+                  keyed
+                >
+                  {(_key) => (
+                    <TabBar
+                      tabs={tabs()}
+                      activeTab={activeTab()}
+                      onSelect={switchTab}
+                      onRenameStart={(tab) =>
+                        setRenaming({ id: tab.id, name: tab.label })
+                      }
+                      onDelete={(tab) => handleDeleteCategory(tab.id)}
+                      renamingId={renaming()?.id}
+                      renamingValue={renaming()?.name}
+                      onRenameInput={(value) =>
+                        setRenaming({ ...renaming()!, name: value })
+                      }
+                      onRenameSubmit={handleRenameCategory}
+                      onRenameCancel={() => setRenaming(null)}
+                    />
+                  )}
+                </Show>
 
-            {/* Inline category create — replaces a modal. Commit only on
+                {/* Inline category create — replaces a modal. Commit only on
                 Enter; Escape or focus loss cancels without creating. This
                 keeps the commit path single-entry so there's nothing to
                 race against. */}
-            <Show
-              when={!creatingCategory()}
-              fallback={
-                <form
-                  class="flex h-full items-center ml-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    submitCreateCategory();
-                  }}
+                <Show
+                  when={!creatingCategory()}
+                  fallback={
+                    <form
+                      class="ml-2 flex h-full items-center"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        submitCreateCategory();
+                      }}
+                    >
+                      <input
+                        ref={(el) => requestAnimationFrame(() => el.focus())}
+                        placeholder="Category name"
+                        class="h-7 w-32 rounded border border-jade-500 bg-ink-800 px-2 text-sm text-ink-100 outline-none placeholder:text-ink-600"
+                        value={newCategoryName()}
+                        onInput={(e) =>
+                          setNewCategoryName(e.currentTarget.value)
+                        }
+                        onBlur={cancelCreateCategory}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") cancelCreateCategory();
+                        }}
+                      />
+                    </form>
+                  }
                 >
-                  <input
-                    ref={(el) => requestAnimationFrame(() => el.focus())}
-                    placeholder="Category name"
-                    class="h-7 px-2 bg-ink-800 border border-jade-500 text-ink-100 placeholder:text-ink-600 rounded text-sm outline-none w-32"
-                    value={newCategoryName()}
-                    onInput={(e) => setNewCategoryName(e.currentTarget.value)}
-                    onBlur={cancelCreateCategory}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") cancelCreateCategory();
-                    }}
-                  />
-                </form>
-              }
-            >
-              <ToolbarButton class="ml-2" onClick={startCreateCategory} title="New category">
-                <Plus size={16} />
-              </ToolbarButton>
-            </Show>
-          </div>
+                  <ToolbarButton
+                    class="ml-2"
+                    onClick={startCreateCategory}
+                    title="New category"
+                  >
+                    <Plus size={16} />
+                  </ToolbarButton>
+                </Show>
+              </div>
 
-          {/* Sort & filter actions */}
-          <ToolbarActions class="ml-3">
-            <ToolbarInlineButton onClick={selection.enter} disabled={mangasForGrid().length === 0}>
-              Select
-            </ToolbarInlineButton>
-            <SortDropdown preference={sortPref()} onChange={handleSortChange} />
-            <DisplayOptionsPopover display={displayOpts()} onChange={handleDisplayChange} />
-            <FilterDropdown
-              state={filters()}
-              availableSources={availableSources()}
-              onChange={handleFilterChange}
-            />
-          </ToolbarActions>
-        </>
+              {/* Sort & filter actions */}
+              <ToolbarActions class="ml-3">
+                <ToolbarInlineButton
+                  onClick={selection.enter}
+                  disabled={mangasForGrid().length === 0}
+                >
+                  Select
+                </ToolbarInlineButton>
+                <SortDropdown
+                  preference={sortPref()}
+                  onChange={handleSortChange}
+                />
+                <DisplayOptionsPopover
+                  display={displayOpts()}
+                  onChange={handleDisplayChange}
+                />
+                <FilterDropdown
+                  state={filters()}
+                  availableSources={availableSources()}
+                  onChange={handleFilterChange}
+                />
+              </ToolbarActions>
+            </>
           }
         >
           <SelectionToolbar
@@ -554,18 +647,25 @@ export function LibraryView() {
         <Show
           when={mangasForGrid().length > 0}
           fallback={
-            <Show when={isFirstRun()} fallback={
-              <Show
-                when={filteredEntries().length > 0 && mangasForGrid().length === 0}
-                fallback={<LibraryEmptyState onBrowse={() => navigate("/sources")} />}
-              >
-                <EmptyState
-                  eyebrow="No results"
-                  title="No manga match your filters."
-                  description="Try adjusting the search query or active filters."
-                />
-              </Show>
-            }>
+            <Show
+              when={isFirstRun()}
+              fallback={
+                <Show
+                  when={
+                    filteredEntries().length > 0 && mangasForGrid().length === 0
+                  }
+                  fallback={
+                    <LibraryEmptyState onBrowse={() => navigate("/sources")} />
+                  }
+                >
+                  <EmptyState
+                    eyebrow="No results"
+                    title="No manga match your filters."
+                    description="Try adjusting the search query or active filters."
+                  />
+                </Show>
+              }
+            >
               <FirstRunWelcome onChooseFolder={handleChooseFolder} />
             </Show>
           }
@@ -575,7 +675,9 @@ export function LibraryView() {
             displayMode={displayOpts().display_mode}
             cardSize={displayOpts().card_size}
             showProgressBadge={displayOpts().show_unread_badge}
-            onContinue={displayOpts().show_continue_button ? handleContinue : undefined}
+            onContinue={
+              displayOpts().show_continue_button ? handleContinue : undefined
+            }
             selectionMode={selection.active()}
             isSelected={selection.isSelected}
             onToggleSelect={selection.toggle}
@@ -602,12 +704,12 @@ function FirstRunWelcome(props: { onChooseFolder: () => void }) {
       description="Pick the folder where your collection lives. We'll scan it once, cache the covers, and stay out of the way after that."
       action={{ label: "Choose library folder", onClick: props.onChooseFolder }}
     >
-      <div class="mt-6 pt-6 border-t border-ink-800/80 w-full max-w-md">
-        <p class="text-[0.7rem] uppercase tracking-wider text-ink-600 font-medium mb-3">
+      <div class="mt-6 w-full max-w-md border-t border-ink-800/80 pt-6">
+        <p class="mb-3 text-[0.7rem] font-medium tracking-wider text-ink-600 uppercase">
           Expected layout
         </p>
-        <pre class="text-xs text-ink-500 leading-relaxed font-mono">
-{`root/               ← the folder you are going to pick
+        <pre class="font-mono text-xs leading-relaxed text-ink-500">
+          {`root/               ← the folder you are going to pick
   source/           ← each subfolder is a source (a collection of manga)
     Manga Title/    ← the manga
       Chapter 01/   ← folders that contain images (pages)

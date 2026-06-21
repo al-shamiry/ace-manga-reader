@@ -1,5 +1,17 @@
-import { For, Show, createSignal } from "solid-js";
-import { CheckCheck, Circle, Square, SquareCheck, SquaresIntersect, Tag, Trash2 } from "lucide-solid";
+import { createSignal, For, Show } from "solid-js";
+
+import {
+  CheckCheck,
+  Circle,
+  Square,
+  SquareCheck,
+  SquaresIntersect,
+  Tag,
+  Trash2,
+} from "lucide-solid";
+
+import type { Category } from "../types";
+
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -8,8 +20,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { ToolbarActions, ToolbarButton, ToolbarInlineButton, ToolbarTitle, toolbarInlineButtonClass } from "./ui/toolbar";
-import type { Category } from "../types";
+import {
+  ToolbarActions,
+  ToolbarButton,
+  ToolbarInlineButton,
+  toolbarInlineButtonClass,
+  ToolbarTitle,
+} from "./ui/toolbar";
 
 interface Props {
   count: number;
@@ -70,10 +87,16 @@ export function SelectionToolbar(props: Props) {
           disabled={!hasSelection()}
           onApply={props.onApplyCategories}
         />
-        <ToolbarInlineButton onClick={props.onMarkRead} disabled={!hasSelection()}>
+        <ToolbarInlineButton
+          onClick={props.onMarkRead}
+          disabled={!hasSelection()}
+        >
           <CheckCheck size={14} /> Mark read
         </ToolbarInlineButton>
-        <ToolbarInlineButton onClick={props.onMarkUnread} disabled={!hasSelection()}>
+        <ToolbarInlineButton
+          onClick={props.onMarkUnread}
+          disabled={!hasSelection()}
+        >
           <Circle size={14} /> Mark unread
         </ToolbarInlineButton>
         <Show when={props.onRemoveFromLibrary}>
@@ -84,7 +107,9 @@ export function SelectionToolbar(props: Props) {
             onRemoveFromLibrary={() => props.onRemoveFromLibrary?.()}
           />
         </Show>
-        <ToolbarInlineButton onClick={props.onCancel}>Cancel</ToolbarInlineButton>
+        <ToolbarInlineButton onClick={props.onCancel}>
+          Cancel
+        </ToolbarInlineButton>
       </ToolbarActions>
     </>
   );
@@ -134,7 +159,7 @@ function BulkCategoryMenu(props: {
         <Tag size={14} /> Category
       </DropdownMenuTrigger>
       <DropdownMenuContent class="w-56">
-        <div class="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
+        <div class="px-2 pt-2 pb-1 text-xs font-semibold tracking-wider text-ink-500 uppercase">
           Add to categories
         </div>
         <DropdownMenuSeparator />
@@ -158,14 +183,15 @@ function BulkCategoryMenu(props: {
             </For>
           </div>
           <DropdownMenuSeparator />
-          <div class="px-1 pb-1 pt-0.5">
+          <div class="px-1 pt-0.5 pb-1">
             <button
               type="button"
               class={`${toolbarInlineButtonClass} w-full justify-center disabled:cursor-default disabled:opacity-40`}
               disabled={checked().size === 0}
               onClick={apply}
             >
-              Add to {checked().size || ""} {checked().size === 1 ? "category" : "categories"}
+              Add to {checked().size || ""}{" "}
+              {checked().size === 1 ? "category" : "categories"}
             </button>
           </div>
         </Show>

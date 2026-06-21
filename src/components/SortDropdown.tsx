@@ -1,16 +1,19 @@
-import { Show, For } from "solid-js";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-solid";
+import { For, Show } from "solid-js";
+
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-solid";
+
+import type { SortField, SortPreference } from "../types";
+
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuGroup,
   DropdownMenuHeader,
+  DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { toolbarIconButtonClass } from "./ui/toolbar";
-import type { SortField, SortPreference } from "../types";
 
 interface SortDropdownProps {
   preference: SortPreference;
@@ -32,7 +35,10 @@ export function SortDropdown(props: SortDropdownProps) {
   const effectiveDefault = () => props.defaultPref ?? DEFAULT_PREF;
   const isNonDefault = () => {
     const d = effectiveDefault();
-    return props.preference.field !== d.field || props.preference.direction !== d.direction;
+    return (
+      props.preference.field !== d.field ||
+      props.preference.direction !== d.direction
+    );
   };
   const visibleOptions = () =>
     props.excludeFields?.length
@@ -71,7 +77,9 @@ export function SortDropdown(props: SortDropdownProps) {
               return (
                 <DropdownMenuItem
                   class="flex justify-between"
-                  classList={{ "text-primary! focus:text-primary!": isActive() }}
+                  classList={{
+                    "text-primary! focus:text-primary!": isActive(),
+                  }}
                   closeOnSelect={false}
                   onSelect={() => selectField(option.value)}
                 >

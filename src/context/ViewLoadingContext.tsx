@@ -1,4 +1,4 @@
-import { createContext, createSignal, useContext, JSX } from "solid-js";
+import { createContext, createSignal, JSX, useContext } from "solid-js";
 
 /**
  * Tracks whether the currently-mounted view has finished its initial data
@@ -53,6 +53,7 @@ export function ViewLoadingProvider(props: { children: JSX.Element }) {
 
 export function useViewLoading() {
   const ctx = useContext(ViewLoadingContext);
-  if (!ctx) throw new Error("useViewLoading must be used within ViewLoadingProvider");
+  if (!ctx)
+    throw new Error("useViewLoading must be used within ViewLoadingProvider");
   return ctx;
 }

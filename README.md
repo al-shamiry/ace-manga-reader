@@ -5,6 +5,7 @@ A lightweight desktop manga reader built with Tauri v2 and SolidJS.
 ## Features
 
 ### Library
+
 - Browse manga libraries organized by source folder
 - Supports both folder-based chapters (images in subfolders) and CBZ archives
 - **Categories** with tab bar — manga can live in multiple categories, right-click to rename/delete
@@ -18,6 +19,7 @@ A lightweight desktop manga reader built with Tauri v2 and SolidJS.
 - **Settings** view — root directory, default fit mode, default reading mode, library display defaults
 
 ### Reader
+
 - **4 reading modes**: Paged LTR, Paged RTL, Paged Vertical, Webtoon (continuous scroll)
 - **5 fit modes**: Fit Screen, Fit Width, Fit Height, Original, Stretch
 - Reading mode and fit mode persisted **per-manga** with global defaults
@@ -30,6 +32,7 @@ A lightweight desktop manga reader built with Tauri v2 and SolidJS.
 - Fullscreen mode (F11 or toolbar button)
 
 ### Polish
+
 - Side navigation rail (Library / History / Sources / Settings)
 - Natural sort order (Chapter 2 before Chapter 10)
 - Smart title cleanup — strips download-tool hash suffixes and restores `:` characters mangled by Windows filename rules
@@ -58,27 +61,27 @@ Set your root folder in the app and it will scan one level deep for manga.
 
 ## Navigation
 
-| Action | Keys |
-|---|---|
-| Next page / Scroll down | `→` `↓` |
-| Previous page / Scroll up | `←` `↑` |
-| Cycle fit mode | `F` |
-| Cycle reading mode | `M` |
-| Fullscreen | `F11` |
-| Go back | `Backspace` `Escape` |
-| Jump to page | Click the page counter |
+| Action                    | Keys                   |
+| ------------------------- | ---------------------- |
+| Next page / Scroll down   | `→` `↓`                |
+| Previous page / Scroll up | `←` `↑`                |
+| Cycle fit mode            | `F`                    |
+| Cycle reading mode        | `M`                    |
+| Fullscreen                | `F11`                  |
+| Go back                   | `Backspace` `Escape`   |
+| Jump to page              | Click the page counter |
 
 Tap zones on the page image also work for mouse navigation — direction adapts to reading mode.
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
-| Shell | Tauri v2 |
+| Layer    | Choice               |
+| -------- | -------------------- |
+| Shell    | Tauri v2             |
 | Frontend | SolidJS + TypeScript |
-| Styling | Tailwind CSS v4 |
-| Build | Vite |
-| Archive | `zip` crate (Rust) |
+| Styling  | Tailwind CSS v4      |
+| Build    | Vite                 |
+| Archive  | `zip` crate (Rust)   |
 
 ## Download
 
@@ -189,14 +192,12 @@ Stage 6 — Advanced            ░░░░░░░░░░  planned
 
 ## Screenshots
 
-
-| | |
-|---|---|
-| ![Loading Screen](docs/screenshots/Screenshot%2001.png) | ![First-run welcome](docs/screenshots/Screenshot%2002.png) |
-| ![Library with display options popover](docs/screenshots/Screenshot%2003.png) | ![Reader view](docs/screenshots/Screenshot%2004.png) |
-| ![History view](docs/screenshots/Screenshot%2005.png) | ![Sources picker](docs/screenshots/Screenshot%2006.png) |
-| ![Source manga grid](docs/screenshots/Screenshot%2007.png) | ![Settings view](docs/screenshots/Screenshot%2008.png) |
-
+|                                                                               |                                                            |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| ![Loading Screen](docs/screenshots/Screenshot%2001.png)                       | ![First-run welcome](docs/screenshots/Screenshot%2002.png) |
+| ![Library with display options popover](docs/screenshots/Screenshot%2003.png) | ![Reader view](docs/screenshots/Screenshot%2004.png)       |
+| ![History view](docs/screenshots/Screenshot%2005.png)                         | ![Sources picker](docs/screenshots/Screenshot%2006.png)    |
+| ![Source manga grid](docs/screenshots/Screenshot%2007.png)                    | ![Settings view](docs/screenshots/Screenshot%2008.png)     |
 
 ## Development
 

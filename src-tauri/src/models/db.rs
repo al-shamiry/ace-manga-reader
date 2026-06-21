@@ -24,7 +24,12 @@ pub struct MangaDb {
 impl MangaDb {
     /// Next `sort_order` for a source appended after all existing ones.
     pub fn next_source_order(&self) -> u32 {
-        self.sources.values().map(|s| s.sort_order).max().unwrap_or(0) + 1
+        self.sources
+            .values()
+            .map(|s| s.sort_order)
+            .max()
+            .unwrap_or(0)
+            + 1
     }
 }
 

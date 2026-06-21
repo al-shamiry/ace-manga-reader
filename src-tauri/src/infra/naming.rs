@@ -48,16 +48,30 @@ pub(crate) fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
             (None, _) => return std::cmp::Ordering::Less,
             (_, None) => return std::cmp::Ordering::Greater,
             (Some(ac), Some(bc)) if ac.is_ascii_digit() && bc.is_ascii_digit() => {
-                let na: u64 = ai.by_ref().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
-                let nb: u64 = bi.by_ref().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
+                let na: u64 = ai
+                    .by_ref()
+                    .take_while(|c| c.is_ascii_digit())
+                    .collect::<String>()
+                    .parse()
+                    .unwrap_or(0);
+                let nb: u64 = bi
+                    .by_ref()
+                    .take_while(|c| c.is_ascii_digit())
+                    .collect::<String>()
+                    .parse()
+                    .unwrap_or(0);
                 let ord = na.cmp(&nb);
-                if ord != std::cmp::Ordering::Equal { return ord; }
+                if ord != std::cmp::Ordering::Equal {
+                    return ord;
+                }
             }
             _ => {
                 let ac = ai.next().unwrap().to_lowercase().next().unwrap();
                 let bc = bi.next().unwrap().to_lowercase().next().unwrap();
                 let ord = ac.cmp(&bc);
-                if ord != std::cmp::Ordering::Equal { return ord; }
+                if ord != std::cmp::Ordering::Equal {
+                    return ord;
+                }
             }
         }
     }

@@ -1,15 +1,17 @@
-import { Show, createSignal, createMemo, onMount, onCleanup } from "solid-js";
-import { useParams, useNavigate } from "@solidjs/router";
-import { ArrowLeft, RefreshCw } from "lucide-solid";
+import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { useNavigate, useParams } from "@solidjs/router";
+
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { ArrowLeft, RefreshCw } from "lucide-solid";
+
+import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { EmptyState } from "../components/EmptyState";
+import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
 import { MangaGrid } from "../components/MangaGrid";
+import { SelectionToolbar } from "../components/SelectionToolbar";
 import { MangaGridSkeleton } from "../components/Skeleton";
 import { SortDropdown } from "../components/SortDropdown";
-import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
-import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
-import { SelectionToolbar } from "../components/SelectionToolbar";
 import {
   Toolbar,
   ToolbarActions,
@@ -18,11 +20,17 @@ import {
   ToolbarSearchRow,
   ToolbarTitle,
 } from "../components/ui/toolbar";
-import { useSources } from "../context/SourcesContext";
 import { useLibrary } from "../context/LibraryContext";
+import { useSources } from "../context/SourcesContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { createMangaSelection } from "../lib/createMangaSelection";
-import type { Chapter, LibraryDisplay, Manga, ReadingStatus, SortPreference } from "../types";
+import type {
+  Chapter,
+  LibraryDisplay,
+  Manga,
+  ReadingStatus,
+  SortPreference,
+} from "../types";
 
 type Status = "idle" | "loading" | "error";
 
@@ -40,8 +48,14 @@ export function SourceView() {
   const [status, setStatus] = createSignal<Status>("idle");
   const [error, setError] = createSignal("");
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [filters, setFilters] = createSignal<FilterState>({ sources: [], readingStatus: [] });
-  const [sortPref, setSortPref] = createSignal<SortPreference>({ field: "alphabetical", direction: "asc" });
+  const [filters, setFilters] = createSignal<FilterState>({
+    sources: [],
+    readingStatus: [],
+  });
+  const [sortPref, setSortPref] = createSignal<SortPreference>({
+    field: "alphabetical",
+    direction: "asc",
+  });
   const [displayOpts, setDisplayOpts] = createSignal<LibraryDisplay>({
     display_mode: "comfortable",
     card_size: 8,
@@ -54,17 +68,31 @@ export function SourceView() {
     const persistedSort = invoke<SortPreference>("get_source_sort_preference")
       .then((pref) => setSortPref(pref))
       .catch(() => {});
-    const persistedDisplay = invoke<{ display_mode: string; card_size: number; show_unread_badge: boolean; show_continue_button: boolean }>("get_source_display")
-      .then((d) => setDisplayOpts((prev) => ({
-        ...prev,
-        display_mode: d.display_mode as LibraryDisplay["display_mode"],
-        card_size: d.card_size,
-        show_unread_badge: d.show_unread_badge,
-        show_continue_button: d.show_continue_button,
-      })))
+    const persistedDisplay = invoke<{
+      display_mode: string;
+      card_size: number;
+      show_unread_badge: boolean;
+      show_continue_button: boolean;
+    }>("get_source_display")
+      .then((d) =>
+        setDisplayOpts((prev) => ({
+          ...prev,
+          display_mode: d.display_mode as LibraryDisplay["display_mode"],
+          card_size: d.card_size,
+          show_unread_badge: d.show_unread_badge,
+          show_continue_button: d.show_continue_button,
+        })),
+      )
       .catch(() => {});
-    const persistedFilters = invoke<{ reading_status: string[] }>("get_source_filters")
-      .then((f) => setFilters({ sources: [], readingStatus: f.reading_status as ReadingStatus[] }))
+    const persistedFilters = invoke<{ reading_status: string[] }>(
+      "get_source_filters",
+    )
+      .then((f) =>
+        setFilters({
+          sources: [],
+          readingStatus: f.reading_status as ReadingStatus[],
+        }),
+      )
       .catch(() => {});
 
     await initialLoad();
@@ -82,7 +110,10 @@ export function SourceView() {
     setStatus("loading");
     setError("");
     try {
-      const result = await invoke<Manga[]>("scan_source", { path, forceRefresh });
+      const result = await invoke<Manga[]>("scan_source", {
+        path,
+        forceRefresh,
+      });
       setMangas(result);
       setStatus("idle");
       getCurrentWindow().setTitle(`Ace Manga Reader — ${source()?.name}`);
@@ -160,16 +191,21 @@ export function SourceView() {
 
   async function handleContinue(manga: Manga) {
     try {
-      const list = await invoke<Chapter[]>("list_chapters", { mangaPath: manga.path });
+      const list = await invoke<Chapter[]>("list_chapters", {
+        mangaPath: manga.path,
+      });
       if (list.length === 0) return;
       const allUnread = list.every((c) => c.status.type === "unread");
-      const target = allUnread ? list[0] : list.find((c) => c.status.type !== "read");
+      const target = allUnread
+        ? list[0]
+        : list.find((c) => c.status.type !== "read");
       if (!target) {
         navigate("/manga/" + manga.id, { state: { manga, from: "sources" } });
         return;
       }
       const idx = list.findIndex((c) => c.id === target.id);
-      const initialPage = target.status.type === "ongoing" ? target.status.page : 0;
+      const initialPage =
+        target.status.type === "ongoing" ? target.status.page : 0;
       navigate("/reader/" + target.id, {
         state: {
           chapter: target,
@@ -196,7 +232,9 @@ export function SourceView() {
     }
 
     if (f.readingStatus.length > 0) {
-      result = result.filter((m) => f.readingStatus.includes(mangaReadingStatus(m)));
+      result = result.filter((m) =>
+        f.readingStatus.includes(mangaReadingStatus(m)),
+      );
     }
 
     const dir = pref.direction === "asc" ? 1 : -1;
@@ -271,11 +309,13 @@ export function SourceView() {
 
   onMount(() => {
     window.addEventListener("keydown", handleSelectionKeys, true);
-    onCleanup(() => window.removeEventListener("keydown", handleSelectionKeys, true));
+    onCleanup(() =>
+      window.removeEventListener("keydown", handleSelectionKeys, true),
+    );
   });
 
   return (
-    <div class="flex flex-col flex-1 overflow-hidden">
+    <div class="flex flex-1 flex-col overflow-hidden">
       <Toolbar>
         <Show
           when={selection.active()}
@@ -287,7 +327,10 @@ export function SourceView() {
               </ToolbarInlineButton>
               <ToolbarTitle class="flex-1">{source()?.name}</ToolbarTitle>
               <ToolbarActions>
-                <ToolbarInlineButton onClick={selection.enter} disabled={mangasForDisplay().length === 0}>
+                <ToolbarInlineButton
+                  onClick={selection.enter}
+                  disabled={mangasForDisplay().length === 0}
+                >
                   Select
                 </ToolbarInlineButton>
                 <SortDropdown
@@ -353,13 +396,20 @@ export function SourceView() {
             description={
               <>
                 Ace expects each manga to live in its own subfolder containing
-                chapter folders or <span class="font-mono text-ink-300">.cbz</span> archives.
-                Add some, or re-scan if you just dropped files in.
+                chapter folders or{" "}
+                <span class="font-mono text-ink-300">.cbz</span> archives. Add
+                some, or re-scan if you just dropped files in.
               </>
             }
           />
         </Show>
-        <Show when={status() === "idle" && mangas().length > 0 && mangasForDisplay().length === 0}>
+        <Show
+          when={
+            status() === "idle" &&
+            mangas().length > 0 &&
+            mangasForDisplay().length === 0
+          }
+        >
           <EmptyState
             eyebrow="No results"
             title="No manga match your filters."
@@ -372,7 +422,9 @@ export function SourceView() {
             displayMode={displayOpts().display_mode}
             cardSize={displayOpts().card_size}
             showProgressBadge={displayOpts().show_unread_badge}
-            onContinue={displayOpts().show_continue_button ? handleContinue : undefined}
+            onContinue={
+              displayOpts().show_continue_button ? handleContinue : undefined
+            }
             showLibraryBadge
             selectionMode={selection.active()}
             isSelected={selection.isSelected}

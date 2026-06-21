@@ -34,8 +34,18 @@ pub fn create_category(app: tauri::AppHandle, name: String) -> AppResult<Categor
         suffix += 1;
     }
 
-    let sort_order = config.categories.iter().map(|c| c.sort_order).max().unwrap_or(0) + 1;
-    let cat = Category { id, name, sort_order };
+    let sort_order = config
+        .categories
+        .iter()
+        .map(|c| c.sort_order)
+        .max()
+        .unwrap_or(0)
+        + 1;
+    let cat = Category {
+        id,
+        name,
+        sort_order,
+    };
     config.categories.push(cat.clone());
     save_config(&app, &config)?;
     Ok(cat)
@@ -44,7 +54,10 @@ pub fn create_category(app: tauri::AppHandle, name: String) -> AppResult<Categor
 #[tauri::command]
 pub fn rename_category(app: tauri::AppHandle, category_id: String, name: String) -> AppResult<()> {
     let mut config = load_config(&app)?;
-    let cat = config.categories.iter_mut().find(|c| c.id == category_id)
+    let cat = config
+        .categories
+        .iter_mut()
+        .find(|c| c.id == category_id)
         .ok_or_else(|| AppError::NotFound(format!("Category '{}' not found", category_id)))?;
     cat.name = name;
     save_config(&app, &config)
@@ -89,12 +102,18 @@ pub fn reorder_categories(app: tauri::AppHandle, category_ids: Vec<String>) -> A
 pub fn list_library(app: tauri::AppHandle) -> AppResult<Vec<MangaDto>> {
     let cache = app.db();
     let guard = db::lock(&cache)?;
-    let hidden: HashSet<&str> = guard.db.sources.iter()
+    let hidden: HashSet<&str> = guard
+        .db
+        .sources
+        .iter()
         .filter(|(_, source)| source.hidden)
         .map(|(id, _)| id.as_str())
         .collect();
 
-    let mangas = guard.db.mangas.iter()
+    let mangas = guard
+        .db
+        .mangas
+        .iter()
         .filter(|(_, manga)| manga.added_at.is_some() && !hidden.contains(manga.source_id.as_str()))
         .map(|(id, manga)| manga.project(id.clone()))
         .collect();
@@ -159,10 +178,7 @@ pub fn add_mangas_to_categories(
 
 /// Remove a set of mangas from the library in one DB write.
 #[tauri::command]
-pub fn remove_mangas_from_library(
-    app: tauri::AppHandle,
-    manga_ids: Vec<String>,
-) -> AppResult<()> {
+pub fn remove_mangas_from_library(app: tauri::AppHandle, manga_ids: Vec<String>) -> AppResult<()> {
     let cache = app.db();
     db::mutate(&cache, &app, |db| {
         for id in &manga_ids {

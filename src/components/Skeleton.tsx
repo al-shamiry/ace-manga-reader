@@ -3,11 +3,11 @@ import { For } from "solid-js";
 /** Skeleton that matches a MangaCard in the grid */
 export function MangaCardSkeleton() {
   return (
-    <div class="flex flex-col bg-ink-900 rounded-lg overflow-hidden">
+    <div class="flex flex-col overflow-hidden rounded-lg bg-ink-900">
       <div class="skeleton h-60" />
-      <div class="px-2.5 py-2 shrink-0 flex flex-col gap-1.5">
-        <div class="skeleton h-3 rounded w-4/5" />
-        <div class="skeleton h-2.5 rounded w-2/5" />
+      <div class="flex shrink-0 flex-col gap-1.5 px-2.5 py-2">
+        <div class="skeleton h-3 w-4/5 rounded" />
+        <div class="skeleton h-2.5 w-2/5 rounded" />
       </div>
     </div>
   );
@@ -27,10 +27,10 @@ export function MangaGridSkeleton(props: { count?: number }) {
 /** Skeleton that matches a chapter list row in MangaDetailView */
 export function ChapterRowSkeleton() {
   return (
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-ink-800/50">
-      <div class="skeleton h-3 rounded flex-1" />
-      <div class="skeleton h-3 rounded w-6 shrink-0" />
-      <div class="skeleton h-5 rounded w-10 shrink-0" />
+    <div class="flex items-center gap-3 border-b border-ink-800/50 px-4 py-3">
+      <div class="skeleton h-3 flex-1 rounded" />
+      <div class="skeleton h-3 w-6 shrink-0 rounded" />
+      <div class="skeleton h-5 w-10 shrink-0 rounded" />
     </div>
   );
 }
@@ -47,14 +47,14 @@ export function ChapterListSkeleton(props: { count?: number }) {
 /** Skeleton that matches a SourceRow in SourcesView */
 export function SourceRowSkeleton() {
   return (
-    <div class="relative flex flex-col px-4 py-3 border-b border-ink-800/40 rounded-md overflow-hidden">
+    <div class="relative flex flex-col overflow-hidden rounded-md border-b border-ink-800/40 px-4 py-3">
       <div class="flex items-center gap-4">
-        <div class="skeleton h-4 w-4 rounded-sm shrink-0" />
-        <div class="skeleton h-7 w-7 rounded-md shrink-0" />
-        <div class="flex-1 min-w-0">
-          <div class="skeleton h-4 rounded w-3/5" />
-          <div class="skeleton h-3 rounded w-2/5 mt-1.5" />
-          <div class="skeleton h-3 rounded w-4/5 mt-1.5" />
+        <div class="skeleton h-4 w-4 shrink-0 rounded-sm" />
+        <div class="skeleton h-7 w-7 shrink-0 rounded-md" />
+        <div class="min-w-0 flex-1">
+          <div class="skeleton h-4 w-3/5 rounded" />
+          <div class="skeleton mt-1.5 h-3 w-2/5 rounded" />
+          <div class="skeleton mt-1.5 h-3 w-4/5 rounded" />
         </div>
       </div>
     </div>

@@ -1,18 +1,21 @@
 import { For, Show } from "solid-js";
+
 import { LayoutGrid } from "lucide-solid";
+
+import type { DisplayMode, LibraryDisplay } from "../types";
+
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuGroupLabel,
   DropdownMenuHeader,
   DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { Slider, SliderTrack, SliderFill, SliderThumb } from "./ui/slider";
+import { Slider, SliderFill, SliderThumb, SliderTrack } from "./ui/slider";
 import { toolbarIconButtonClass } from "./ui/toolbar";
-import type { DisplayMode, LibraryDisplay } from "../types";
 
 interface Props {
   display: LibraryDisplay;
@@ -54,7 +57,9 @@ function sameDisplay(a: LibraryDisplay, b: LibraryDisplay): boolean {
 export function DisplayOptionsPopover(props: Props) {
   const defaults = () =>
     props.defaults ??
-    ((props.showTabsSection ?? true) ? DEFAULT_LIBRARY_DISPLAY : DEFAULT_SOURCE_DISPLAY);
+    ((props.showTabsSection ?? true)
+      ? DEFAULT_LIBRARY_DISPLAY
+      : DEFAULT_SOURCE_DISPLAY);
   const canReset = () => !sameDisplay(props.display, defaults());
 
   function setMode(mode: DisplayMode) {
@@ -75,7 +80,10 @@ export function DisplayOptionsPopover(props: Props) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger class={toolbarIconButtonClass} title="Display options">
+      <DropdownMenuTrigger
+        class={toolbarIconButtonClass}
+        title="Display options"
+      >
         <LayoutGrid size={16} />
       </DropdownMenuTrigger>
 
@@ -87,15 +95,17 @@ export function DisplayOptionsPopover(props: Props) {
 
         <DropdownMenuGroup>
           <DropdownMenuGroupLabel>Display mode</DropdownMenuGroupLabel>
-          <div class="grid grid-cols-2 gap-1.5 px-2 pb-2 pt-1">
+          <div class="grid grid-cols-2 gap-1.5 px-2 pt-1 pb-2">
             <For each={DISPLAY_MODES}>
               {(mode) => {
-                const isActive = () => props.display.display_mode === mode.value;
+                const isActive = () =>
+                  props.display.display_mode === mode.value;
                 return (
                   <button
                     class="cursor-pointer rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors"
                     classList={{
-                      "border-jade-500/60 bg-jade-500/10 text-jade-300": isActive(),
+                      "border-jade-500/60 bg-jade-500/10 text-jade-300":
+                        isActive(),
                       "border-transparent bg-ink-900/60 text-ink-300 hover:border-ink-700 hover:bg-ink-900 hover:text-ink-100":
                         !isActive(),
                     }}
@@ -112,8 +122,10 @@ export function DisplayOptionsPopover(props: Props) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuGroupLabel>Card size</DropdownMenuGroupLabel>
-          <div class="flex items-center gap-2 px-2 pb-2 pt-1">
-            <span class="shrink-0 text-[0.7rem] uppercase tracking-[0.12em] text-ink-500">Small</span>
+          <div class="flex items-center gap-2 px-2 pt-1 pb-2">
+            <span class="shrink-0 text-[0.7rem] tracking-[0.12em] text-ink-500 uppercase">
+              Small
+            </span>
             <Slider
               minValue={1}
               maxValue={15}
@@ -127,7 +139,9 @@ export function DisplayOptionsPopover(props: Props) {
                 <SliderThumb />
               </SliderTrack>
             </Slider>
-            <span class="shrink-0 text-[0.7rem] uppercase tracking-[0.12em] text-ink-500">Large</span>
+            <span class="shrink-0 text-[0.7rem] tracking-[0.12em] text-ink-500 uppercase">
+              Large
+            </span>
           </div>
         </DropdownMenuGroup>
 

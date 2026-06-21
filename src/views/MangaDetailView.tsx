@@ -1,5 +1,16 @@
-import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
-import { useNavigate, useLocation } from "@solidjs/router";
+import {
+  createMemo,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
+import { useLocation, useNavigate } from "@solidjs/router";
+
+import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   ArrowDownNarrowWide,
   ArrowLeft,
@@ -16,33 +27,31 @@ import {
   SquaresIntersect,
   Trash2,
 } from "lucide-solid";
-import { invoke } from "@tauri-apps/api/core";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+
+import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/ui/button";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
   DropdownMenuCheckboxItem,
+  DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuGroupLabel,
   DropdownMenuHeader,
-  DropdownMenuSeparator,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
-import { useLibrary } from "../context/LibraryContext";
-import { useViewLoading } from "../context/ViewLoadingContext";
-import { EmptyState } from "../components/EmptyState";
 import {
   Toolbar,
   ToolbarActions,
   ToolbarButton,
+  toolbarIconButtonClass,
   ToolbarInlineButton,
   ToolbarSpacer,
   ToolbarTitle,
-  toolbarIconButtonClass,
 } from "../components/ui/toolbar";
+import { useLibrary } from "../context/LibraryContext";
+import { useViewLoading } from "../context/ViewLoadingContext";
 import type { Chapter, ChapterStatus, MangaDetailState } from "../types";
 
 type ChapterFilterStatus = "unread" | "ongoing" | "read";
@@ -74,16 +83,22 @@ function ChapterFilterMenu(props: {
   }
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger class={toolbarIconButtonClass} title="Filter chapters">
+      <DropdownMenuTrigger
+        class={toolbarIconButtonClass}
+        title="Filter chapters"
+      >
         <SlidersHorizontal size={16} />
         <Show when={count() > 0}>
-          <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-jade-500 px-1 text-[10px] font-bold text-ink-950">
+          <span class="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-jade-500 px-1 text-[10px] font-bold text-ink-950">
             {count()}
           </span>
         </Show>
       </DropdownMenuTrigger>
       <DropdownMenuContent class="w-48">
-        <DropdownMenuHeader onReset={() => props.onChange([])} canReset={count() > 0}>
+        <DropdownMenuHeader
+          onReset={() => props.onChange([])}
+          canReset={count() > 0}
+        >
           Filter
         </DropdownMenuHeader>
         <DropdownMenuSeparator />
@@ -110,26 +125,26 @@ function StatusBadge(props: { status: ChapterStatus }) {
   switch (props.status.type) {
     case "read":
       return (
-        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-ink-800 text-ink-500">
+        <span class="rounded bg-ink-800 px-1.5 py-0.5 text-[0.65rem] font-semibold text-ink-500">
           Done
         </span>
       );
     case "ongoing":
       if (props.status.page === 0) {
         return (
-          <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-ink-800 text-ink-100">
+          <span class="rounded bg-ink-800 px-1.5 py-0.5 text-[0.65rem] font-semibold text-ink-100">
             New
           </span>
         );
       }
       return (
-        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-jade-900/50 text-jade-400">
+        <span class="rounded bg-jade-900/50 px-1.5 py-0.5 text-[0.65rem] font-semibold text-jade-400">
           Page {props.status.page + 1}
         </span>
       );
     default:
       return (
-        <span class="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-ink-800 text-ink-100">
+        <span class="rounded bg-ink-800 px-1.5 py-0.5 text-[0.65rem] font-semibold text-ink-100">
           New
         </span>
       );
@@ -140,7 +155,8 @@ export function MangaDetailView() {
   const navigate = useNavigate();
   const location = useLocation();
   const manga = (location.state as MangaDetailState | undefined)?.manga;
-  const { categories, libraryEntries, refreshLibrary, refreshCategories } = useLibrary();
+  const { categories, libraryEntries, refreshLibrary, refreshCategories } =
+    useLibrary();
   const view = useViewLoading();
   // Mark busy synchronously so the overlay paints on the first frame.
   // The "no manga" branch below short-circuits to ready() in onMount.
@@ -152,7 +168,9 @@ export function MangaDetailView() {
 
   // ── Toolbar state ──
   const [sortDir, setSortDir] = createSignal<"asc" | "desc">("asc");
-  const [statusFilter, setStatusFilter] = createSignal<ChapterFilterStatus[]>([]);
+  const [statusFilter, setStatusFilter] = createSignal<ChapterFilterStatus[]>(
+    [],
+  );
   const [refreshing, setRefreshing] = createSignal(false);
   // ── Chapter selection ──
   const [selectMode, setSelectMode] = createSignal(false);
@@ -160,7 +178,9 @@ export function MangaDetailView() {
 
   async function loadChapters() {
     if (!manga) return;
-    const result = await invoke<Chapter[]>("list_chapters", { mangaPath: manga.path });
+    const result = await invoke<Chapter[]>("list_chapters", {
+      mangaPath: manga.path,
+    });
     setChapters(result);
   }
 
@@ -268,7 +288,9 @@ export function MangaDetailView() {
     setRefreshing(true);
     setError("");
     try {
-      const result = await invoke<Chapter[]>("rescan_manga", { mangaPath: manga.path });
+      const result = await invoke<Chapter[]>("rescan_manga", {
+        mangaPath: manga.path,
+      });
       setChapters(result);
       await refreshLibrary();
     } catch (e) {
@@ -339,7 +361,11 @@ export function MangaDetailView() {
     const chapterIds = [...selectedIds()];
     if (chapterIds.length === 0) return;
     try {
-      await invoke("set_chapters_read", { mangaId: manga.id, chapterIds, read });
+      await invoke("set_chapters_read", {
+        mangaId: manga.id,
+        chapterIds,
+        read,
+      });
       await loadChapters();
       await refreshLibrary();
     } catch (e) {
@@ -363,12 +389,14 @@ export function MangaDetailView() {
 
   onMount(() => {
     window.addEventListener("keydown", handleSelectionKeys, true);
-    onCleanup(() => window.removeEventListener("keydown", handleSelectionKeys, true));
+    onCleanup(() =>
+      window.removeEventListener("keydown", handleSelectionKeys, true),
+    );
   });
 
   if (!manga) {
     return (
-      <div class="flex flex-col items-center justify-center flex-1 gap-4 text-ink-500">
+      <div class="flex flex-1 flex-col items-center justify-center gap-4 text-ink-500">
         <p class="text-sm">No manga data — navigate here from the library.</p>
         <Button variant="ghost" onClick={() => navigate(-1)}>
           <ArrowLeft size={14} /> Back
@@ -397,7 +425,9 @@ export function MangaDetailView() {
                   Select
                 </ToolbarInlineButton>
                 <ToolbarButton
-                  onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                  onClick={() =>
+                    setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+                  }
                   title={sortDir() === "asc" ? "Oldest first" : "Newest first"}
                 >
                   <Show
@@ -407,19 +437,27 @@ export function MangaDetailView() {
                     <ArrowDownNarrowWide size={16} />
                   </Show>
                 </ToolbarButton>
-                <ChapterFilterMenu state={statusFilter()} onChange={setStatusFilter} />
+                <ChapterFilterMenu
+                  state={statusFilter()}
+                  onChange={setStatusFilter}
+                />
                 <ToolbarButton
                   onClick={handleRefresh}
                   disabled={refreshing()}
                   title="Re-scan this manga from disk"
                 >
-                  <RefreshCw size={16} class={refreshing() ? "animate-spin" : ""} />
+                  <RefreshCw
+                    size={16}
+                    class={refreshing() ? "animate-spin" : ""}
+                  />
                 </ToolbarButton>
               </ToolbarActions>
             </>
           }
         >
-          <ToolbarTitle class="flex-1">{selectedIds().size} selected</ToolbarTitle>
+          <ToolbarTitle class="flex-1">
+            {selectedIds().size} selected
+          </ToolbarTitle>
           <ToolbarActions>
             <ToolbarButton
               onClick={selectAll}
@@ -455,26 +493,29 @@ export function MangaDetailView() {
             >
               <Circle size={14} /> Mark unread
             </ToolbarInlineButton>
-            <ToolbarInlineButton onClick={exitSelect}>Cancel</ToolbarInlineButton>
+            <ToolbarInlineButton onClick={exitSelect}>
+              Cancel
+            </ToolbarInlineButton>
           </ToolbarActions>
         </Show>
       </Toolbar>
 
       {/* Header */}
-      <div class="flex gap-5 p-5 border-b border-ink-800 shrink-0">
+      <div class="flex shrink-0 gap-5 border-b border-ink-800 p-5">
         <img
           src={convertFileSrc(manga.cover_path)}
           alt={manga.title}
-          class="w-28 rounded-lg object-cover shrink-0 bg-ink-800 shadow-lg shadow-black/40"
+          class="w-28 shrink-0 rounded-lg bg-ink-800 object-cover shadow-lg shadow-black/40"
         />
-        <div class="flex flex-col gap-3 flex-1 min-w-0 justify-center">
-          <h1 class="font-display text-display text-ink-100 line-clamp-2">
+        <div class="flex min-w-0 flex-1 flex-col justify-center gap-3">
+          <h1 class="line-clamp-2 font-display text-display text-ink-100">
             {manga.title}
           </h1>
-          <p class="text-xs uppercase tracking-wider text-ink-500 font-medium">
-            {manga.chapter_count} {manga.chapter_count === 1 ? "chapter" : "chapters"}
+          <p class="text-xs font-medium tracking-wider text-ink-500 uppercase">
+            {manga.chapter_count}{" "}
+            {manga.chapter_count === 1 ? "chapter" : "chapters"}
           </p>
-          <div class="flex items-center gap-2 mt-1">
+          <div class="mt-1 flex items-center gap-2">
             <Show when={primaryLabel()}>
               <Button
                 variant="primary"
@@ -495,13 +536,18 @@ export function MangaDetailView() {
               <DropdownMenuTrigger
                 as={Button}
                 variant={isInLibrary() ? "primary" : "ghost"}
-                title={isInLibrary() ? "Edit library categories" : "Add to library"}
+                title={
+                  isInLibrary() ? "Edit library categories" : "Add to library"
+                }
               >
-                <Bookmark size={14} fill={isInLibrary() ? "currentColor" : "none"} />
+                <Bookmark
+                  size={14}
+                  fill={isInLibrary() ? "currentColor" : "none"}
+                />
                 {isInLibrary() ? "In Library" : "Add to Library"}
               </DropdownMenuTrigger>
               <DropdownMenuContent class="w-56">
-                <div class="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
+                <div class="px-2 pt-2 pb-1 text-xs font-semibold tracking-wider text-ink-500 uppercase">
                   {isInLibrary() ? "Categories" : "Add to category"}
                 </div>
                 <DropdownMenuSeparator />
@@ -535,11 +581,16 @@ export function MangaDetailView() {
       </div>
 
       {/* Chapter count */}
-      <div class="px-4 py-2 text-xs font-semibold text-ink-500 uppercase tracking-wider border-b border-ink-800 shrink-0">
+      <div class="shrink-0 border-b border-ink-800 px-4 py-2 text-xs font-semibold tracking-wider text-ink-500 uppercase">
         <Show when={!loading()} fallback="…">
           <Show
             when={statusFilter().length > 0}
-            fallback={<>{chapters().length} {chapters().length === 1 ? "chapter" : "chapters"}</>}
+            fallback={
+              <>
+                {chapters().length}{" "}
+                {chapters().length === 1 ? "chapter" : "chapters"}
+              </>
+            }
           >
             {chaptersForDisplay().length} of {chapters().length} chapters
           </Show>
@@ -547,7 +598,7 @@ export function MangaDetailView() {
       </div>
 
       {/* Chapter list */}
-      <div class="overflow-y-auto flex-1">
+      <div class="flex-1 overflow-y-auto">
         <Show when={error()}>
           <p class="px-4 py-3 text-sm text-red-400">{error()}</p>
         </Show>
@@ -559,8 +610,9 @@ export function MangaDetailView() {
             description={
               <>
                 Ace expects this manga to contain either chapter subfolders
-                (each with images inside) or <span class="font-mono text-ink-300">.cbz</span> archives.
-                Check the folder contents and try refreshing.
+                (each with images inside) or{" "}
+                <span class="font-mono text-ink-300">.cbz</span> archives. Check
+                the folder contents and try refreshing.
               </>
             }
           />
@@ -584,7 +636,7 @@ export function MangaDetailView() {
         <For each={chaptersForDisplay()}>
           {(chapter) => (
             <button
-              class={`w-full flex items-center gap-3 px-4 py-3 hover:bg-ink-800/60 transition-colors border-b border-ink-800/50 text-left ${
+              class={`flex w-full items-center gap-3 border-b border-ink-800/50 px-4 py-3 text-left transition-colors hover:bg-ink-800/60 ${
                 selectMode() && isSelected(chapter) ? "bg-jade-950/30" : ""
               }`}
               onClick={() => handleChapterClick(chapter)}
@@ -600,10 +652,10 @@ export function MangaDetailView() {
                   <Check size={12} strokeWidth={3} />
                 </div>
               </Show>
-              <span class="flex-1 text-sm text-ink-200 truncate">
+              <span class="flex-1 truncate text-sm text-ink-200">
                 {chapter.title}
               </span>
-              <span class="text-xs text-ink-600 shrink-0 mr-2">
+              <span class="mr-2 shrink-0 text-xs text-ink-600">
                 {chapter.page_count}p
               </span>
               <StatusBadge status={chapter.status} />

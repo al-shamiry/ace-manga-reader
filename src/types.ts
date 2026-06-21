@@ -54,7 +54,11 @@ export interface LibraryFilters {
 
 export type ReadingStatus = "unread" | "started" | "completed";
 
-export type SortField = "alphabetical" | "total-chapters" | "last-read" | "date-added";
+export type SortField =
+  | "alphabetical"
+  | "total-chapters"
+  | "last-read"
+  | "date-added";
 export type SortDirection = "asc" | "desc";
 
 export interface SortPreference {
@@ -72,8 +76,17 @@ export interface LibraryDisplay {
   show_item_count: boolean;
 }
 
-export type FitMode = "fit-screen" | "fit-width" | "fit-height" | "original" | "stretch";
-export type ReadingMode = "paged-ltr" | "paged-rtl" | "paged-vertical" | "webtoon";
+export type FitMode =
+  | "fit-screen"
+  | "fit-width"
+  | "fit-height"
+  | "original"
+  | "stretch";
+export type ReadingMode =
+  | "paged-ltr"
+  | "paged-rtl"
+  | "paged-vertical"
+  | "webtoon";
 
 export interface Settings {
   fit_mode?: FitMode;

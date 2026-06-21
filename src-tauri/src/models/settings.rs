@@ -155,7 +155,9 @@ impl Default for LibraryDisplay {
 impl LibraryDisplay {
     /// Clamp the card size into the slider's allowed range.
     pub fn clamped(mut self) -> Self {
-        self.card_size = self.card_size.clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
+        self.card_size = self
+            .card_size
+            .clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
         self
     }
 }
@@ -183,7 +185,9 @@ impl Default for SourceDisplay {
 impl SourceDisplay {
     /// Clamp the card size into the slider's allowed range.
     pub fn clamped(mut self) -> Self {
-        self.card_size = self.card_size.clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
+        self.card_size = self
+            .card_size
+            .clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
         self
     }
 }
