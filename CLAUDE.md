@@ -41,18 +41,23 @@ Source folder/              ← add directly in Sources view
 ### Data flow
 
 1. Sources load from manga DB via `list_sources`
-2. Opening a source calls `scan_directory(path, force_refresh?)` → `Manga[]` and updates cache/metadata
-3. Opening a manga detail calls `get_chapters(manga_path)` → `Chapter[]` + saved progress
+2. Opening a source calls `scan_source(path, force_refresh?)` → `Manga[]` and updates cache/metadata
+3. Opening a manga detail calls `list_chapters(manga_path)` → `Chapter[]` + saved progress
 4. Opening a chapter calls `open_chapter(chapter_path, file_type)`; frontend renders via `convertFileSrc`
 5. Reader updates progress via `set_chapter_progress` and history via `record_history`
 
-### Tauri commands
-Registered in `src-tauri/src/lib.rs` — check `generate_handler!` for the canonical list. Modules under `commands/`: `sources`, `reader`, `settings`, `categories`, `history`, plus `manga_db` (the DB hub, not exposed).
+### Backend architecture (layered)
+Strict layers with downward-only dependencies (`commands → services → store → models`; `infra` is a leaf). Registered commands live in `src-tauri/src/lib.rs` — check `generate_handler!` for the canonical list.
 
-### Key Rust files
-- `commands/manga_db.rs` — `MangaDbCache` (Mutex-managed), load/backfill/save for `manga_db.json`
-- `models/manga_db.rs` — `SourceMeta`, `MangaState`, `MangaDb` (central data model)
-- `utils.rs` — `is_image`, `path_id`, `normalize`, `title_from_path`, `natural_cmp`, `images_in`, `subdirs_and_cbz`, `write_atomic_json`
+- `commands/` — thin Tauri IPC handlers; validate input and delegate. Modules: `sources`, `reader`, `library` (categories + library membership), `settings`, `history`.
+- `services/` — domain logic, no `#[tauri::command]`: `scan` (disk scan + source reconciliation), `relocate` (relocation transaction), `chapters` (discovery, page loading, read-state), `cache` (cover/page cleanup). Services never call sibling services — cross-feature flows are orchestrated in the command (e.g. `relocate_source` → `services::relocate` → `store::history::rekey` → `services::cache`).
+- `store/` — persistence; owns all file I/O and the DB cache: `db` (`MangaDbCache` in managed state + `lock`/`mutate`/`get_manga`/`save_db` and the `app.db()` accessor), `config` (`config.json` + per-manga reader settings), `history` (`history.json` + `prune_mangas`/`rekey_mangas`).
+- `models/` — pure serde types: `manga`, `source`, `chapter`, `category`, `history`, `db` (`MangaDb`), `settings` (`Config`, `ReaderSettings`, sort/display/filter types). DTO (sent to frontend) vs `*Record` (persisted) split.
+- `infra/` — dependency-free primitives: `paths`, `image` (fs discovery), `archive` (CBZ extract/count), `naming` (`path_id`, `normalize`, `title_from_path`, `natural_cmp`, `now_epoch`), `atomic` (`write_atomic_json`).
+- `app.rs` — Tauri `setup` (data-dir + cache state init); `lib.rs` holds the builder chain + handler list.
+
+### DB access pattern
+Use the `app.db()` extension trait (`store::db::DbExt`) instead of `app.state::<Mutex<MangaDbCache>>()`, then go through `store::db::{lock, mutate, get_manga, save_db}` — never read/write `manga_db.json` directly.
 
 ### Frontend contexts (`src/context/`)
 - `SourcesContext` — source list, CRUD, scan status, `initialLoad`, mutation counter
@@ -64,7 +69,7 @@ Router state is the primary cross-view payload mechanism (no global "current cha
 ### Asset protocol
 Pages/covers served via Tauri asset protocol. Use `convertFileSrc(path)` from `@tauri-apps/api/core` (resolves to `http://asset.localhost/...` — note `http://` not `https://`).
 
-### Title normalisation (`utils::title_from_path`)
+### Title normalisation (`infra::naming::title_from_path`)
 - Strips trailing `_HEXSTRING` suffixes (4–16 hex chars) — download-tool dedup hashes
 - Replaces `_ ` with `: ` — Windows-safe filename restoration
 
