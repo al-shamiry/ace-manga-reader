@@ -61,16 +61,6 @@ pub fn set_chapter_progress(
 }
 
 #[tauri::command]
-pub fn set_chapter_read(
-    manga_id: String,
-    chapter_id: String,
-    read: bool,
-    app: tauri::AppHandle,
-) -> AppResult<()> {
-    chapters::set_chapter_read(&app, manga_id, chapter_id, read)
-}
-
-#[tauri::command]
 pub fn set_mangas_read(
     manga_ids: Vec<String>,
     read: bool,

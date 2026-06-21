@@ -96,17 +96,6 @@ pub(crate) fn set_progress(
     update_chapter_status(app, manga_id, chapter_id, status)
 }
 
-/// Mark a single chapter Read or Unread.
-pub(crate) fn set_chapter_read(
-    app: &tauri::AppHandle,
-    manga_id: String,
-    chapter_id: String,
-    read: bool,
-) -> AppResult<()> {
-    let status = if read { ChapterStatus::Read } else { ChapterStatus::Unread };
-    update_chapter_status(app, manga_id, chapter_id, status)
-}
-
 /// Bulk mark every chapter of each manga Read or Unread in a single DB write.
 /// For Read, chapter ids are discovered from disk (in parallel) before taking
 /// the write lock; for Unread the chapter map is simply cleared.

@@ -51,13 +51,13 @@ Strict layers with downward-only dependencies (`commands → services → store 
 
 - `commands/` — thin Tauri IPC handlers; validate input and delegate. Modules: `sources`, `reader`, `library` (categories + library membership), `settings`, `history`.
 - `services/` — domain logic, no `#[tauri::command]`: `scan` (disk scan + source reconciliation), `relocate` (relocation transaction), `chapters` (discovery, page loading, read-state), `cache` (cover/page cleanup). Services never call sibling services — cross-feature flows are orchestrated in the command (e.g. `relocate_source` → `services::relocate` → `store::history::rekey` → `services::cache`).
-- `store/` — persistence; owns all file I/O and the DB cache: `db` (`MangaDbCache` in managed state + `lock`/`mutate`/`get_manga`/`save_db` and the `app.db()` accessor), `config` (`config.json` + per-manga reader settings), `history` (`history.json` + `prune_mangas`/`rekey_mangas`).
+- `store/` — persistence; owns all file I/O and the DB cache: `db` (`MangaDbCache` in managed state + `lock`/`mutate`/`save_db` and the `app.db()` accessor), `config` (`config.json` + per-manga reader settings), `history` (`history.json` + `prune_mangas`/`rekey_mangas`).
 - `models/` — pure serde types: `manga`, `source`, `chapter`, `category`, `history`, `db` (`MangaDb`), `settings` (`Config`, `ReaderSettings`, sort/display/filter types). DTO (sent to frontend) vs `*Record` (persisted) split.
 - `infra/` — dependency-free primitives: `paths`, `image` (fs discovery), `archive` (CBZ extract/count), `naming` (`path_id`, `normalize`, `title_from_path`, `natural_cmp`, `now_epoch`), `atomic` (`write_atomic_json`).
 - `app.rs` — Tauri `setup` (data-dir + cache state init); `lib.rs` holds the builder chain + handler list.
 
 ### DB access pattern
-Use the `app.db()` extension trait (`store::db::DbExt`) instead of `app.state::<Mutex<MangaDbCache>>()`, then go through `store::db::{lock, mutate, get_manga, save_db}` — never read/write `manga_db.json` directly.
+Use the `app.db()` extension trait (`store::db::DbExt`) instead of `app.state::<Mutex<MangaDbCache>>()`, then go through `store::db::{lock, mutate, save_db}` — never read/write `manga_db.json` directly.
 
 ### Frontend contexts (`src/context/`)
 - `SourcesContext` — source list, CRUD, scan status, `initialLoad`, mutation counter

@@ -9,7 +9,7 @@ use tauri::{Manager, State};
 use crate::error::{AppError, AppResult};
 use crate::infra::atomic::write_atomic_json;
 use crate::infra::paths;
-use crate::models::{MangaDb, MangaRecord};
+use crate::models::MangaDb;
 
 /// The loaded database, wrapped in managed state as `Mutex<MangaDbCache>`.
 pub struct MangaDbCache {
@@ -48,15 +48,6 @@ where
     let mut guard = lock(cache)?;
     f(&mut guard.db);
     save_db(app, &guard.db)
-}
-
-/// Clone the `MangaRecord` for `manga_id`, if it exists.
-pub(crate) fn get_manga(
-    cache: &Mutex<MangaDbCache>,
-    manga_id: &str,
-) -> AppResult<Option<MangaRecord>> {
-    let guard = lock(cache)?;
-    Ok(guard.db.mangas.get(manga_id).cloned())
 }
 
 /// Persist the database atomically.

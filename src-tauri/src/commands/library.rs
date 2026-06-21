@@ -194,11 +194,3 @@ pub fn remove_mangas_from_category(
         }
     })
 }
-
-#[tauri::command]
-pub fn is_in_library(app: tauri::AppHandle, manga_id: String) -> AppResult<bool> {
-    let cache = app.db();
-    Ok(db::get_manga(&cache, &manga_id)?
-        .map(|m| m.added_at.is_some())
-        .unwrap_or(false))
-}
