@@ -1,45 +1,13 @@
 //! Tauri commands for global `Config` (`config.json`): reader defaults, root
 //! directory, active category, and per-view sort/display/filter preferences.
-//! Config types live in `models::settings`; persistence helpers here are
-//! shared with `commands::library`.
-
-use std::fs;
+//! Config types live in `models::settings`; persistence in `store::config`.
 
 use crate::error::AppResult;
-use crate::infra::atomic::write_atomic_json;
-use crate::infra::paths;
 use crate::models::{
-    Config, LibraryDisplay, LibraryFilters, LibrarySortPreference, ReaderSettings, SourceDisplay,
+    LibraryDisplay, LibraryFilters, LibrarySortPreference, ReaderSettings, SourceDisplay,
     SourceFilters, SourceSortPreference,
 };
-
-// ── Config helpers ───────────────────────────────────────────────────────────
-
-pub fn load_config(app: &tauri::AppHandle) -> AppResult<Config> {
-    let path = paths::config_file(app)?;
-    // A missing or unreadable file is treated as a default config.
-    let config = fs::read_to_string(path)
-        .ok()
-        .and_then(|s| serde_json::from_str::<Config>(&s).ok())
-        .unwrap_or_default()
-        .normalize();
-    Ok(config)
-}
-
-pub fn save_config(app: &tauri::AppHandle, config: &Config) -> AppResult<()> {
-    write_atomic_json(&paths::config_file(app)?, config)
-}
-
-/// Load the config, apply `f`, and persist the result — the shared
-/// read-modify-write used by every setter.
-pub fn update_config<F>(app: &tauri::AppHandle, f: F) -> AppResult<()>
-where
-    F: FnOnce(&mut Config),
-{
-    let mut config = load_config(app)?;
-    f(&mut config);
-    save_config(app, &config)
-}
+use crate::store::config::{load_config, update_config};
 
 // ── Root directory ───────────────────────────────────────────────────────────
 

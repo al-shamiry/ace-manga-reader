@@ -3,6 +3,7 @@
 //! JSON persistence. This is dependency-free leaf code — it knows nothing about
 //! commands, services, or the data model.
 
+pub mod archive;
 pub mod atomic;
 pub mod image;
 pub mod naming;

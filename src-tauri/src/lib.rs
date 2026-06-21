@@ -2,6 +2,7 @@ mod commands;
 mod error;
 mod infra;
 mod models;
+mod store;
 
 use std::sync::Mutex;
 use tauri::Manager;
@@ -16,7 +17,7 @@ pub fn run() {
             std::fs::create_dir_all(infra::paths::data_dir(app.handle())?)?;
 
             // Load the manga_db cache into managed state.
-            let cache = commands::manga_db::MangaDbCache::load(app.handle())?;
+            let cache = store::db::MangaDbCache::load(app.handle())?;
             app.manage(Mutex::new(cache));
 
             Ok(())
