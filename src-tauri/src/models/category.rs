@@ -1,3 +1,5 @@
+//! Library category type and the reserved default-category id.
+
 use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_CATEGORY_ID: &str = "default";

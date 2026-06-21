@@ -1,3 +1,4 @@
+mod app;
 mod commands;
 mod error;
 mod infra;
@@ -5,24 +6,13 @@ mod models;
 mod services;
 mod store;
 
-use std::sync::Mutex;
-use tauri::Manager;
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .setup(|app| {
-            std::fs::create_dir_all(infra::paths::data_dir(app.handle())?)?;
-
-            // Load the manga_db cache into managed state.
-            let cache = store::db::MangaDbCache::load(app.handle())?;
-            app.manage(Mutex::new(cache));
-
-            Ok(())
-        })
+        .setup(app::setup)
         .invoke_handler(tauri::generate_handler![
             commands::sources::scan_directory,
             commands::sources::list_sources,

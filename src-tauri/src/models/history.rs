@@ -1,3 +1,5 @@
+//! Recently-read history types persisted to `history.json`.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

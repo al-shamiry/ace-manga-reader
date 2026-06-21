@@ -1,3 +1,6 @@
+//! Chapter types: a `Chapter` (page count + status) and its persisted
+//! `ChapterStatus`.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

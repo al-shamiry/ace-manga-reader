@@ -1,3 +1,6 @@
+//! Source types: the `SourceDto` sent to the frontend and the persisted
+//! `SourceRecord` stored in the DB.
+
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};

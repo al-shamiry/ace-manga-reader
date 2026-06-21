@@ -1,3 +1,6 @@
+//! Data model: serde types shared across the app — DTOs sent to the frontend
+//! and the records persisted on disk. No I/O or Tauri here.
+
 pub mod category;
 pub mod chapter;
 pub mod db;

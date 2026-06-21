@@ -1,3 +1,6 @@
+//! Application-wide error type and result alias shared by every command,
+//! service, and store. Serializes to its display string for the frontend.
+
 use std::fmt;
 
 /// Application-wide error returned by every Tauri command.

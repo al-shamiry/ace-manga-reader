@@ -1,3 +1,6 @@
+//! Manga types: the `MangaDto` sent to the frontend and the persisted
+//! `MangaRecord` stored in the DB.
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
