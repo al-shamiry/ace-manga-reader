@@ -1,3 +1,8 @@
+//! Tauri commands for categories and library membership: category CRUD and
+//! ordering, plus adding/removing mangas to the library and its categories.
+//! Category state is persisted via `store::config`; manga membership via
+//! `store::db`.
+
 use std::collections::HashSet;
 
 use crate::error::{AppError, AppResult};
