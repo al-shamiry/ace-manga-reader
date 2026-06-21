@@ -179,7 +179,7 @@ export function ReaderView() {
   }
 
   function nudgeWebtoonPadding(delta: number) {
-    const next = Math.max(0, Math.min(25, webtoonPadding() + delta));
+    const next = Math.max(0, Math.min(40, webtoonPadding() + delta));
     setWebtoonPaddingPreserving(next);
   }
 
@@ -589,7 +589,7 @@ export function ReaderView() {
                     <span class="shrink-0 text-[0.7rem] text-muted-foreground">0%</span>
                     <Slider
                       minValue={0}
-                      maxValue={25}
+                      maxValue={40}
                       step={1}
                       value={[webtoonPadding()]}
                       onChange={(v) => setWebtoonPaddingPreserving(v[0])}
@@ -600,7 +600,7 @@ export function ReaderView() {
                         <SliderThumb />
                       </SliderTrack>
                     </Slider>
-                    <span class="shrink-0 text-[0.7rem] text-muted-foreground">25%</span>
+                    <span class="shrink-0 text-[0.7rem] text-muted-foreground">40%</span>
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>

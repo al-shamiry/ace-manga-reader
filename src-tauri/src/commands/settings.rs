@@ -51,9 +51,9 @@ impl Default for ReaderSettings {
 
 impl ReaderSettings {
     /// Clamp values to the ranges the UI allows, so out-of-band input from a
-    /// command can't be persisted. Webtoon side padding is 0–25%.
+    /// command can't be persisted. Webtoon side padding is 0–40%.
     pub fn clamped(mut self) -> Self {
-        self.webtoon_padding = self.webtoon_padding.map(|p| p.min(25));
+        self.webtoon_padding = self.webtoon_padding.map(|p| p.min(40));
         self
     }
 }
