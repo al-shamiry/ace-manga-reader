@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Read;
 use std::path::Path;
@@ -156,20 +156,9 @@ fn update_chapter_status(
 
 // ── Commands ──────────────────────────────────────────────────────────────────
 
-#[tauri::command]
-pub fn get_chapters(manga_path: String, app: tauri::AppHandle) -> AppResult<Vec<Chapter>> {
-    let dir = Path::new(&manga_path);
-    let manga_id = path_id(dir);
-
-    // Pull the chapters map out of the cache (no I/O)
-    let cache = app.state::<Mutex<MangaDbCache>>();
-    let chapters_map: HashMap<String, ChapterStatus> = {
-        let guard = manga_db::lock(&cache)?;
-        guard.db.mangas.get(&manga_id)
-            .map(|manga| manga.chapters.clone())
-            .unwrap_or_default()
-    };
-
+/// Discover a manga's chapters fresh from disk (image subdirs + CBZs),
+/// overlaying any saved statuses, sorted in natural title order.
+fn discover_chapters(dir: &Path, chapters_map: &HashMap<String, ChapterStatus>) -> Vec<Chapter> {
     let (sub_dirs, cbz_files) = subdirs_and_cbz(dir);
 
     let dir_chapters = sub_dirs.par_iter().filter_map(|p| {
@@ -189,22 +178,76 @@ pub fn get_chapters(manga_path: String, app: tauri::AppHandle) -> AppResult<Vec<
         })
     });
 
-    let cbz_chapters = cbz_files.par_iter().filter_map(|p| {
+    let cbz_chapters = cbz_files.par_iter().map(|p| {
         let id = path_id(p);
         let status = chapters_map.get(&id).cloned().unwrap_or(ChapterStatus::Unread);
         let page_count = count_cbz_images(p);
-        Some(Chapter {
+        Chapter {
             id,
             title: title_from_path(p),
             path: normalize(p),
             file_type: "cbz".to_string(),
             page_count,
             status,
-        })
+        }
     });
 
     let mut chapters: Vec<Chapter> = dir_chapters.chain(cbz_chapters).collect();
     chapters.sort_by(|a, b| natural_cmp(&a.title, &b.title));
+    chapters
+}
+
+/// Read a manga's saved chapter-status map out of the cache (no I/O).
+fn chapters_map_for(
+    cache: &Mutex<MangaDbCache>,
+    manga_id: &str,
+) -> AppResult<HashMap<String, ChapterStatus>> {
+    let guard = manga_db::lock(cache)?;
+    Ok(guard
+        .db
+        .mangas
+        .get(manga_id)
+        .map(|manga| manga.chapters.clone())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn get_chapters(manga_path: String, app: tauri::AppHandle) -> AppResult<Vec<Chapter>> {
+    let dir = Path::new(&manga_path);
+    let manga_id = path_id(dir);
+
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    let chapters_map = chapters_map_for(&cache, &manga_id)?;
+
+    Ok(discover_chapters(dir, &chapters_map))
+}
+
+/// Re-scan a single manga folder from disk: refresh the chapter list, prune
+/// saved statuses for chapters that no longer exist, and update the cached
+/// chapter/read counts in one DB write. Returns the fresh chapter list.
+#[tauri::command]
+pub fn rescan_manga(manga_path: String, app: tauri::AppHandle) -> AppResult<Vec<Chapter>> {
+    let dir = Path::new(&manga_path);
+    let manga_id = path_id(dir);
+    let cache = app.state::<Mutex<MangaDbCache>>();
+
+    let chapters_map = chapters_map_for(&cache, &manga_id)?;
+    let chapters = discover_chapters(dir, &chapters_map);
+
+    let on_disk_ids: HashSet<&str> = chapters.iter().map(|c| c.id.as_str()).collect();
+    let chapter_count = chapters.len();
+    manga_db::mutate(&cache, &app, |db| {
+        if let Some(entry) = db.mangas.get_mut(&manga_id) {
+            entry.chapters.retain(|id, _| on_disk_ids.contains(id.as_str()));
+            entry.chapter_count = chapter_count;
+            entry.read_chapters = entry
+                .chapters
+                .values()
+                .filter(|s| matches!(s, ChapterStatus::Read))
+                .count();
+        }
+    })?;
+
     Ok(chapters)
 }
 
@@ -318,6 +361,37 @@ pub fn mark_mangas_read(
             } else {
                 entry.read_chapters = 0;
             }
+        }
+    })
+}
+
+/// Mark a specific set of chapters within one manga Read or Unread in a single
+/// DB write. Marking Unread removes the status entry (Unread is the implicit
+/// default), keeping the persisted chapter map lean.
+#[tauri::command]
+pub fn mark_chapters_read(
+    manga_id: String,
+    chapter_ids: Vec<String>,
+    read: bool,
+    app: tauri::AppHandle,
+) -> AppResult<()> {
+    let cache = app.state::<Mutex<MangaDbCache>>();
+    manga_db::mutate(&cache, &app, |db| {
+        let entry = db.mangas.entry(manga_id).or_default();
+        for cid in &chapter_ids {
+            if read {
+                entry.chapters.insert(cid.clone(), ChapterStatus::Read);
+            } else {
+                entry.chapters.remove(cid);
+            }
+        }
+        entry.read_chapters = entry
+            .chapters
+            .values()
+            .filter(|s| matches!(s, ChapterStatus::Read))
+            .count();
+        if read {
+            entry.last_read_at = now_epoch();
         }
     })
 }
