@@ -4,16 +4,15 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
-use std::sync::Mutex;
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 use crate::error::AppResult;
 use crate::infra::atomic::write_atomic_json;
 use crate::infra::naming::{normalize, path_id};
 use crate::infra::paths;
 use crate::models::HistoryData;
-use crate::store::db::{self, MangaDbCache};
+use crate::store::db::{self, DbExt};
 
 pub(crate) fn load(app: &AppHandle) -> AppResult<HistoryData> {
     let path = paths::history_file(app)?;
@@ -51,7 +50,7 @@ pub(crate) fn rekey_mangas(app: &AppHandle, id_map: &HashMap<String, String>) ->
         return Ok(());
     }
 
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     let guard = db::lock(&cache)?;
 
     for entry in data.entries.iter_mut() {

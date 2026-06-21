@@ -4,6 +4,8 @@
 
 use std::sync::{Mutex, MutexGuard};
 
+use tauri::{Manager, State};
+
 use crate::error::{AppError, AppResult};
 use crate::infra::atomic::write_atomic_json;
 use crate::infra::paths;
@@ -18,6 +20,18 @@ impl MangaDbCache {
     /// Load the database from disk (missing or corrupt → empty).
     pub fn load(app: &tauri::AppHandle) -> AppResult<Self> {
         Ok(Self { db: load_db(app)? })
+    }
+}
+
+/// Extension trait so call sites read `app.db()` instead of the verbose
+/// `app.state::<Mutex<MangaDbCache>>()`.
+pub(crate) trait DbExt {
+    fn db(&self) -> State<'_, Mutex<MangaDbCache>>;
+}
+
+impl DbExt for tauri::AppHandle {
+    fn db(&self) -> State<'_, Mutex<MangaDbCache>> {
+        self.state::<Mutex<MangaDbCache>>()
     }
 }
 

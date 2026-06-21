@@ -6,15 +6,12 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
-
-use tauri::Manager;
 
 use crate::error::{AppError, AppResult};
 use crate::infra::image::subdirs_and_cbz;
 use crate::infra::naming::{normalize, path_id};
 use crate::models::{ChapterStatus, MangaDb, MangaRecord};
-use crate::store::db::{self, MangaDbCache};
+use crate::store::db::{self, DbExt};
 
 /// Relocate `source_id` to `new_dir`, persisting the remap. Returns the old→new
 /// manga id map (empty entries excluded only when ids are unchanged).
@@ -25,7 +22,7 @@ pub(crate) fn relocate_source(
 ) -> AppResult<HashMap<String, String>> {
     let normalized_new_path = normalize(new_dir);
     let new_source_id = path_id(new_dir);
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
 
     let mut guard = db::lock(&cache)?;
 

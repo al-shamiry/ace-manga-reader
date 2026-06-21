@@ -4,10 +4,8 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::sync::Mutex;
 
 use rayon::prelude::*;
-use tauri::Manager;
 
 use crate::error::{AppError, AppResult};
 use crate::infra::archive;
@@ -15,7 +13,7 @@ use crate::infra::image::{has_image, images_in, subdirs_and_cbz};
 use crate::infra::naming::{natural_cmp, normalize, now_epoch, path_id, title_from_path};
 use crate::infra::paths;
 use crate::models::{Chapter, ChapterStatus};
-use crate::store::db::{self, MangaDbCache};
+use crate::store::db::{self, DbExt};
 
 // ── Discovery & loading ──────────────────────────────────────────────────────
 
@@ -38,7 +36,7 @@ pub(crate) fn rescan(app: &tauri::AppHandle, manga_path: &str) -> AppResult<Vec<
 
     let on_disk_ids: HashSet<&str> = chapters.iter().map(|c| c.id.as_str()).collect();
     let chapter_count = chapters.len();
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     db::mutate(&cache, app, |db| {
         if let Some(entry) = db.mangas.get_mut(&manga_id) {
             entry.chapters.retain(|id, _| on_disk_ids.contains(id.as_str()));
@@ -117,7 +115,7 @@ pub(crate) fn set_mangas_read(
     manga_ids: Vec<String>,
     read: bool,
 ) -> AppResult<()> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
 
     let chapter_ids: HashMap<String, Vec<String>> = if read {
         let paths: Vec<(String, String)> = {
@@ -164,7 +162,7 @@ pub(crate) fn set_chapters_read(
     chapter_ids: Vec<String>,
     read: bool,
 ) -> AppResult<()> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     db::mutate(&cache, app, |db| {
         let entry = db.mangas.entry(manga_id).or_default();
         for cid in &chapter_ids {
@@ -233,7 +231,7 @@ fn chapters_map_for(
     app: &tauri::AppHandle,
     manga_id: &str,
 ) -> AppResult<HashMap<String, ChapterStatus>> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     let guard = db::lock(&cache)?;
     Ok(guard
         .db
@@ -264,7 +262,7 @@ fn update_chapter_status(
     chapter_id: String,
     status: ChapterStatus,
 ) -> AppResult<()> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     db::mutate(&cache, app, |db| {
         let entry = db.mangas.entry(manga_id).or_default();
         entry.chapters.insert(chapter_id, status);

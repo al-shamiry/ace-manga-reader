@@ -1,13 +1,10 @@
 use std::collections::HashSet;
-use std::sync::Mutex;
-
-use tauri::Manager;
 
 use crate::error::{AppError, AppResult};
 use crate::infra::naming::now_epoch;
 use crate::models::{Category, MangaDto, DEFAULT_CATEGORY_ID};
 use crate::store::config::{load_config, save_config, update_config};
-use crate::store::db::{self, MangaDbCache};
+use crate::store::db::{self, DbExt};
 
 // ── Category commands ────────────────────────────────────────────────────────
 
@@ -58,7 +55,7 @@ pub fn delete_category(app: tauri::AppHandle, category_id: String) -> AppResult<
 
     // Move mangas off this category first, so a failure can't leave mangas
     // pointing at a category that no longer exists.
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     db::mutate(&cache, &app, |db| {
         for manga in db.mangas.values_mut() {
             manga.category_ids.retain(|id| id != &category_id);
@@ -85,7 +82,7 @@ pub fn reorder_categories(app: tauri::AppHandle, category_ids: Vec<String>) -> A
 
 #[tauri::command]
 pub fn get_library(app: tauri::AppHandle) -> AppResult<Vec<MangaDto>> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     let guard = db::lock(&cache)?;
     let hidden: HashSet<&str> = guard.db.sources.iter()
         .filter(|(_, source)| source.hidden)
@@ -105,7 +102,7 @@ pub fn add_to_library(
     manga_id: String,
     category_ids: Vec<String>,
 ) -> AppResult<()> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     db::mutate(&cache, &app, |db| {
         if let Some(entry) = db.mangas.get_mut(&manga_id) {
             entry.category_ids = category_ids;
@@ -119,7 +116,7 @@ pub fn add_to_library(
 
 #[tauri::command]
 pub fn remove_from_library(app: tauri::AppHandle, manga_id: String) -> AppResult<()> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     db::mutate(&cache, &app, |db| {
         if let Some(m) = db.mangas.get_mut(&manga_id) {
             m.added_at = None;
@@ -136,7 +133,7 @@ pub fn add_mangas_to_categories(
     manga_ids: Vec<String>,
     category_ids: Vec<String>,
 ) -> AppResult<()> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     let now = now_epoch();
     db::mutate(&cache, &app, |db| {
         for id in &manga_ids {
@@ -161,7 +158,7 @@ pub fn remove_mangas_from_library(
     app: tauri::AppHandle,
     manga_ids: Vec<String>,
 ) -> AppResult<()> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     db::mutate(&cache, &app, |db| {
         for id in &manga_ids {
             if let Some(m) = db.mangas.get_mut(id) {
@@ -180,7 +177,7 @@ pub fn remove_mangas_from_category(
     manga_ids: Vec<String>,
     category_id: String,
 ) -> AppResult<()> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     db::mutate(&cache, &app, |db| {
         for id in &manga_ids {
             if let Some(m) = db.mangas.get_mut(id) {
@@ -195,7 +192,7 @@ pub fn remove_mangas_from_category(
 
 #[tauri::command]
 pub fn is_in_library(app: tauri::AppHandle, manga_id: String) -> AppResult<bool> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     Ok(db::get_manga(&cache, &manga_id)?
         .map(|m| m.added_at.is_some())
         .unwrap_or(false))

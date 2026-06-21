@@ -5,10 +5,8 @@
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 use rayon::prelude::*;
-use tauri::Manager;
 
 use crate::error::{AppError, AppResult};
 use crate::infra::archive;
@@ -16,7 +14,7 @@ use crate::infra::image::{images_in, subdirs_and_cbz};
 use crate::infra::naming::{natural_cmp, normalize, now_epoch, path_id, title_from_path};
 use crate::infra::paths;
 use crate::models::{MangaDb, MangaDto, SourceDto, SourceRecord};
-use crate::store::db::{self, MangaDbCache};
+use crate::store::db::{self, DbExt};
 
 /// Cache-aware scan of a source directory into its mangas. On a cache hit (the
 /// source is known and has mangas) returns the stored projection; otherwise
@@ -27,7 +25,7 @@ pub(crate) fn scan_source(
     source_id: &str,
     force_refresh: bool,
 ) -> AppResult<Vec<MangaDto>> {
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
 
     if !force_refresh {
         let guard = db::lock(&cache)?;
@@ -59,7 +57,7 @@ pub(crate) fn ensure_source(
     name: Option<String>,
 ) -> AppResult<String> {
     let id = path_id(dir);
-    let cache = app.state::<Mutex<MangaDbCache>>();
+    let cache = app.db();
     {
         let guard = db::lock(&cache)?;
         if guard.db.sources.contains_key(&id) {
