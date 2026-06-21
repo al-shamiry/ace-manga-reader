@@ -9,7 +9,7 @@ use crate::store::db::{self, DbExt};
 // ── Category commands ────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_categories(app: tauri::AppHandle) -> AppResult<Vec<Category>> {
+pub fn list_categories(app: tauri::AppHandle) -> AppResult<Vec<Category>> {
     let mut cats = load_config(&app)?.categories;
     cats.sort_by_key(|c| c.sort_order);
     Ok(cats)
@@ -81,7 +81,7 @@ pub fn reorder_categories(app: tauri::AppHandle, category_ids: Vec<String>) -> A
 // ── Library commands ─────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_library(app: tauri::AppHandle) -> AppResult<Vec<MangaDto>> {
+pub fn list_library(app: tauri::AppHandle) -> AppResult<Vec<MangaDto>> {
     let cache = app.db();
     let guard = db::lock(&cache)?;
     let hidden: HashSet<&str> = guard.db.sources.iter()

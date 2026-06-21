@@ -11,7 +11,7 @@ use crate::store::history;
 const MAX_ENTRIES: usize = 1000;
 
 #[tauri::command]
-pub fn get_history(app: AppHandle) -> AppResult<Vec<HistoryEntry>> {
+pub fn list_history(app: AppHandle) -> AppResult<Vec<HistoryEntry>> {
     Ok(history::load(&app)?.entries)
 }
 

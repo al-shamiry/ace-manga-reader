@@ -29,7 +29,7 @@ pub fn set_manga_reader_settings(
 // ── Chapter discovery & loading ──────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_chapters(manga_path: String, app: tauri::AppHandle) -> AppResult<Vec<Chapter>> {
+pub fn list_chapters(manga_path: String, app: tauri::AppHandle) -> AppResult<Vec<Chapter>> {
     chapters::list(&app, &manga_path)
 }
 
@@ -61,7 +61,7 @@ pub fn set_chapter_progress(
 }
 
 #[tauri::command]
-pub fn mark_chapter_read(
+pub fn set_chapter_read(
     manga_id: String,
     chapter_id: String,
     read: bool,
@@ -71,7 +71,7 @@ pub fn mark_chapter_read(
 }
 
 #[tauri::command]
-pub fn mark_mangas_read(
+pub fn set_mangas_read(
     manga_ids: Vec<String>,
     read: bool,
     app: tauri::AppHandle,
@@ -80,7 +80,7 @@ pub fn mark_mangas_read(
 }
 
 #[tauri::command]
-pub fn mark_chapters_read(
+pub fn set_chapters_read(
     manga_id: String,
     chapter_ids: Vec<String>,
     read: bool,

@@ -33,7 +33,7 @@ pub fn list_sources(
 }
 
 #[tauri::command]
-pub fn scan_directory(
+pub fn scan_source(
     path: String,
     force_refresh: bool,
     app: tauri::AppHandle,
