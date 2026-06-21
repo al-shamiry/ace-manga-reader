@@ -7,7 +7,7 @@ use crate::commands::manga_db::{self, MangaDbCache};
 use crate::commands::settings::{load_config, save_config, update_config};
 use crate::error::{AppError, AppResult};
 use crate::models::{Category, MangaDto, DEFAULT_CATEGORY_ID};
-use crate::utils::now_epoch;
+use crate::infra::naming::now_epoch;
 
 // ── Category commands ────────────────────────────────────────────────────────
 

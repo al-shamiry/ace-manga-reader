@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::utils::now_epoch;
+use crate::infra::naming::now_epoch;
 
 /// A source folder as presented to the frontend.
 #[derive(Debug, Clone, Serialize, Deserialize)]

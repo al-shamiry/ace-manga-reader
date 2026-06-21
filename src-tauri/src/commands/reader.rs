@@ -12,11 +12,10 @@ use crate::commands::manga_db::{self, MangaDbCache};
 use crate::commands::settings::{load_config, ReaderSettings};
 use crate::error::{AppError, AppResult};
 use crate::models::{Chapter, ChapterStatus};
-use crate::paths;
-use crate::utils::{
-    has_image, images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
-    title_from_path, write_atomic_json,
-};
+use crate::infra::atomic::write_atomic_json;
+use crate::infra::image::{has_image, images_in, is_image, subdirs_and_cbz};
+use crate::infra::naming::{natural_cmp, normalize, now_epoch, path_id, title_from_path};
+use crate::infra::paths;
 
 // ── Per-manga reader settings (settings/{manga_id}.json) ─────────────────────
 

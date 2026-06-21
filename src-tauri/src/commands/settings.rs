@@ -3,8 +3,8 @@ use std::fs;
 
 use crate::error::AppResult;
 use crate::models::{Category, DEFAULT_CATEGORY_ID};
-use crate::paths;
-use crate::utils::write_atomic_json;
+use crate::infra::atomic::write_atomic_json;
+use crate::infra::paths;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

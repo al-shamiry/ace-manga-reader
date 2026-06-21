@@ -2,8 +2,8 @@ use std::sync::{Mutex, MutexGuard};
 
 use crate::error::{AppError, AppResult};
 use crate::models::{MangaDb, MangaRecord};
-use crate::paths;
-use crate::utils::write_atomic_json;
+use crate::infra::atomic::write_atomic_json;
+use crate::infra::paths;
 
 // ── Cache struct ─────────────────────────────────────────────────────────────
 

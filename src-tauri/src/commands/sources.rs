@@ -13,11 +13,9 @@ use crate::commands::{history, manga_db};
 use crate::commands::manga_db::MangaDbCache;
 use crate::error::{AppError, AppResult};
 use crate::models::{ChapterStatus, MangaDb, MangaDto, MangaRecord, SourceDto, SourceRecord};
-use crate::paths;
-use crate::utils::{
-    images_in, is_image, natural_cmp, normalize, now_epoch, path_id, subdirs_and_cbz,
-    title_from_path,
-};
+use crate::infra::image::{images_in, is_image, subdirs_and_cbz};
+use crate::infra::naming::{natural_cmp, normalize, now_epoch, path_id, title_from_path};
+use crate::infra::paths;
 
 /// Find the cover from explicit cover files or first issue's first image.
 fn find_folder_cover(manga_path: &Path, sub_dirs: &[PathBuf]) -> Option<String> {

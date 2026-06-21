@@ -8,8 +8,9 @@ use tauri::{AppHandle, Manager};
 use crate::commands::manga_db::{self, MangaDbCache};
 use crate::error::AppResult;
 use crate::models::{HistoryData, HistoryEntry};
-use crate::paths;
-use crate::utils::{normalize, now_epoch, path_id, write_atomic_json};
+use crate::infra::atomic::write_atomic_json;
+use crate::infra::naming::{normalize, now_epoch, path_id};
+use crate::infra::paths;
 
 const MAX_ENTRIES: usize = 1000;
 

@@ -1,8 +1,7 @@
 mod commands;
 mod error;
+mod infra;
 mod models;
-mod paths;
-mod utils;
 
 use std::sync::Mutex;
 use tauri::Manager;
@@ -14,7 +13,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
-            std::fs::create_dir_all(paths::data_dir(app.handle())?)?;
+            std::fs::create_dir_all(infra::paths::data_dir(app.handle())?)?;
 
             // Load the manga_db cache into managed state.
             let cache = commands::manga_db::MangaDbCache::load(app.handle())?;
