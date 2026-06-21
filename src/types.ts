@@ -10,6 +10,12 @@ export interface Manga {
   added_at?: number;
 }
 
+export type NavOrigin = "library" | "sources" | "history";
+export interface MangaDetailState {
+  manga: Manga;
+  from?: NavOrigin;
+}
+
 export type ChapterStatus =
   | { type: "unread" }
   | { type: "ongoing"; page: number }

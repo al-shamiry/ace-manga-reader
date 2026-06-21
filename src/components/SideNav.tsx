@@ -14,9 +14,15 @@ export function SideNav() {
   const navigate = useNavigate();
   const [expanded, setExpanded] = createSignal(false);
 
+  const ORIGIN_PATH = { library: "/", sources: "/sources", history: "/history" } as const;
+
   function isActive(path: string) {
+    if (location.pathname.startsWith("/manga/")) {
+      const from = (location.state as { from?: keyof typeof ORIGIN_PATH } | undefined)?.from;
+      return ORIGIN_PATH[from ?? "library"] === path;
+    }
     if (path === "/") {
-      return location.pathname === "/" || location.pathname.startsWith("/manga/");
+      return location.pathname === "/";
     }
     if (path === "/sources") {
       return location.pathname === "/sources" || location.pathname.startsWith("/source/");

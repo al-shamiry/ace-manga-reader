@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 import { MangaCard } from "./MangaCard";
-import type { DisplayMode, Manga } from "../types";
+import type { DisplayMode, Manga, NavOrigin } from "../types";
 
 interface Props {
   mangas: Manga[];
@@ -12,6 +12,7 @@ interface Props {
   selectionMode?: boolean;
   isSelected?: (manga: Manga) => boolean;
   onToggleSelect?: (manga: Manga) => void;
+  from?: NavOrigin;
 }
 
 const GRID_CLASS: Record<DisplayMode, string> = {
@@ -47,6 +48,7 @@ export function MangaGrid(props: Props) {
             selectionMode={props.selectionMode}
             selected={props.isSelected?.(manga)}
             onToggleSelect={props.onToggleSelect ? () => props.onToggleSelect!(manga) : undefined}
+            from={props.from}
           />
         )}
       </For>

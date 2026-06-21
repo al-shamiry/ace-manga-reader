@@ -43,7 +43,7 @@ import {
   ToolbarTitle,
   toolbarIconButtonClass,
 } from "../components/ui/toolbar";
-import type { Manga, Chapter, ChapterStatus } from "../types";
+import type { Chapter, ChapterStatus, MangaDetailState } from "../types";
 
 type ChapterFilterStatus = "unread" | "ongoing" | "read";
 
@@ -139,7 +139,7 @@ function StatusBadge(props: { status: ChapterStatus }) {
 export function MangaDetailView() {
   const navigate = useNavigate();
   const location = useLocation();
-  const manga = location.state as Manga | undefined;
+  const manga = (location.state as MangaDetailState | undefined)?.manga;
   const { categories, libraryEntries, refreshLibrary, refreshCategories } = useLibrary();
   const view = useViewLoading();
   // Mark busy synchronously so the overlay paints on the first frame.

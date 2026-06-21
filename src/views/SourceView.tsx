@@ -165,7 +165,7 @@ export function SourceView() {
       const allUnread = list.every((c) => c.status.type === "unread");
       const target = allUnread ? list[0] : list.find((c) => c.status.type !== "read");
       if (!target) {
-        navigate("/manga/" + manga.id, { state: manga });
+        navigate("/manga/" + manga.id, { state: { manga, from: "sources" } });
         return;
       }
       const idx = list.findIndex((c) => c.id === target.id);
@@ -377,6 +377,7 @@ export function SourceView() {
             selectionMode={selection.active()}
             isSelected={selection.isSelected}
             onToggleSelect={selection.toggle}
+            from="sources"
           />
         </Show>
       </div>

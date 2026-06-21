@@ -4,7 +4,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { Bookmark, Check, Play } from "lucide-solid";
 import { useLibrary } from "../context/LibraryContext";
 import { Button } from "./ui/button";
-import type { DisplayMode, Manga } from "../types";
+import type { DisplayMode, Manga, NavOrigin } from "../types";
 
 interface Props {
   manga: Manga;
@@ -15,6 +15,7 @@ interface Props {
   selectionMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  from?: NavOrigin;
 }
 
 export function MangaCard(props: Props) {
@@ -31,7 +32,9 @@ export function MangaCard(props: Props) {
       props.onToggleSelect?.();
       return;
     }
-    navigate("/manga/" + props.manga.id, { state: props.manga });
+    navigate("/manga/" + props.manga.id, {
+      state: { manga: props.manga, from: props.from },
+    });
   }
 
   // Selection affordance overlaid on the cover while selecting: an inset

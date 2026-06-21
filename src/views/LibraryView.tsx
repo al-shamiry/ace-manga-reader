@@ -158,7 +158,7 @@ export function LibraryView() {
       const target = allUnread ? list[0] : list.find((c) => c.status.type !== "read");
       if (!target) {
         // All chapters read — fall through to manga detail
-        navigate("/manga/" + manga.id, { state: manga });
+        navigate("/manga/" + manga.id, { state: { manga, from: "library" } });
         return;
       }
       const idx = list.findIndex((c) => c.id === target.id);
@@ -579,6 +579,7 @@ export function LibraryView() {
             selectionMode={selection.active()}
             isSelected={selection.isSelected}
             onToggleSelect={selection.toggle}
+            from="library"
           />
         </Show>
       </div>
