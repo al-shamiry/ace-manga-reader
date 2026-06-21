@@ -45,7 +45,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   async function refreshCategories() {
     try {
-      const cats = await invoke<Category[]>("get_categories");
+      const cats = await invoke<Category[]>("list_categories");
       setCategories(cats);
     } catch (e) {
       console.error("Failed to load categories:", e);
@@ -54,7 +54,7 @@ export function LibraryProvider(props: { children: JSX.Element }) {
 
   async function refreshLibrary() {
     try {
-      const entries = await invoke<Manga[]>("get_library");
+      const entries = await invoke<Manga[]>("list_library");
       setLibraryEntries(entries);
     } catch (e) {
       console.error("Failed to load library:", e);

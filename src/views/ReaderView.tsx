@@ -382,7 +382,7 @@ export function ReaderView() {
     if (!chapter) return;
     const s = state();
     if (!s) return;
-    const allChapters = await invoke<Chapter[]>("get_chapters", {
+    const allChapters = await invoke<Chapter[]>("list_chapters", {
       mangaPath: s.manga.path,
     }).catch(() => [] as Chapter[]);
     const idx = allChapters.findIndex((c) => c.id === chapter.id);

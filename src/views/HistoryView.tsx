@@ -20,7 +20,7 @@ export function HistoryView() {
 
   onMount(async () => {
     try {
-      const result = await invoke<HistoryEntry[]>("get_history");
+      const result = await invoke<HistoryEntry[]>("list_history");
       setEntries(result);
     } catch (e) {
       console.error("Failed to load history:", e);
@@ -61,7 +61,7 @@ export function HistoryView() {
       chapter_count: e.manga_chapter_count,
     };
     try {
-      const list = await invoke<Chapter[]>("get_chapters", { mangaPath: manga.path });
+      const list = await invoke<Chapter[]>("list_chapters", { mangaPath: manga.path });
       const idx = list.findIndex((c) => c.id === e.chapter_id);
       if (idx === -1) {
         // Chapter no longer exists on disk — drop the dead entry.

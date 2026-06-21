@@ -82,7 +82,7 @@ export function SourceView() {
     setStatus("loading");
     setError("");
     try {
-      const result = await invoke<Manga[]>("scan_directory", { path, forceRefresh });
+      const result = await invoke<Manga[]>("scan_source", { path, forceRefresh });
       setMangas(result);
       setStatus("idle");
       getCurrentWindow().setTitle(`Ace Manga Reader — ${source()?.name}`);
@@ -160,7 +160,7 @@ export function SourceView() {
 
   async function handleContinue(manga: Manga) {
     try {
-      const list = await invoke<Chapter[]>("get_chapters", { mangaPath: manga.path });
+      const list = await invoke<Chapter[]>("list_chapters", { mangaPath: manga.path });
       if (list.length === 0) return;
       const allUnread = list.every((c) => c.status.type === "unread");
       const target = allUnread ? list[0] : list.find((c) => c.status.type !== "read");
@@ -236,7 +236,7 @@ export function SourceView() {
     const mangaIds = selection.selectedIds();
     if (mangaIds.length === 0) return;
     try {
-      await invoke("mark_mangas_read", { mangaIds, read });
+      await invoke("set_mangas_read", { mangaIds, read });
       await reloadAfterBulk();
     } catch (e) {
       console.error("Failed to mark mangas:", e);

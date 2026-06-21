@@ -116,7 +116,7 @@ export function SourcesProvider(props: { children: JSX.Element }) {
 
     setScanStatusFor(sourceId, { status: "scanning" });
 
-    invoke("scan_directory", { path: source.path, forceRefresh: true })
+    invoke("scan_source", { path: source.path, forceRefresh: true })
       .then(() => {
         setScanStatusFor(sourceId, { status: "done" });
         refreshSources();

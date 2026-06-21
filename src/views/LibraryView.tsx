@@ -152,7 +152,7 @@ export function LibraryView() {
   // Mirrors MangaDetailView's `primaryChapter` logic so behavior is identical.
   async function handleContinue(manga: Manga) {
     try {
-      const list = await invoke<Chapter[]>("get_chapters", { mangaPath: manga.path });
+      const list = await invoke<Chapter[]>("list_chapters", { mangaPath: manga.path });
       if (list.length === 0) return;
       const allUnread = list.every((c) => c.status.type === "unread");
       const target = allUnread ? list[0] : list.find((c) => c.status.type !== "read");
@@ -270,7 +270,7 @@ export function LibraryView() {
     const mangaIds = selection.selectedIds();
     if (mangaIds.length === 0) return;
     try {
-      await invoke("mark_mangas_read", { mangaIds, read });
+      await invoke("set_mangas_read", { mangaIds, read });
       await refreshLibrary();
     } catch (e) {
       console.error("Failed to mark mangas:", e);

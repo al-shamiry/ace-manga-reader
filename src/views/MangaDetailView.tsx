@@ -160,7 +160,7 @@ export function MangaDetailView() {
 
   async function loadChapters() {
     if (!manga) return;
-    const result = await invoke<Chapter[]>("get_chapters", { mangaPath: manga.path });
+    const result = await invoke<Chapter[]>("list_chapters", { mangaPath: manga.path });
     setChapters(result);
   }
 
@@ -339,7 +339,7 @@ export function MangaDetailView() {
     const chapterIds = [...selectedIds()];
     if (chapterIds.length === 0) return;
     try {
-      await invoke("mark_chapters_read", { mangaId: manga.id, chapterIds, read });
+      await invoke("set_chapters_read", { mangaId: manga.id, chapterIds, read });
       await loadChapters();
       await refreshLibrary();
     } catch (e) {
