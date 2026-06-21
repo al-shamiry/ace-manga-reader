@@ -2,6 +2,7 @@ mod commands;
 mod error;
 mod infra;
 mod models;
+mod services;
 mod store;
 
 use std::sync::Mutex;
