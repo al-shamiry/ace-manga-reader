@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-solid";
 
-import type { Category } from "../types";
+import type { Category } from "~/types";
 
 import {
   DropdownMenu,

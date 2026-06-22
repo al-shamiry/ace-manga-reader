@@ -21,6 +21,8 @@ import {
   Trash2,
 } from "lucide-solid";
 
+import type { Source } from "~/types";
+
 import { EmptyState } from "../components/EmptyState";
 import { SourceListSkeleton } from "../components/Skeleton";
 import { SourceRow } from "../components/SourceRow";
@@ -34,7 +36,6 @@ import {
 } from "../components/ui/toolbar";
 import { useSources } from "../context/SourcesContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
-import type { Source } from "../types";
 
 export function SourcesView() {
   const {

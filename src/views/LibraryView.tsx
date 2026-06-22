@@ -13,6 +13,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Plus } from "lucide-solid";
 
+import type {
+  Chapter,
+  LibraryDisplay,
+  LibraryFilters,
+  Manga,
+  ReadingStatus,
+  SortPreference,
+} from "~/types";
+
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
 import { EmptyState } from "../components/EmptyState";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
@@ -32,14 +41,6 @@ import { useLibrary } from "../context/LibraryContext";
 import { useSources } from "../context/SourcesContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { createMangaSelection } from "../lib/createMangaSelection";
-import type {
-  Chapter,
-  LibraryDisplay,
-  LibraryFilters,
-  Manga,
-  ReadingStatus,
-  SortPreference,
-} from "../types";
 
 export function LibraryView() {
   const {

@@ -8,7 +8,7 @@ import {
 
 import { invoke } from "@tauri-apps/api/core";
 
-import type { Source } from "../types";
+import type { Source } from "~/types";
 
 type Status = "idle" | "loading" | "error";
 export type ScanStatus = "scanning" | "done" | "error";

@@ -28,6 +28,8 @@ import {
   Trash2,
 } from "lucide-solid";
 
+import type { Chapter, ChapterStatus, MangaDetailState } from "~/types";
+
 import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/ui/button";
 import {
@@ -52,7 +54,6 @@ import {
 } from "../components/ui/toolbar";
 import { useLibrary } from "../context/LibraryContext";
 import { useViewLoading } from "../context/ViewLoadingContext";
-import type { Chapter, ChapterStatus, MangaDetailState } from "../types";
 
 type ChapterFilterStatus = "unread" | "ongoing" | "read";
 

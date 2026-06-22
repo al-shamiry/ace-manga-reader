@@ -1,6 +1,6 @@
 import { createMemo, createSignal } from "solid-js";
 
-import type { Manga } from "../types";
+import type { Manga } from "~/types";
 
 /**
  * Multi-select state for a manga grid. `visible` is the accessor for the

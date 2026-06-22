@@ -33,6 +33,8 @@ import {
   Scroll,
 } from "lucide-solid";
 
+import type { Chapter, FitMode, Manga, ReadingMode, Settings } from "~/types";
+
 import { Button } from "../components/ui/button";
 import {
   DropdownMenu,
@@ -45,7 +47,6 @@ import {
   SliderThumb,
   SliderTrack,
 } from "../components/ui/slider";
-import type { Chapter, FitMode, Manga, ReadingMode, Settings } from "../types";
 
 const FIT_MODES: FitMode[] = [
   "fit-screen",

@@ -4,6 +4,8 @@ import { useNavigate } from "@solidjs/router";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
 
+import type { Chapter, HistoryEntry, Manga } from "~/types";
+
 import { EmptyState } from "../components/EmptyState";
 import {
   Toolbar,
@@ -14,7 +16,6 @@ import {
 } from "../components/ui/toolbar";
 import { useViewLoading } from "../context/ViewLoadingContext";
 import { formatRelativeDay, formatTime } from "../lib/date";
-import type { Chapter, HistoryEntry, Manga } from "../types";
 
 export function HistoryView() {
   const navigate = useNavigate();

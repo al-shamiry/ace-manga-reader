@@ -14,9 +14,10 @@ import {
   Trash2,
 } from "lucide-solid";
 
+import type { Source } from "~/types";
+
 import type { ScanEntry } from "../context/SourcesContext";
 import { formatRelativeDay } from "../lib/date";
-import type { Source } from "../types";
 
 import {
   DropdownMenu,

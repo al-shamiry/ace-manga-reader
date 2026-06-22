@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 
-import type { DisplayMode, Manga, NavOrigin } from "../types";
+import type { DisplayMode, Manga, NavOrigin } from "~/types";
 
 import { MangaCard } from "./MangaCard";
 

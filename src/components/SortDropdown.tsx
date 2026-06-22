@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-solid";
 
-import type { SortField, SortPreference } from "../types";
+import type { SortField, SortPreference } from "~/types";
 
 import {
   DropdownMenu,

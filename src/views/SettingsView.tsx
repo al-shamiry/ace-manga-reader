@@ -4,6 +4,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Folder } from "lucide-solid";
 
+import type {
+  DisplayMode,
+  FitMode,
+  LibraryDisplay,
+  ReadingMode,
+  Settings,
+} from "~/types";
+
 import { Checkbox } from "../components/ui/checkbox";
 import {
   Slider,
@@ -13,13 +21,6 @@ import {
 } from "../components/ui/slider";
 import { Toolbar, ToolbarTitle } from "../components/ui/toolbar";
 import { useSources } from "../context/SourcesContext";
-import type {
-  DisplayMode,
-  FitMode,
-  LibraryDisplay,
-  ReadingMode,
-  Settings,
-} from "../types";
 
 const FIT_MODE_OPTIONS: { value: FitMode; label: string }[] = [
   { value: "fit-screen", label: "Fit screen" },

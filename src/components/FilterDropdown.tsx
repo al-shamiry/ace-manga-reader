@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 
 import { SlidersHorizontal } from "lucide-solid";
 
-import type { ReadingStatus } from "../types";
+import type { ReadingStatus } from "~/types";
 
 import { ChipMultiSelect } from "./ui/chip-multiselect";
 import {

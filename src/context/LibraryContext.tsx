@@ -10,7 +10,7 @@ import {
 
 import { invoke } from "@tauri-apps/api/core";
 
-import type { Category, Manga } from "../types";
+import type { Category, Manga } from "~/types";
 
 import { useSources } from "./SourcesContext";
 

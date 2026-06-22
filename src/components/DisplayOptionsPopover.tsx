@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 
 import { LayoutGrid } from "lucide-solid";
 
-import type { DisplayMode, LibraryDisplay } from "../types";
+import type { DisplayMode, LibraryDisplay } from "~/types";
 
 import {
   DropdownMenu,

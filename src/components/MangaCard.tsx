@@ -4,8 +4,9 @@ import { useNavigate } from "@solidjs/router";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Bookmark, Check, Play } from "lucide-solid";
 
+import type { DisplayMode, Manga, NavOrigin } from "~/types";
+
 import { useLibrary } from "../context/LibraryContext";
-import type { DisplayMode, Manga, NavOrigin } from "../types";
 
 import { Button } from "./ui/button";
 
