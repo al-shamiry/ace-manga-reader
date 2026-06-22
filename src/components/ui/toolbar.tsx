@@ -5,7 +5,7 @@ import * as ButtonPrimitive from "@kobalte/core/button";
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
 import { Search, X } from "lucide-solid";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/cn";
 
 /*
  * Toolbar — the view-level chrome band that sits directly under the

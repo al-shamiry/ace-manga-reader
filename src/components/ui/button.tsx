@@ -4,7 +4,7 @@ import { splitProps } from "solid-js";
 import * as ButtonPrimitive from "@kobalte/core/button";
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/cn";
 
 type ButtonProps<T extends ValidComponent = "button"> =
   ButtonPrimitive.ButtonRootProps<T> & {

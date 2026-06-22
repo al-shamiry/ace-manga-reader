@@ -4,7 +4,7 @@ import { mergeProps, splitProps } from "solid-js";
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
 import * as TextFieldPrimitive from "@kobalte/core/text-field";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/cn";
 
 type TextFieldRootProps<T extends ValidComponent = "div"> =
   TextFieldPrimitive.TextFieldRootProps<T> & { class?: string | undefined };

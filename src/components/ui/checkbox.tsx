@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 import * as CheckboxPrimitive from "@kobalte/core/checkbox";
 import { Check } from "lucide-solid";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/cn";
 
 interface CheckboxProps {
   checked: boolean;

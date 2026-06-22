@@ -2,7 +2,7 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 
 import { Check, Search, X } from "lucide-solid";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/cn";
 
 interface ChipMultiSelectProps {
   /** Full set of selectable values. */
