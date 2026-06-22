@@ -1,12 +1,11 @@
 import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
 
-import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ArrowLeft, RefreshCw } from "lucide-solid";
 
+import * as api from "~/api";
 import type {
-  Chapter,
   LibraryDisplay,
   Manga,
   ReadingStatus,
@@ -66,15 +65,12 @@ export function SourceView() {
   });
 
   onMount(async () => {
-    const persistedSort = invoke<SortPreference>("get_source_sort_preference")
+    const persistedSort = api.settings
+      .getSourceSortPreference()
       .then((pref) => setSortPref(pref))
       .catch(() => {});
-    const persistedDisplay = invoke<{
-      display_mode: string;
-      card_size: number;
-      show_unread_badge: boolean;
-      show_continue_button: boolean;
-    }>("get_source_display")
+    const persistedDisplay = api.settings
+      .getSourceDisplay()
       .then((d) =>
         setDisplayOpts((prev) => ({
           ...prev,
@@ -85,9 +81,8 @@ export function SourceView() {
         })),
       )
       .catch(() => {});
-    const persistedFilters = invoke<{ reading_status: string[] }>(
-      "get_source_filters",
-    )
+    const persistedFilters = api.settings
+      .getSourceFilters()
       .then((f) =>
         setFilters({
           sources: [],
@@ -111,10 +106,7 @@ export function SourceView() {
     setStatus("loading");
     setError("");
     try {
-      const result = await invoke<Manga[]>("scan_source", {
-        path,
-        forceRefresh,
-      });
+      const result = await api.sources.scanSource(path, forceRefresh);
       setMangas(result);
       setStatus("idle");
       getCurrentWindow().setTitle(`Ace Manga Reader — ${source()?.name}`);
@@ -127,26 +119,26 @@ export function SourceView() {
 
   function handleSortChange(next: SortPreference) {
     setSortPref(next);
-    invoke("set_source_sort_preference", { preference: next }).catch(() => {});
+    api.settings.setSourceSortPreference(next).catch(() => {});
   }
 
   function handleDisplayChange(next: LibraryDisplay) {
     setDisplayOpts(next);
-    invoke("set_source_display", {
-      display: {
+    api.settings
+      .setSourceDisplay({
         display_mode: next.display_mode,
         card_size: next.card_size,
         show_unread_badge: next.show_unread_badge,
         show_continue_button: next.show_continue_button,
-      },
-    }).catch(() => {});
+      })
+      .catch(() => {});
   }
 
   function handleFilterChange(next: FilterState) {
     setFilters(next);
-    invoke("set_source_filters", {
-      filters: { reading_status: next.readingStatus },
-    }).catch(() => {});
+    api.settings
+      .setSourceFilters({ reading_status: next.readingStatus })
+      .catch(() => {});
   }
 
   function nudgeCardSize(delta: number) {
@@ -192,9 +184,7 @@ export function SourceView() {
 
   async function handleContinue(manga: Manga) {
     try {
-      const list = await invoke<Chapter[]>("list_chapters", {
-        mangaPath: manga.path,
-      });
+      const list = await api.chapters.listChapters(manga.path);
       if (list.length === 0) return;
       const allUnread = list.every((c) => c.status.type === "unread");
       const target = allUnread
@@ -275,7 +265,7 @@ export function SourceView() {
     const mangaIds = selection.selectedIds();
     if (mangaIds.length === 0) return;
     try {
-      await invoke("set_mangas_read", { mangaIds, read });
+      await api.library.setMangasRead(mangaIds, read);
       await reloadAfterBulk();
     } catch (e) {
       console.error("Failed to mark mangas:", e);
@@ -287,7 +277,7 @@ export function SourceView() {
     const mangaIds = selection.selectedIds();
     if (mangaIds.length === 0) return;
     try {
-      await invoke("add_mangas_to_categories", { mangaIds, categoryIds });
+      await api.library.addMangasToCategories(mangaIds, categoryIds);
       await reloadAfterBulk();
     } catch (e) {
       console.error("Failed to assign categories:", e);

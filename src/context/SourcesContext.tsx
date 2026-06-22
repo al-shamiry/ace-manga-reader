@@ -6,8 +6,7 @@ import {
   useContext,
 } from "solid-js";
 
-import { invoke } from "@tauri-apps/api/core";
-
+import * as api from "~/api";
 import type { Source } from "~/types";
 
 type Status = "idle" | "loading" | "error";
@@ -65,9 +64,7 @@ export function SourcesProvider(props: { children: JSX.Element }) {
   });
 
   async function refreshSources() {
-    const srcs = await invoke<Source[]>("list_sources", {
-      includeHidden: true,
-    });
+    const srcs = await api.sources.listSources(true);
     setSources(srcs);
   }
 
@@ -75,7 +72,7 @@ export function SourcesProvider(props: { children: JSX.Element }) {
     setStatus("loading");
     setError("");
     try {
-      await invoke<void>("set_root_directory", { path });
+      await api.settings.setRootDirectory(path);
       await refreshSources();
       setStatus("idle");
     } catch (e) {
@@ -85,24 +82,24 @@ export function SourcesProvider(props: { children: JSX.Element }) {
   }
 
   async function addSource(path: string, name?: string) {
-    await invoke<Source>("add_source", { path, name: name ?? null });
+    await api.sources.addSource(path, name ?? null);
     await refreshSources();
   }
 
   async function removeSource(sourceId: string) {
-    await invoke("remove_source", { sourceId });
+    await api.sources.removeSource(sourceId);
     await refreshSources();
     setSourceMutationCount((count) => count + 1);
   }
 
   async function relocateSource(sourceId: string, newPath: string) {
-    await invoke<Source>("relocate_source", { sourceId, newPath });
+    await api.sources.relocateSource(sourceId, newPath);
     await refreshSources();
     setSourceMutationCount((count) => count + 1);
   }
 
   async function setSourceHidden(sourceId: string, hidden: boolean) {
-    await invoke("set_source_hidden", { sourceId, hidden });
+    await api.sources.setSourceHidden(sourceId, hidden);
     await refreshSources();
     setSourceMutationCount((count) => count + 1);
   }
@@ -131,7 +128,8 @@ export function SourcesProvider(props: { children: JSX.Element }) {
 
     setScanStatusFor(sourceId, { status: "scanning" });
 
-    invoke("scan_source", { path: source.path, forceRefresh: true })
+    api.sources
+      .scanSource(source.path, true)
       .then(() => {
         setScanStatusFor(sourceId, { status: "done" });
         refreshSources();

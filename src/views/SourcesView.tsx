@@ -8,7 +8,6 @@ import {
 } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 
-import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   Eye,
@@ -21,6 +20,7 @@ import {
   Trash2,
 } from "lucide-solid";
 
+import * as api from "~/api";
 import type { Source } from "~/types";
 
 import { EmptyState } from "../components/EmptyState";
@@ -138,7 +138,7 @@ export function SourcesView() {
       return;
     }
     try {
-      await invoke("rename_source", { sourceId: id, name });
+      await api.sources.renameSource(id, name);
       await refreshSources();
     } catch (e) {
       console.error("Failed to rename source:", e);
@@ -399,7 +399,7 @@ export function SourcesView() {
     const orderedIds = items.map((s) => s.id);
 
     try {
-      await invoke("reorder_sources", { orderedIds });
+      await api.sources.reorderSources(orderedIds);
       await refreshSources();
     } catch (err) {
       console.error("Failed to reorder sources:", err);

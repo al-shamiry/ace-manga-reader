@@ -1,10 +1,11 @@
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
 
-import type { Chapter, HistoryEntry, Manga } from "~/types";
+import * as api from "~/api";
+import type { HistoryEntry, Manga } from "~/types";
 
 import { EmptyState } from "../components/EmptyState";
 import {
@@ -29,7 +30,7 @@ export function HistoryView() {
 
   onMount(async () => {
     try {
-      const result = await invoke<HistoryEntry[]>("list_history");
+      const result = await api.history.listHistory();
       setEntries(result);
     } catch (e) {
       console.error("Failed to load history:", e);
@@ -70,13 +71,11 @@ export function HistoryView() {
       chapter_count: e.manga_chapter_count,
     };
     try {
-      const list = await invoke<Chapter[]>("list_chapters", {
-        mangaPath: manga.path,
-      });
+      const list = await api.chapters.listChapters(manga.path);
       const idx = list.findIndex((c) => c.id === e.chapter_id);
       if (idx === -1) {
         // Chapter no longer exists on disk — drop the dead entry.
-        await invoke("delete_history_entry", { chapterId: e.chapter_id });
+        await api.history.deleteHistoryEntry(e.chapter_id);
         setEntries(entries().filter((x) => x.chapter_id !== e.chapter_id));
         return;
       }
@@ -100,7 +99,7 @@ export function HistoryView() {
   async function handleDelete(e: HistoryEntry) {
     setEntries(entries().filter((x) => x.chapter_id !== e.chapter_id));
     try {
-      await invoke("delete_history_entry", { chapterId: e.chapter_id });
+      await api.history.deleteHistoryEntry(e.chapter_id);
     } catch (err) {
       console.error("Failed to delete history entry:", err);
     }
@@ -108,7 +107,7 @@ export function HistoryView() {
 
   async function handleClearAll() {
     try {
-      await invoke("clear_history");
+      await api.history.clearHistory();
       setEntries([]);
     } catch (err) {
       console.error("Failed to clear history:", err);

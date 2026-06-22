@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
 
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   AlignCenter,
@@ -33,6 +33,7 @@ import {
   Scroll,
 } from "lucide-solid";
 
+import * as api from "~/api";
 import type { Chapter, FitMode, Manga, ReadingMode, Settings } from "~/types";
 
 import { Button } from "../components/ui/button";
@@ -170,7 +171,8 @@ export function ReaderView() {
   onMount(() => {
     const s = state();
     if (!s) return;
-    invoke<Settings>("get_manga_reader_settings", { mangaId: s.manga.id })
+    api.reader
+      .getMangaReaderSettings(s.manga.id)
       .then((settings) => {
         if (settings.fit_mode) setFitMode(settings.fit_mode);
         if (settings.reading_mode) setReadingMode(settings.reading_mode);
@@ -183,10 +185,7 @@ export function ReaderView() {
   function saveSetting(patch: Partial<Settings>) {
     const s = state();
     if (!s) return;
-    invoke("set_manga_reader_settings", {
-      settings: patch,
-      mangaId: s.manga.id,
-    }).catch(console.error);
+    api.reader.setMangaReaderSettings(s.manga.id, patch).catch(console.error);
   }
 
   function cycleFitMode() {
@@ -306,10 +305,8 @@ export function ReaderView() {
     setError("");
     setJumping(false);
 
-    invoke<string[]>("open_chapter", {
-      chapterPath: s.chapter.path,
-      fileType: s.chapter.file_type,
-    })
+    api.reader
+      .openChapter(s.chapter.path, s.chapter.file_type)
       .then((result) => {
         // Compute the initial page once from the chapter load, so webtoon
         // scroll-to-initial doesn't have to re-derive it later from a possibly-
@@ -326,8 +323,8 @@ export function ReaderView() {
         // Webtoon scroll-to-initial is handled in initWebtoonRef on mount,
         // so it also runs when cycling modes back into webtoon.
         // Record this chapter open in history (fire-and-forget). Backend overwrites last_read_at.
-        invoke("record_history", {
-          entry: {
+        api.history
+          .recordHistory({
             manga_id: s.manga.id,
             manga_title: s.manga.title,
             manga_path: s.manga.path,
@@ -338,8 +335,8 @@ export function ReaderView() {
             chapter_path: s.chapter.path,
             chapter_file_type: s.chapter.file_type,
             last_read_at: 0,
-          },
-        }).catch(console.error);
+          })
+          .catch(console.error);
       })
       .catch((e) => {
         setError(String(e));
@@ -361,12 +358,9 @@ export function ReaderView() {
     );
 
     if (s.chapter.status.type !== "read") {
-      invoke("set_chapter_progress", {
-        mangaId: s.manga.id,
-        chapterId: s.chapter.id,
-        page: idx,
-        totalPages: total,
-      }).catch(console.error);
+      api.reader
+        .setChapterProgress(s.manga.id, s.chapter.id, idx, total)
+        .catch(console.error);
     }
   });
 
@@ -478,9 +472,9 @@ export function ReaderView() {
     if (!chapter) return;
     const s = state();
     if (!s) return;
-    const allChapters = await invoke<Chapter[]>("list_chapters", {
-      mangaPath: s.manga.path,
-    }).catch(() => [] as Chapter[]);
+    const allChapters = await api.chapters
+      .listChapters(s.manga.path)
+      .catch(() => [] as Chapter[]);
     const idx = allChapters.findIndex((c) => c.id === chapter.id);
 
     navigate("/reader/" + chapter.id, {

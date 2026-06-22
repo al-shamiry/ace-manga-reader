@@ -8,7 +8,6 @@ import {
 } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
 
-import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
@@ -28,6 +27,7 @@ import {
   Trash2,
 } from "lucide-solid";
 
+import * as api from "~/api";
 import type { Chapter, ChapterStatus, MangaDetailState } from "~/types";
 
 import { EmptyState } from "../components/EmptyState";
@@ -179,9 +179,7 @@ export function MangaDetailView() {
 
   async function loadChapters() {
     if (!manga) return;
-    const result = await invoke<Chapter[]>("list_chapters", {
-      mangaPath: manga.path,
-    });
+    const result = await api.chapters.listChapters(manga.path);
     setChapters(result);
   }
 
@@ -254,19 +252,16 @@ export function MangaDetailView() {
       : [...current, catId];
 
     if (next.length === 0) {
-      await invoke("remove_from_library", { mangaId: manga.id });
+      await api.library.removeFromLibrary(manga.id);
     } else {
-      await invoke("add_to_library", {
-        mangaId: manga.id,
-        categoryIds: next,
-      });
+      await api.library.addToLibrary(manga.id, next);
     }
     await refreshLibrary();
   }
 
   async function handleRemoveFromLibrary() {
     if (!manga) return;
-    await invoke("remove_from_library", { mangaId: manga.id });
+    await api.library.removeFromLibrary(manga.id);
     await refreshLibrary();
   }
 
@@ -289,9 +284,7 @@ export function MangaDetailView() {
     setRefreshing(true);
     setError("");
     try {
-      const result = await invoke<Chapter[]>("rescan_manga", {
-        mangaPath: manga.path,
-      });
+      const result = await api.chapters.rescanManga(manga.path);
       setChapters(result);
       await refreshLibrary();
     } catch (e) {
@@ -362,11 +355,7 @@ export function MangaDetailView() {
     const chapterIds = [...selectedIds()];
     if (chapterIds.length === 0) return;
     try {
-      await invoke("set_chapters_read", {
-        mangaId: manga.id,
-        chapterIds,
-        read,
-      });
+      await api.chapters.setChaptersRead(manga.id, chapterIds, read);
       await loadChapters();
       await refreshLibrary();
     } catch (e) {

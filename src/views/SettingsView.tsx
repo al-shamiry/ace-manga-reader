@@ -1,9 +1,9 @@
 import { createSignal, For, JSX, onMount, Show } from "solid-js";
 
-import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Folder } from "lucide-solid";
 
+import * as api from "~/api";
 import type {
   DisplayMode,
   FitMode,
@@ -59,20 +59,20 @@ export function SettingsView() {
 
   onMount(async () => {
     try {
-      const r = await invoke<string | null>("get_root_directory");
+      const r = await api.settings.getRootDirectory();
       setRootDir(r);
     } catch (e) {
       console.error("Failed to load root directory:", e);
     }
     try {
-      const s = await invoke<Settings>("get_default_reader_settings");
+      const s = await api.settings.getDefaultReaderSettings();
       if (s.fit_mode) setFitMode(s.fit_mode);
       if (s.reading_mode) setReadingMode(s.reading_mode);
     } catch (e) {
       console.error("Failed to load reading defaults:", e);
     }
     try {
-      const d = await invoke<LibraryDisplay>("get_library_display");
+      const d = await api.settings.getLibraryDisplay();
       setDisplay(d);
     } catch (e) {
       console.error("Failed to load display options:", e);
@@ -92,9 +92,9 @@ export function SettingsView() {
       fit_mode: fitMode(),
       reading_mode: readingMode(),
     };
-    invoke("set_default_reader_settings", { settings }).catch((e) =>
-      console.error("Failed to save reading defaults:", e),
-    );
+    api.settings
+      .setDefaultReaderSettings(settings)
+      .catch((e) => console.error("Failed to save reading defaults:", e));
   }
 
   function updateFitMode(mode: FitMode) {
@@ -109,9 +109,9 @@ export function SettingsView() {
 
   function updateDisplay(next: LibraryDisplay) {
     setDisplay(next);
-    invoke("set_library_display", { display: next }).catch((e) =>
-      console.error("Failed to save display options:", e),
-    );
+    api.settings
+      .setLibraryDisplay(next)
+      .catch((e) => console.error("Failed to save display options:", e));
   }
 
   function toggleDisplay(key: keyof LibraryDisplay) {

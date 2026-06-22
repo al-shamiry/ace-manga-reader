@@ -9,14 +9,12 @@ import {
 } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 
-import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Plus } from "lucide-solid";
 
+import * as api from "~/api";
 import type {
-  Chapter,
   LibraryDisplay,
-  LibraryFilters,
   Manga,
   ReadingStatus,
   SortPreference,
@@ -86,7 +84,8 @@ export function LibraryView() {
   // invokes. Persisted-state failures are non-fatal (defaults are used)
   // so we swallow errors per-call and resolve them all together.
   onMount(async () => {
-    const persistedFilters = invoke<LibraryFilters>("get_library_filters")
+    const persistedFilters = api.settings
+      .getLibraryFilters()
       .then((saved) =>
         setFilters({
           sources: saved.sources,
@@ -96,19 +95,22 @@ export function LibraryView() {
       .catch(() => {
         /* no saved filters */
       });
-    const persistedTab = invoke<string | null>("get_active_category")
+    const persistedTab = api.settings
+      .getActiveCategory()
       .then((savedTab) => {
         if (savedTab) setActiveTab(savedTab);
       })
       .catch(() => {
         /* no saved tab */
       });
-    const persistedSort = invoke<SortPreference>("get_library_sort_preference")
+    const persistedSort = api.settings
+      .getLibrarySortPreference()
       .then((pref) => setSortPref(pref))
       .catch(() => {
         /* no saved sort */
       });
-    const persistedDisplay = invoke<LibraryDisplay>("get_library_display")
+    const persistedDisplay = api.settings
+      .getLibraryDisplay()
       .then((disp) => setDisplayOpts(disp))
       .catch(() => {
         /* no saved display */
@@ -127,19 +129,22 @@ export function LibraryView() {
 
   function handleFilterChange(next: FilterState) {
     setFilters(next);
-    invoke("set_library_filters", {
-      filters: { sources: next.sources, reading_status: next.readingStatus },
-    }).catch(() => {});
+    api.settings
+      .setLibraryFilters({
+        sources: next.sources,
+        reading_status: next.readingStatus,
+      })
+      .catch(() => {});
   }
 
   function handleSortChange(next: SortPreference) {
     setSortPref(next);
-    invoke("set_library_sort_preference", { preference: next }).catch(() => {});
+    api.settings.setLibrarySortPreference(next).catch(() => {});
   }
 
   function handleDisplayChange(next: LibraryDisplay) {
     setDisplayOpts(next);
-    invoke("set_library_display", { display: next }).catch(() => {});
+    api.settings.setLibraryDisplay(next).catch(() => {});
   }
 
   function nudgeCardSize(delta: number) {
@@ -203,9 +208,7 @@ export function LibraryView() {
   // Mirrors MangaDetailView's `primaryChapter` logic so behavior is identical.
   async function handleContinue(manga: Manga) {
     try {
-      const list = await invoke<Chapter[]>("list_chapters", {
-        mangaPath: manga.path,
-      });
+      const list = await api.chapters.listChapters(manga.path);
       if (list.length === 0) return;
       const allUnread = list.every((c) => c.status.type === "unread");
       const target = allUnread
@@ -330,7 +333,7 @@ export function LibraryView() {
     const mangaIds = selection.selectedIds();
     if (mangaIds.length === 0) return;
     try {
-      await invoke("set_mangas_read", { mangaIds, read });
+      await api.library.setMangasRead(mangaIds, read);
       await refreshLibrary();
     } catch (e) {
       console.error("Failed to mark mangas:", e);
@@ -342,7 +345,7 @@ export function LibraryView() {
     const mangaIds = selection.selectedIds();
     if (mangaIds.length === 0) return;
     try {
-      await invoke("add_mangas_to_categories", { mangaIds, categoryIds });
+      await api.library.addMangasToCategories(mangaIds, categoryIds);
       await refreshLibrary();
     } catch (e) {
       console.error("Failed to assign categories:", e);
@@ -354,7 +357,7 @@ export function LibraryView() {
     const mangaIds = selection.selectedIds();
     if (mangaIds.length === 0) return;
     try {
-      await invoke("remove_mangas_from_library", { mangaIds });
+      await api.library.removeMangasFromLibrary(mangaIds);
       await refreshLibrary();
     } catch (e) {
       console.error("Failed to remove from library:", e);
@@ -367,7 +370,7 @@ export function LibraryView() {
     const categoryId = activeTab();
     if (mangaIds.length === 0 || !categoryId) return;
     try {
-      await invoke("remove_mangas_from_category", { mangaIds, categoryId });
+      await api.library.removeMangasFromCategory(mangaIds, categoryId);
       await refreshLibrary();
     } catch (e) {
       console.error("Failed to remove from category:", e);
@@ -413,7 +416,7 @@ export function LibraryView() {
     setSlideClass("tab-fade-out");
     setTimeout(() => {
       setActiveTab(newTab);
-      invoke("set_active_category", { categoryId: newTab }).catch(() => {});
+      api.settings.setActiveCategory(newTab).catch(() => {});
       setSlideClass(slideIn);
       setTimeout(() => {
         setSlideClass("");
@@ -458,7 +461,7 @@ export function LibraryView() {
       return;
     }
     try {
-      await invoke("create_category", { name });
+      await api.library.createCategory(name);
       await refreshCategories();
     } catch (e) {
       console.error("Failed to create category:", e);
@@ -470,10 +473,7 @@ export function LibraryView() {
     const r = renaming();
     if (!r || !r.name.trim()) return;
     try {
-      await invoke("rename_category", {
-        categoryId: r.id,
-        name: r.name.trim(),
-      });
+      await api.library.renameCategory(r.id, r.name.trim());
       setRenaming(null);
       await refreshCategories();
     } catch (e) {
@@ -499,7 +499,7 @@ export function LibraryView() {
 
   async function handleDeleteCategory(categoryId: string) {
     try {
-      await invoke("delete_category", { categoryId });
+      await api.library.deleteCategory(categoryId);
       if (activeTab() === categoryId) {
         const cats = visibleCategories();
         setActiveTab(cats.length > 0 ? cats[0].id : "");
