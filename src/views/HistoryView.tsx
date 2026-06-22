@@ -1,23 +1,24 @@
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { Trash2 } from "lucide-solid";
 
 import * as api from "~/api";
 import type { HistoryEntry, Manga } from "~/types";
 
-import { EmptyState } from "~/components/common/EmptyState";
+import { groupByDay } from "~/lib/history-groups";
 
+import { EmptyState } from "~/components/common/EmptyState";
+import { HistoryGroup } from "~/components/history/HistoryGroup";
 import {
   Toolbar,
   ToolbarActions,
   ToolbarButton,
   ToolbarSearchRow,
   ToolbarTitle,
-} from "../components/ui/toolbar";
-import { useViewLoading } from "../context/ViewLoadingContext";
-import { formatRelativeDay, formatTime } from "../lib/date";
+} from "~/components/ui/toolbar";
+
+import { useViewLoading } from "~/context/ViewLoadingContext";
 
 export function HistoryView() {
   const navigate = useNavigate();
@@ -47,21 +48,7 @@ export function HistoryView() {
     return entries().filter((e) => e.manga_title.toLowerCase().includes(q));
   });
 
-  // Walk the already-sorted list and emit a new group whenever the day label changes.
-  const groups = createMemo(() => {
-    const list = filteredEntries();
-    const out: Array<{ label: string; entries: HistoryEntry[] }> = [];
-    let current: { label: string; entries: HistoryEntry[] } | null = null;
-    for (const e of list) {
-      const label = formatRelativeDay(e.last_read_at);
-      if (!current || current.label !== label) {
-        current = { label, entries: [] };
-        out.push(current);
-      }
-      current.entries.push(e);
-    }
-    return out;
-  });
+  const groups = createMemo(() => groupByDay(filteredEntries()));
 
   async function handleResume(e: HistoryEntry) {
     const manga: Manga = {
@@ -184,69 +171,18 @@ export function HistoryView() {
             <div class="mx-auto max-w-3xl px-8 pb-12">
               <For each={groups()}>
                 {(group, i) => (
-                  <section class={i() === 0 ? "mt-10" : "mt-12"}>
-                    <h2 class="mb-3 text-[0.7rem] font-medium tracking-[0.2em] text-ink-600 uppercase">
-                      {group.label}
-                    </h2>
-                    <For each={group.entries}>
-                      {(entry) => (
-                        <HistoryRow
-                          entry={entry}
-                          onResume={handleResume}
-                          onDelete={handleDelete}
-                        />
-                      )}
-                    </For>
-                  </section>
+                  <HistoryGroup
+                    group={group}
+                    first={i() === 0}
+                    onResume={handleResume}
+                    onDelete={handleDelete}
+                  />
                 )}
               </For>
             </div>
           </Show>
         </div>
       </Show>
-    </div>
-  );
-}
-
-function HistoryRow(props: {
-  entry: HistoryEntry;
-  onResume: (e: HistoryEntry) => void;
-  onDelete: (e: HistoryEntry) => void;
-}) {
-  return (
-    <div
-      class="group flex cursor-pointer items-center gap-4 border-b border-ink-900/60 py-3 transition-colors hover:bg-ink-900/40"
-      onClick={() => props.onResume(props.entry)}
-    >
-      <img
-        src={convertFileSrc(props.entry.manga_cover_path)}
-        alt=""
-        class="h-16 w-12 shrink-0 rounded-sm bg-ink-900 object-cover"
-        loading="lazy"
-        draggable={false}
-      />
-      <div class="min-w-0 flex-1">
-        <p class="truncate text-sm font-medium text-ink-100">
-          {props.entry.manga_title}
-        </p>
-        <p class="mt-0.5 truncate text-xs text-ink-500">
-          {props.entry.chapter_title}
-          <span class="text-ink-700"> · </span>
-          <span class="tabular-nums">
-            {formatTime(props.entry.last_read_at)}
-          </span>
-        </p>
-      </div>
-      <button
-        class="shrink-0 cursor-pointer rounded p-1.5 text-ink-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-ink-800 hover:text-red-400 focus-visible:opacity-100"
-        onClick={(e) => {
-          e.stopPropagation();
-          props.onDelete(props.entry);
-        }}
-        title="Remove from history"
-      >
-        <Trash2 size={14} />
-      </button>
     </div>
   );
 }
