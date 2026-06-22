@@ -1,4 +1,4 @@
-import { createSignal, For, JSX, onMount, Show } from "solid-js";
+import { createSignal, onMount, Show } from "solid-js";
 
 import { open } from "@tauri-apps/plugin-dialog";
 import { Folder } from "lucide-solid";
@@ -12,15 +12,19 @@ import type {
   Settings,
 } from "~/types";
 
-import { Checkbox } from "../components/ui/checkbox";
+import { SettingsField } from "~/components/settings/SettingsField";
+import { SettingsSection } from "~/components/settings/SettingsSection";
+import { Checkbox } from "~/components/ui/checkbox";
+import { SegmentedControl } from "~/components/ui/segmented-control";
 import {
   Slider,
   SliderFill,
   SliderThumb,
   SliderTrack,
-} from "../components/ui/slider";
-import { Toolbar, ToolbarTitle } from "../components/ui/toolbar";
-import { useSources } from "../context/SourcesContext";
+} from "~/components/ui/slider";
+import { Toolbar, ToolbarTitle } from "~/components/ui/toolbar";
+
+import { useSources } from "~/context/SourcesContext";
 
 const FIT_MODE_OPTIONS: { value: FitMode; label: string }[] = [
   { value: "fit-screen", label: "Fit screen" },
@@ -129,11 +133,11 @@ export function SettingsView() {
       {/* Body */}
       <div class="flex-1 overflow-y-auto">
         <div class="mx-auto flex max-w-2xl flex-col gap-12 px-10 py-12">
-          <Section
+          <SettingsSection
             title="General"
             description="Where Ace looks for your library on disk."
           >
-            <Field label="Library folder">
+            <SettingsField label="Library folder">
               <div class="flex items-center gap-3">
                 <div class="flex h-9 min-w-0 flex-1 items-center truncate rounded-md border border-ink-800 bg-ink-900 px-3 font-mono text-sm text-ink-300">
                   <Show
@@ -153,34 +157,34 @@ export function SettingsView() {
                   Change
                 </button>
               </div>
-            </Field>
-          </Section>
+            </SettingsField>
+          </SettingsSection>
 
-          <Section
+          <SettingsSection
             title="Reading"
             description="Defaults applied to manga without per-title overrides."
           >
-            <Field label="Default fit mode">
+            <SettingsField label="Default fit mode">
               <SegmentedControl
                 options={FIT_MODE_OPTIONS}
                 value={fitMode()}
                 onChange={updateFitMode}
               />
-            </Field>
-            <Field label="Default reading mode">
+            </SettingsField>
+            <SettingsField label="Default reading mode">
               <SegmentedControl
                 options={READING_MODE_OPTIONS}
                 value={readingMode()}
                 onChange={updateReadingMode}
               />
-            </Field>
-          </Section>
+            </SettingsField>
+          </SettingsSection>
 
-          <Section
-            title="Display"
+          <SettingsSection
+            title="Library Display"
             description="How the library grid looks across all categories."
           >
-            <Field label="Display mode">
+            <SettingsField label="Display mode">
               <SegmentedControl
                 options={DISPLAY_MODE_OPTIONS}
                 value={display().display_mode}
@@ -188,8 +192,8 @@ export function SettingsView() {
                   updateDisplay({ ...display(), display_mode: mode })
                 }
               />
-            </Field>
-            <Field label="Card size">
+            </SettingsField>
+            <SettingsField label="Card size">
               <div class="flex items-center gap-3">
                 <span class="shrink-0 text-[0.7rem] text-ink-600">Small</span>
                 <Slider
@@ -209,8 +213,8 @@ export function SettingsView() {
                 </Slider>
                 <span class="shrink-0 text-[0.7rem] text-ink-600">Large</span>
               </div>
-            </Field>
-            <Field label="Badges">
+            </SettingsField>
+            <SettingsField label="Badges">
               <div class="flex flex-col">
                 <Checkbox
                   label="Show unread chapter count"
@@ -223,8 +227,8 @@ export function SettingsView() {
                   onChange={() => toggleDisplay("show_continue_button")}
                 />
               </div>
-            </Field>
-            <Field label="Category tabs">
+            </SettingsField>
+            <SettingsField label="Category tabs">
               <div class="flex flex-col">
                 <Checkbox
                   label="Show number of items"
@@ -232,69 +236,10 @@ export function SettingsView() {
                   onChange={() => toggleDisplay("show_item_count")}
                 />
               </div>
-            </Field>
-          </Section>
+            </SettingsField>
+          </SettingsSection>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Section(props: {
-  title: string;
-  description: string;
-  children: JSX.Element;
-}) {
-  return (
-    <section class="flex flex-col gap-5">
-      <div>
-        <h2 class="font-display text-xl text-ink-100">{props.title}</h2>
-        <p class="mt-1 text-sm text-ink-500">{props.description}</p>
-      </div>
-      <div class="flex flex-col gap-5 border-t border-ink-800/80 pt-5">
-        {props.children}
-      </div>
-    </section>
-  );
-}
-
-function Field(props: { label: string; children: JSX.Element }) {
-  return (
-    <div class="flex flex-col gap-2">
-      <label class="text-[0.7rem] font-medium tracking-[0.15em] text-ink-600 uppercase">
-        {props.label}
-      </label>
-      {props.children}
-    </div>
-  );
-}
-
-function SegmentedControl<T extends string>(props: {
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div class="flex flex-wrap gap-1.5">
-      <For each={props.options}>
-        {(opt) => {
-          const isActive = () => props.value === opt.value;
-          return (
-            <button
-              class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-              classList={{
-                "bg-jade-600 text-white shadow-sm shadow-jade-950/40":
-                  isActive(),
-                "bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100":
-                  !isActive(),
-              }}
-              onClick={() => props.onChange(opt.value)}
-            >
-              {opt.label}
-            </button>
-          );
-        }}
-      </For>
     </div>
   );
 }
