@@ -7,8 +7,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuPortal,
-} from "./ui/dropdown-menu";
-import { Tabs, TabsIndicator, TabsList, TabsTrigger } from "./ui/tabs";
+} from "~/components/ui/dropdown-menu";
+import {
+  Tabs,
+  TabsIndicator,
+  TabsList,
+  TabsTrigger,
+} from "~/components/ui/tabs";
 
 interface Tab {
   id: string;

@@ -9,37 +9,38 @@ import {
 } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 
-import { open } from "@tauri-apps/plugin-dialog";
 import { Plus } from "lucide-solid";
 
 import * as api from "~/api";
-import type {
-  LibraryDisplay,
-  Manga,
-  ReadingStatus,
-  SortPreference,
-} from "~/types";
+import type { Manga } from "~/types";
+
+import { createContinueReading } from "~/hooks/createContinueReading";
+import { createFirstRun } from "~/hooks/createFirstRun";
+import { createLibraryControls } from "~/hooks/createLibraryControls";
+import { createMangaSelection } from "~/hooks/createMangaSelection";
+import { createTabTransition } from "~/hooks/createTabTransition";
+import { applyFilters } from "~/lib/filter";
+import { sortEntries } from "~/lib/sort";
 
 import { EmptyState } from "~/components/common/EmptyState";
-
-import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
-import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
-import { MangaGrid } from "../components/MangaGrid";
-import { SelectionToolbar } from "../components/SelectionToolbar";
-import { SortDropdown } from "../components/SortDropdown";
-import type { Tab } from "../components/TabBar";
-import { TabBar } from "../components/TabBar";
+import { FirstRunWelcome } from "~/components/common/FirstRunWelcome";
+import { type Tab, TabBar } from "~/components/common/TabBar";
+import { DisplayOptionsPopover } from "~/components/library/DisplayOptionsPopover";
+import { FilterDropdown } from "~/components/library/FilterDropdown";
+import { SelectionToolbar } from "~/components/library/SelectionToolbar";
+import { SortDropdown } from "~/components/library/SortDropdown";
+import { MangaGrid } from "~/components/manga/MangaGrid";
 import {
   Toolbar,
   ToolbarActions,
   ToolbarButton,
   ToolbarInlineButton,
   ToolbarSearchRow,
-} from "../components/ui/toolbar";
-import { useLibrary } from "../context/LibraryContext";
-import { useSources } from "../context/SourcesContext";
-import { useViewLoading } from "../context/ViewLoadingContext";
-import { createMangaSelection } from "../lib/createMangaSelection";
+} from "~/components/ui/toolbar";
+
+import { useLibrary } from "~/context/LibraryContext";
+import { useSources } from "~/context/SourcesContext";
+import { useViewLoading } from "~/context/ViewLoadingContext";
 
 export function LibraryView() {
   const {
@@ -49,13 +50,17 @@ export function LibraryView() {
     refreshLibrary,
     initialLoad,
   } = useLibrary();
-  const { sources, addSource } = useSources();
+  const { sources } = useSources();
   const view = useViewLoading();
   // Mark busy synchronously so the overlay paints on the first frame.
   const loadToken = view.busy();
   const navigate = useNavigate();
+
+  const controls = createLibraryControls();
+  const handleContinue = createContinueReading("library");
+  const firstRun = createFirstRun();
+
   const [activeTab, setActiveTab] = createSignal("");
-  const [slideClass, setSlideClass] = createSignal("");
   const [creatingCategory, setCreatingCategory] = createSignal(false);
   const [newCategoryName, setNewCategoryName] = createSignal("");
   const [renaming, setRenaming] = createSignal<{
@@ -63,39 +68,13 @@ export function LibraryView() {
     name: string;
   } | null>(null);
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [filters, setFilters] = createSignal<FilterState>({
-    sources: [],
-    readingStatus: [],
-  });
-  const [sortPref, setSortPref] = createSignal<SortPreference>({
-    field: "last-read",
-    direction: "desc",
-  });
-  const [displayOpts, setDisplayOpts] = createSignal<LibraryDisplay>({
-    display_mode: "comfortable",
-    card_size: 8,
-    show_unread_badge: false,
-    show_continue_button: false,
-    show_item_count: true,
-  });
 
   // Wait on every async source the view depends on, then declare ready.
   // Order: provider's initial onMount (categories/library/root), local
-  // refreshLibrary (picks up last_read_at), and the 4 persisted-state
-  // invokes. Persisted-state failures are non-fatal (defaults are used)
-  // so we swallow errors per-call and resolve them all together.
+  // refreshLibrary (picks up last_read_at), the persisted browse controls,
+  // and the saved active category. Persisted-state failures are non-fatal
+  // (defaults are used) so each resolves regardless and we await them together.
   onMount(async () => {
-    const persistedFilters = api.settings
-      .getLibraryFilters()
-      .then((saved) =>
-        setFilters({
-          sources: saved.sources,
-          readingStatus: saved.reading_status as ReadingStatus[],
-        }),
-      )
-      .catch(() => {
-        /* no saved filters */
-      });
     const persistedTab = api.settings
       .getActiveCategory()
       .then((savedTab) => {
@@ -104,86 +83,14 @@ export function LibraryView() {
       .catch(() => {
         /* no saved tab */
       });
-    const persistedSort = api.settings
-      .getLibrarySortPreference()
-      .then((pref) => setSortPref(pref))
-      .catch(() => {
-        /* no saved sort */
-      });
-    const persistedDisplay = api.settings
-      .getLibraryDisplay()
-      .then((disp) => setDisplayOpts(disp))
-      .catch(() => {
-        /* no saved display */
-      });
 
     await Promise.all([
       initialLoad(),
       refreshLibrary(),
-      persistedFilters,
+      controls.loadPersisted(),
       persistedTab,
-      persistedSort,
-      persistedDisplay,
     ]);
     view.ready(loadToken);
-  });
-
-  function handleFilterChange(next: FilterState) {
-    setFilters(next);
-    api.settings
-      .setLibraryFilters({
-        sources: next.sources,
-        reading_status: next.readingStatus,
-      })
-      .catch(() => {});
-  }
-
-  function handleSortChange(next: SortPreference) {
-    setSortPref(next);
-    api.settings.setLibrarySortPreference(next).catch(() => {});
-  }
-
-  function handleDisplayChange(next: LibraryDisplay) {
-    setDisplayOpts(next);
-    api.settings.setLibraryDisplay(next).catch(() => {});
-  }
-
-  function nudgeCardSize(delta: number) {
-    const current = displayOpts();
-    const next = Math.max(1, Math.min(15, current.card_size + delta));
-    if (next === current.card_size) return;
-    handleDisplayChange({ ...current, card_size: next });
-  }
-
-  // Ctrl + (+/-) to resize cards. Also covers numpad +/- and Ctrl+= (the
-  // un-shifted form of Ctrl++ on US layouts).
-  function handleResizeKey(e: KeyboardEvent) {
-    if (!e.ctrlKey || e.altKey || e.metaKey) return;
-    if (e.key === "+" || e.key === "=") {
-      e.preventDefault();
-      nudgeCardSize(1);
-    } else if (e.key === "-" || e.key === "_") {
-      e.preventDefault();
-      nudgeCardSize(-1);
-    }
-  }
-
-  // Ctrl + wheel to resize cards. Listener must be non-passive so we can
-  // preventDefault and block the webview's page zoom.
-  function handleResizeWheel(e: WheelEvent) {
-    if (!e.ctrlKey || e.altKey || e.metaKey) return;
-    if (e.deltaY === 0) return;
-    e.preventDefault();
-    nudgeCardSize(e.deltaY < 0 ? 1 : -1);
-  }
-
-  onMount(() => {
-    window.addEventListener("keydown", handleResizeKey);
-    window.addEventListener("wheel", handleResizeWheel, { passive: false });
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleResizeKey);
-      window.removeEventListener("wheel", handleResizeWheel);
-    });
   });
 
   // Derive available source names from library entries, ordered by user-defined sort_order
@@ -204,45 +111,6 @@ export function LibraryView() {
       return oa !== ob ? oa - ob : a.localeCompare(b);
     });
   });
-
-  // Continue button: fetch chapters, jump to first non-read (or first unread).
-  // Mirrors MangaDetailView's `primaryChapter` logic so behavior is identical.
-  async function handleContinue(manga: Manga) {
-    try {
-      const list = await api.chapters.listChapters(manga.path);
-      if (list.length === 0) return;
-      const allUnread = list.every((c) => c.status.type === "unread");
-      const target = allUnread
-        ? list[0]
-        : list.find((c) => c.status.type !== "read");
-      if (!target) {
-        // All chapters read — fall through to manga detail
-        navigate("/manga/" + manga.id, { state: { manga, from: "library" } });
-        return;
-      }
-      const idx = list.findIndex((c) => c.id === target.id);
-      const initialPage =
-        target.status.type === "ongoing" ? target.status.page : 0;
-      navigate("/reader/" + target.id, {
-        state: {
-          chapter: target,
-          manga,
-          prevChapter: list[idx - 1],
-          nextChapter: list[idx + 1],
-          initialPage,
-        },
-      });
-    } catch (e) {
-      console.error("Failed to continue reading:", e);
-    }
-  }
-
-  function readingStatus(e: Manga): ReadingStatus {
-    const read = e.read_chapters ?? 0;
-    if (read === 0) return "unread";
-    if (read >= e.chapter_count) return "completed";
-    return "started";
-  }
 
   // Filter out Default tab when it's empty and other categories exist
   const visibleCategories = createMemo(() => {
@@ -267,64 +135,43 @@ export function LibraryView() {
     }),
   );
 
+  const tabTransition = createTabTransition({
+    tabs: visibleCategories,
+    activeTab,
+    setActiveTab,
+    onCommit: (id) => api.settings.setActiveCategory(id).catch(() => {}),
+  });
+
   // Manga entries filtered by active tab
   const filteredEntries = createMemo(() => {
     const tab = activeTab();
-    const entries = libraryEntries();
-    return entries.filter((e) => e.category_ids?.includes(tab));
+    return libraryEntries().filter((e) => e.category_ids?.includes(tab));
   });
 
-  // Apply search + filters to entries
-  function applyFilters(entries: Manga[]): Manga[] {
-    const query = searchQuery().toLowerCase().trim();
-    const f = filters();
-    let result = entries;
-    if (query) {
-      result = result.filter((e) => e.title.toLowerCase().includes(query));
-    }
-    if (f.readingStatus.length > 0) {
-      result = result.filter((e) => f.readingStatus.includes(readingStatus(e)));
-    }
-    if (f.sources.length > 0) {
-      result = result.filter((e) => {
-        const parts = e.path.replace(/\\/g, "/").split("/");
-        const source = parts.length >= 2 ? parts[parts.length - 2] : "";
-        return f.sources.includes(source);
-      });
-    }
-    return result;
-  }
-
-  function sortEntries(entries: Manga[]): Manga[] {
-    const pref = sortPref();
-    const dir = pref.direction === "asc" ? 1 : -1;
-    return [...entries].sort((a, b) => {
-      switch (pref.field) {
-        case "alphabetical":
-          return dir * a.title.localeCompare(b.title);
-        case "total-chapters":
-          return dir * (a.chapter_count - b.chapter_count);
-        case "last-read": {
-          const aLastRead = a.last_read_at ?? 0;
-          const bLastRead = b.last_read_at ?? 0;
-          const aRead = aLastRead > 0;
-          const bRead = bLastRead > 0;
-          // desc: read entries first; asc: unread entries first
-          if (aRead !== bRead) return dir * (aRead ? 1 : -1);
-          // Read entries sorted by last_read_at following direction, unread by added_at inverted
-          if (aRead) return dir * (aLastRead - bLastRead);
-          return -dir * ((a.added_at ?? 0) - (b.added_at ?? 0));
-        }
-        case "date-added":
-          return dir * ((a.added_at ?? 0) - (b.added_at ?? 0));
-        default:
-          return 0;
-      }
-    });
-  }
-
   const mangasForGrid = createMemo((): Manga[] =>
-    sortEntries(applyFilters(filteredEntries())),
+    sortEntries(
+      applyFilters(filteredEntries(), searchQuery(), controls.filters()),
+      controls.sortPref(),
+    ),
+  );
+
+  function countForCategory(categoryId: string): number {
+    return applyFilters(
+      libraryEntries().filter((e) => e.category_ids?.includes(categoryId)),
+      searchQuery(),
+      controls.filters(),
+    ).length;
+  }
+
+  const tabs = createMemo((): Tab[] =>
+    visibleCategories().map((cat) => ({
+      id: cat.id,
+      label: cat.name,
+      count: controls.displayOpts().show_item_count
+        ? countForCategory(cat.id)
+        : undefined,
+      deletable: cat.id !== "default",
+    })),
   );
 
   // ── Bulk selection ──
@@ -402,47 +249,6 @@ export function LibraryView() {
     );
   });
 
-  let switching = false;
-  function switchTab(newTab: string) {
-    if (switching) return;
-    const cats = visibleCategories();
-    const oldIndex = cats.findIndex((c) => c.id === activeTab());
-    const newIndex = cats.findIndex((c) => c.id === newTab);
-    if (oldIndex === newIndex) return;
-
-    switching = true;
-    const slideIn = newIndex > oldIndex ? "slide-in-left" : "slide-in-right";
-
-    // Fade out old content
-    setSlideClass("tab-fade-out");
-    setTimeout(() => {
-      setActiveTab(newTab);
-      api.settings.setActiveCategory(newTab).catch(() => {});
-      setSlideClass(slideIn);
-      setTimeout(() => {
-        setSlideClass("");
-        switching = false;
-      }, 200);
-    }, 100);
-  }
-
-  function countForCategory(categoryId: string): number {
-    return applyFilters(
-      libraryEntries().filter((e) => e.category_ids?.includes(categoryId)),
-    ).length;
-  }
-
-  const tabs = createMemo((): Tab[] =>
-    visibleCategories().map((cat) => ({
-      id: cat.id,
-      label: cat.name,
-      count: displayOpts().show_item_count
-        ? countForCategory(cat.id)
-        : undefined,
-      deletable: cat.id !== "default",
-    })),
-  );
-
   // ── Category management ──
 
   function startCreateCategory() {
@@ -482,22 +288,6 @@ export function LibraryView() {
     }
   }
 
-  // First-run flow: open the Tauri folder picker, load it, route to sources.
-  // No root configured = `sources().length === 0` AND `libraryEntries().length === 0`.
-  // The root is the only piece of state that distinguishes "fresh install" from
-  // "user has a library but cleared it" — we treat both as empty-with-root if
-  // sources is non-empty, and as first-run otherwise.
-  const isFirstRun = () =>
-    sources().length === 0 && libraryEntries().length === 0;
-
-  async function handleChooseFolder() {
-    const selected = await open({ directory: true, multiple: false });
-    if (typeof selected === "string" && selected) {
-      await addSource(selected);
-      navigate("/sources");
-    }
-  }
-
   async function handleDeleteCategory(categoryId: string) {
     try {
       await api.library.deleteCategory(categoryId);
@@ -529,7 +319,7 @@ export function LibraryView() {
                 indicator misaligned. Remounting forces its onMount path which
                 waits a microtask for layout to settle. */}
                 <Show
-                  when={`${displayOpts().show_item_count ? "with" : "without"}\0${visibleCategories()
+                  when={`${controls.displayOpts().show_item_count ? "with" : "without"}\0${visibleCategories()
                     .map((c) => c.name)
                     .join("\0")}`}
                   keyed
@@ -538,7 +328,7 @@ export function LibraryView() {
                     <TabBar
                       tabs={tabs()}
                       activeTab={activeTab()}
-                      onSelect={switchTab}
+                      onSelect={tabTransition.switchTab}
                       onRenameStart={(tab) =>
                         setRenaming({ id: tab.id, name: tab.label })
                       }
@@ -603,17 +393,17 @@ export function LibraryView() {
                   Select
                 </ToolbarInlineButton>
                 <SortDropdown
-                  preference={sortPref()}
-                  onChange={handleSortChange}
+                  preference={controls.sortPref()}
+                  onChange={controls.handleSortChange}
                 />
                 <DisplayOptionsPopover
-                  display={displayOpts()}
-                  onChange={handleDisplayChange}
+                  display={controls.displayOpts()}
+                  onChange={controls.handleDisplayChange}
                 />
                 <FilterDropdown
-                  state={filters()}
+                  state={controls.filters()}
                   availableSources={availableSources()}
-                  onChange={handleFilterChange}
+                  onChange={controls.handleFilterChange}
                 />
               </ToolbarActions>
             </>
@@ -645,12 +435,12 @@ export function LibraryView() {
       />
 
       {/* Manga grid or empty state */}
-      <div class={`flex-1 overflow-y-auto ${slideClass()}`}>
+      <div class={`flex-1 overflow-y-auto ${tabTransition.slideClass()}`}>
         <Show
           when={mangasForGrid().length > 0}
           fallback={
             <Show
-              when={isFirstRun()}
+              when={firstRun.isFirstRun()}
               fallback={
                 <Show
                   when={
@@ -668,17 +458,19 @@ export function LibraryView() {
                 </Show>
               }
             >
-              <FirstRunWelcome onChooseFolder={handleChooseFolder} />
+              <FirstRunWelcome onChooseFolder={firstRun.chooseFolder} />
             </Show>
           }
         >
           <MangaGrid
             mangas={mangasForGrid()}
-            displayMode={displayOpts().display_mode}
-            cardSize={displayOpts().card_size}
-            showProgressBadge={displayOpts().show_unread_badge}
+            displayMode={controls.displayOpts().display_mode}
+            cardSize={controls.displayOpts().card_size}
+            showProgressBadge={controls.displayOpts().show_unread_badge}
             onContinue={
-              displayOpts().show_continue_button ? handleContinue : undefined
+              controls.displayOpts().show_continue_button
+                ? handleContinue
+                : undefined
             }
             selectionMode={selection.active()}
             isSelected={selection.isSelected}
@@ -688,39 +480,6 @@ export function LibraryView() {
         </Show>
       </div>
     </div>
-  );
-}
-
-// ── Empty states ────────────────────────────────────────────────────────────
-// All empty surfaces share the EmptyState primitive so the eyebrow / display
-// title / body / CTA rhythm is identical across the app.
-
-// First-run welcome — no root configured. Accent eyebrow + the only place we
-// teach the on-disk layout, since the user has nothing else to go on yet.
-function FirstRunWelcome(props: { onChooseFolder: () => void }) {
-  return (
-    <EmptyState
-      accent
-      eyebrow="Ace Manga Reader"
-      title="Point us at your manga."
-      description="Pick the folder where your collection lives. We'll scan it once, cache the covers, and stay out of the way after that."
-      action={{ label: "Choose library folder", onClick: props.onChooseFolder }}
-    >
-      <div class="mt-6 w-full max-w-md border-t border-ink-800/80 pt-6">
-        <p class="mb-3 text-[0.7rem] font-medium tracking-wider text-ink-600 uppercase">
-          Expected layout
-        </p>
-        <pre class="font-mono text-xs leading-relaxed text-ink-500">
-          {`root/               ← the folder you are going to pick
-  source/           ← each subfolder is a source (a collection of manga)
-    Manga Title/    ← the manga
-      Chapter 01/   ← folders that contain images (pages)
-      Chapter 02/
-    Another Manga/
-      vol01.cbz     ← you can also have .cbz files instead of folders`}
-        </pre>
-      </div>
-    </EmptyState>
   );
 }
 

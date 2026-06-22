@@ -12,8 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { toolbarIconButtonClass } from "./ui/toolbar";
+} from "~/components/ui/dropdown-menu";
+import { toolbarIconButtonClass } from "~/components/ui/toolbar";
 
 interface SortDropdownProps {
   preference: SortPreference;

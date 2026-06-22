@@ -19,14 +19,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "~/components/ui/dropdown-menu";
 import {
   ToolbarActions,
   ToolbarButton,
   ToolbarInlineButton,
   toolbarInlineButtonClass,
   ToolbarTitle,
-} from "./ui/toolbar";
+} from "~/components/ui/toolbar";
 
 interface Props {
   count: number;

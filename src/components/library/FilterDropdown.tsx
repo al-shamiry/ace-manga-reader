@@ -4,7 +4,7 @@ import { SlidersHorizontal } from "lucide-solid";
 
 import type { ReadingStatus } from "~/types";
 
-import { ChipMultiSelect } from "./ui/chip-multiselect";
+import { ChipMultiSelect } from "~/components/ui/chip-multiselect";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -14,8 +14,8 @@ import {
   DropdownMenuHeader,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { toolbarIconButtonClass } from "./ui/toolbar";
+} from "~/components/ui/dropdown-menu";
+import { toolbarIconButtonClass } from "~/components/ui/toolbar";
 
 export interface FilterState {
   sources: string[];

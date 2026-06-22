@@ -12,14 +12,18 @@ import type {
   SortPreference,
 } from "~/types";
 
+import { createMangaSelection } from "~/hooks/createMangaSelection";
+
 import { EmptyState } from "~/components/common/EmptyState";
 import { MangaGridSkeleton } from "~/components/common/Skeleton";
-
-import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
-import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
-import { MangaGrid } from "../components/MangaGrid";
-import { SelectionToolbar } from "../components/SelectionToolbar";
-import { SortDropdown } from "../components/SortDropdown";
+import { DisplayOptionsPopover } from "~/components/library/DisplayOptionsPopover";
+import {
+  FilterDropdown,
+  type FilterState,
+} from "~/components/library/FilterDropdown";
+import { SelectionToolbar } from "~/components/library/SelectionToolbar";
+import { SortDropdown } from "~/components/library/SortDropdown";
+import { MangaGrid } from "~/components/manga/MangaGrid";
 import {
   Toolbar,
   ToolbarActions,
@@ -27,11 +31,11 @@ import {
   ToolbarInlineButton,
   ToolbarSearchRow,
   ToolbarTitle,
-} from "../components/ui/toolbar";
-import { useLibrary } from "../context/LibraryContext";
-import { useSources } from "../context/SourcesContext";
-import { useViewLoading } from "../context/ViewLoadingContext";
-import { createMangaSelection } from "../lib/createMangaSelection";
+} from "~/components/ui/toolbar";
+
+import { useLibrary } from "~/context/LibraryContext";
+import { useSources } from "~/context/SourcesContext";
+import { useViewLoading } from "~/context/ViewLoadingContext";
 
 type Status = "idle" | "loading" | "error";
 

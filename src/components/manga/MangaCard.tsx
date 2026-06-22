@@ -6,9 +6,9 @@ import { Bookmark, Check, Play } from "lucide-solid";
 
 import type { DisplayMode, Manga, NavOrigin } from "~/types";
 
-import { useLibrary } from "../context/LibraryContext";
+import { Button } from "~/components/ui/button";
 
-import { Button } from "./ui/button";
+import { useLibrary } from "~/context/LibraryContext";
 
 interface Props {
   manga: Manga;

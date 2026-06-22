@@ -13,9 +13,14 @@ import {
   DropdownMenuHeader,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { Slider, SliderFill, SliderThumb, SliderTrack } from "./ui/slider";
-import { toolbarIconButtonClass } from "./ui/toolbar";
+} from "~/components/ui/dropdown-menu";
+import {
+  Slider,
+  SliderFill,
+  SliderThumb,
+  SliderTrack,
+} from "~/components/ui/slider";
+import { toolbarIconButtonClass } from "~/components/ui/toolbar";
 
 interface Props {
   display: LibraryDisplay;
