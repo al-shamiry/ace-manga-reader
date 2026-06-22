@@ -5,22 +5,18 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ArrowLeft, RefreshCw } from "lucide-solid";
 
 import * as api from "~/api";
-import type {
-  LibraryDisplay,
-  Manga,
-  ReadingStatus,
-  SortPreference,
-} from "~/types";
+import type { Manga } from "~/types";
 
+import { createContinueReading } from "~/hooks/createContinueReading";
+import { createLibraryControls } from "~/hooks/createLibraryControls";
 import { createMangaSelection } from "~/hooks/createMangaSelection";
+import { applyFilters } from "~/lib/filter";
+import { sortEntries } from "~/lib/sort";
 
 import { EmptyState } from "~/components/common/EmptyState";
 import { MangaGridSkeleton } from "~/components/common/Skeleton";
 import { DisplayOptionsPopover } from "~/components/library/DisplayOptionsPopover";
-import {
-  FilterDropdown,
-  type FilterState,
-} from "~/components/library/FilterDropdown";
+import { FilterDropdown } from "~/components/library/FilterDropdown";
 import { SelectionToolbar } from "~/components/library/SelectionToolbar";
 import { SortDropdown } from "~/components/library/SortDropdown";
 import { MangaGrid } from "~/components/manga/MangaGrid";
@@ -47,63 +43,21 @@ export function SourceView() {
   const view = useViewLoading();
   const loadToken = view.busy();
 
+  const controls = createLibraryControls("source");
+  const handleContinue = createContinueReading("sources");
+
   const source = () => getSource(params.id);
 
   const [mangas, setMangas] = createSignal<Manga[]>([]);
   const [status, setStatus] = createSignal<Status>("idle");
   const [error, setError] = createSignal("");
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [filters, setFilters] = createSignal<FilterState>({
-    sources: [],
-    readingStatus: [],
-  });
-  const [sortPref, setSortPref] = createSignal<SortPreference>({
-    field: "alphabetical",
-    direction: "asc",
-  });
-  const [displayOpts, setDisplayOpts] = createSignal<LibraryDisplay>({
-    display_mode: "comfortable",
-    card_size: 8,
-    show_unread_badge: false,
-    show_continue_button: false,
-    show_item_count: false,
-  });
 
   onMount(async () => {
-    const persistedSort = api.settings
-      .getSourceSortPreference()
-      .then((pref) => setSortPref(pref))
-      .catch(() => {});
-    const persistedDisplay = api.settings
-      .getSourceDisplay()
-      .then((d) =>
-        setDisplayOpts((prev) => ({
-          ...prev,
-          display_mode: d.display_mode,
-          card_size: d.card_size,
-          show_unread_badge: d.show_unread_badge,
-          show_continue_button: d.show_continue_button,
-        })),
-      )
-      .catch(() => {});
-    const persistedFilters = api.settings
-      .getSourceFilters()
-      .then((f) =>
-        setFilters({
-          sources: [],
-          readingStatus: f.reading_status as ReadingStatus[],
-        }),
-      )
-      .catch(() => {});
-
+    const persisted = controls.loadPersisted();
     await initialLoad();
     const s = source();
-    await Promise.all([
-      s ? loadMangas(s.path) : Promise.resolve(),
-      persistedSort,
-      persistedDisplay,
-      persistedFilters,
-    ]);
+    await Promise.all([s ? loadMangas(s.path) : Promise.resolve(), persisted]);
     view.ready(loadToken);
   });
 
@@ -122,138 +76,12 @@ export function SourceView() {
     }
   }
 
-  function handleSortChange(next: SortPreference) {
-    setSortPref(next);
-    api.settings.setSourceSortPreference(next).catch(() => {});
-  }
-
-  function handleDisplayChange(next: LibraryDisplay) {
-    setDisplayOpts(next);
-    api.settings
-      .setSourceDisplay({
-        display_mode: next.display_mode,
-        card_size: next.card_size,
-        show_unread_badge: next.show_unread_badge,
-        show_continue_button: next.show_continue_button,
-      })
-      .catch(() => {});
-  }
-
-  function handleFilterChange(next: FilterState) {
-    setFilters(next);
-    api.settings
-      .setSourceFilters({ reading_status: next.readingStatus })
-      .catch(() => {});
-  }
-
-  function nudgeCardSize(delta: number) {
-    const current = displayOpts();
-    const next = Math.max(1, Math.min(15, current.card_size + delta));
-    if (next === current.card_size) return;
-    handleDisplayChange({ ...current, card_size: next });
-  }
-
-  function handleResizeKey(e: KeyboardEvent) {
-    if (!e.ctrlKey || e.altKey || e.metaKey) return;
-    if (e.key === "+" || e.key === "=") {
-      e.preventDefault();
-      nudgeCardSize(1);
-    } else if (e.key === "-" || e.key === "_") {
-      e.preventDefault();
-      nudgeCardSize(-1);
-    }
-  }
-
-  function handleResizeWheel(e: WheelEvent) {
-    if (!e.ctrlKey || e.altKey || e.metaKey) return;
-    if (e.deltaY === 0) return;
-    e.preventDefault();
-    nudgeCardSize(e.deltaY < 0 ? 1 : -1);
-  }
-
-  onMount(() => {
-    window.addEventListener("keydown", handleResizeKey);
-    window.addEventListener("wheel", handleResizeWheel, { passive: false });
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleResizeKey);
-      window.removeEventListener("wheel", handleResizeWheel);
-    });
-  });
-
-  function mangaReadingStatus(manga: Manga): ReadingStatus {
-    const read = manga.read_chapters ?? 0;
-    if (read === 0) return "unread";
-    if (read >= manga.chapter_count) return "completed";
-    return "started";
-  }
-
-  async function handleContinue(manga: Manga) {
-    try {
-      const list = await api.chapters.listChapters(manga.path);
-      if (list.length === 0) return;
-      const allUnread = list.every((c) => c.status.type === "unread");
-      const target = allUnread
-        ? list[0]
-        : list.find((c) => c.status.type !== "read");
-      if (!target) {
-        navigate("/manga/" + manga.id, { state: { manga, from: "sources" } });
-        return;
-      }
-      const idx = list.findIndex((c) => c.id === target.id);
-      const initialPage =
-        target.status.type === "ongoing" ? target.status.page : 0;
-      navigate("/reader/" + target.id, {
-        state: {
-          chapter: target,
-          manga,
-          prevChapter: list[idx - 1],
-          nextChapter: list[idx + 1],
-          initialPage,
-        },
-      });
-    } catch (e) {
-      console.error("Failed to continue reading:", e);
-    }
-  }
-
-  const mangasForDisplay = createMemo(() => {
-    const query = searchQuery().toLowerCase().trim();
-    const f = filters();
-    const pref = sortPref();
-
-    let result = mangas();
-
-    if (query) {
-      result = result.filter((m) => m.title.toLowerCase().includes(query));
-    }
-
-    if (f.readingStatus.length > 0) {
-      result = result.filter((m) =>
-        f.readingStatus.includes(mangaReadingStatus(m)),
-      );
-    }
-
-    const dir = pref.direction === "asc" ? 1 : -1;
-    return [...result].sort((a, b) => {
-      switch (pref.field) {
-        case "alphabetical":
-          return dir * a.title.localeCompare(b.title);
-        case "total-chapters":
-          return dir * (a.chapter_count - b.chapter_count);
-        case "last-read": {
-          const aAt = a.last_read_at ?? 0;
-          const bAt = b.last_read_at ?? 0;
-          const aRead = aAt > 0;
-          const bRead = bAt > 0;
-          if (aRead !== bRead) return dir * (aRead ? 1 : -1);
-          if (aRead) return dir * (aAt - bAt);
-          return dir * a.title.localeCompare(b.title);
-        }
-        default:
-          return 0;
-      }
-    });
-  });
+  const mangasForDisplay = createMemo((): Manga[] =>
+    sortEntries(
+      applyFilters(mangas(), searchQuery(), controls.filters()),
+      controls.sortPref(),
+    ),
+  );
 
   // ── Bulk selection ──
   const selection = createMangaSelection(mangasForDisplay);
@@ -330,20 +158,20 @@ export function SourceView() {
                   Select
                 </ToolbarInlineButton>
                 <SortDropdown
-                  preference={sortPref()}
-                  onChange={handleSortChange}
+                  preference={controls.sortPref()}
+                  onChange={controls.handleSortChange}
                   excludeFields={["date-added"]}
                   defaultPref={{ field: "alphabetical", direction: "asc" }}
                 />
                 <DisplayOptionsPopover
-                  display={displayOpts()}
-                  onChange={handleDisplayChange}
+                  display={controls.displayOpts()}
+                  onChange={controls.handleDisplayChange}
                   showTabsSection={false}
                 />
                 <FilterDropdown
-                  state={filters()}
+                  state={controls.filters()}
                   availableSources={[]}
-                  onChange={handleFilterChange}
+                  onChange={controls.handleFilterChange}
                 />
                 <ToolbarButton
                   onClick={() => {
@@ -415,11 +243,13 @@ export function SourceView() {
         <Show when={mangasForDisplay().length > 0 && status() !== "loading"}>
           <MangaGrid
             mangas={mangasForDisplay()}
-            displayMode={displayOpts().display_mode}
-            cardSize={displayOpts().card_size}
-            showProgressBadge={displayOpts().show_unread_badge}
+            displayMode={controls.displayOpts().display_mode}
+            cardSize={controls.displayOpts().card_size}
+            showProgressBadge={controls.displayOpts().show_unread_badge}
             onContinue={
-              displayOpts().show_continue_button ? handleContinue : undefined
+              controls.displayOpts().show_continue_button
+                ? handleContinue
+                : undefined
             }
             showLibraryBadge
             selectionMode={selection.active()}
