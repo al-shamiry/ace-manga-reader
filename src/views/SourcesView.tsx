@@ -9,34 +9,20 @@ import {
 import { useNavigate } from "@solidjs/router";
 
 import { open } from "@tauri-apps/plugin-dialog";
-import {
-  Eye,
-  EyeOff,
-  Plus,
-  RefreshCw,
-  Square,
-  SquareCheck,
-  SquaresIntersect,
-  Trash2,
-} from "lucide-solid";
 
 import * as api from "~/api";
 import type { Source } from "~/types";
 
+import { createSourceSelection } from "~/hooks/createSourceSelection";
+
 import { EmptyState } from "~/components/common/EmptyState";
 import { SourceListSkeleton } from "~/components/common/Skeleton";
+import { SourceRow } from "~/components/source/SourceRow";
+import { SourcesToolbar } from "~/components/source/SourcesToolbar";
+import { ToolbarSearchRow } from "~/components/ui/toolbar";
 
-import { SourceRow } from "../components/SourceRow";
-import {
-  Toolbar,
-  ToolbarActions,
-  ToolbarButton,
-  ToolbarInlineButton,
-  ToolbarSearchRow,
-  ToolbarTitle,
-} from "../components/ui/toolbar";
-import { useSources } from "../context/SourcesContext";
-import { useViewLoading } from "../context/ViewLoadingContext";
+import { useSources } from "~/context/SourcesContext";
+import { useViewLoading } from "~/context/ViewLoadingContext";
 
 export function SourcesView() {
   const {
@@ -82,9 +68,21 @@ export function SourcesView() {
     filteredSources().filter((s) => s.hidden),
   );
 
+  const selectableSources = createMemo(() =>
+    showHidden() ? [...visibleSources(), ...hiddenSources()] : visibleSources(),
+  );
+
   const isAnyScanning = createMemo(() =>
     Object.values(scanStatus()).some((s) => s.status === "scanning"),
   );
+
+  const selection = createSourceSelection(sortedSources, selectableSources);
+
+  const bulkHideLabel = createMemo<"Hide" | "Show">(() => {
+    const selected = selection.selected();
+    if (selected.length === 0) return "Hide";
+    return selected.every((source) => source.hidden) ? "Show" : "Hide";
+  });
 
   function openSource(source: Source) {
     navigate(`/source/${source.id}`);
@@ -101,22 +99,15 @@ export function SourcesView() {
     scanAllSources();
   }
 
-  const [locateError, setLocateError] = createSignal<string | null>(null);
-
-  async function handleLocate(source: Source) {
-    setLocateError(null);
-    const selected = await open({ directory: true, multiple: false });
-    if (typeof selected !== "string" || !selected) return;
-    try {
-      await relocateSource(source.id, selected);
-      setLocatingId(null);
-    } catch (e) {
-      setLocateError(String(e));
-    }
-  }
-
   function handleToggleHidden() {
     setShowHidden((prev) => !prev);
+  }
+
+  function enterSelection() {
+    setRenamingId(null);
+    setRemovingId(null);
+    setLocatingId(null);
+    selection.enter();
   }
 
   // ── Rename ────────────────────────────────────────────────────────────────────
@@ -125,7 +116,7 @@ export function SourcesView() {
   const [renameValue, setRenameValue] = createSignal("");
 
   function startRename(source: Source) {
-    if (selectionMode()) exitSelectionMode();
+    if (selection.active()) selection.exit();
     setRemovingId(null);
     setRenamingId(source.id);
     setRenameValue(source.name);
@@ -152,76 +143,18 @@ export function SourcesView() {
   const [removingId, setRemovingId] = createSignal<string | null>(null);
   const [locatingId, setLocatingId] = createSignal<string | null>(null);
   const [fadingOutId, setFadingOutId] = createSignal<string | null>(null);
+  const [locateError, setLocateError] = createSignal<string | null>(null);
 
-  const [selectionMode, setSelectionMode] = createSignal(false);
-  const [selectedIds, setSelectedIds] = createSignal<Set<string>>(
-    new Set<string>(),
-  );
-  const [bulkRemoving, setBulkRemoving] = createSignal(false);
-
-  const selectedSources = createMemo(() =>
-    sortedSources().filter((source) => selectedIds().has(source.id)),
-  );
-
-  const selectableSources = createMemo(() =>
-    showHidden() ? [...visibleSources(), ...hiddenSources()] : visibleSources(),
-  );
-
-  const selectedCount = createMemo(() => selectedIds().size);
-
-  const bulkHideLabel = createMemo(() => {
-    const selected = selectedSources();
-    if (selected.length === 0) return "Hide";
-    return selected.every((source) => source.hidden) ? "Show" : "Hide";
-  });
-
-  function clearSelection() {
-    setSelectedIds(new Set<string>());
-    setBulkRemoving(false);
-  }
-
-  function enterSelectionMode() {
-    setRenamingId(null);
-    setRemovingId(null);
-    setLocatingId(null);
-    setSelectionMode(true);
-    clearSelection();
-  }
-
-  function exitSelectionMode() {
-    setSelectionMode(false);
-    clearSelection();
-  }
-
-  function toggleSelected(sourceId: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(sourceId)) next.delete(sourceId);
-      else next.add(sourceId);
-      if (next.size === 0) setBulkRemoving(false);
-      return next;
-    });
-  }
-
-  function selectAll() {
-    setSelectedIds(new Set(selectableSources().map((source) => source.id)));
-    setBulkRemoving(false);
-  }
-
-  function selectNone() {
-    setSelectedIds(new Set<string>());
-    setBulkRemoving(false);
-  }
-
-  function invertSelection() {
-    setSelectedIds((prev) => {
-      const next = new Set<string>();
-      for (const source of selectableSources()) {
-        if (!prev.has(source.id)) next.add(source.id);
-      }
-      return next;
-    });
-    setBulkRemoving(false);
+  async function handleLocate(source: Source) {
+    setLocateError(null);
+    const selected = await open({ directory: true, multiple: false });
+    if (typeof selected !== "string" || !selected) return;
+    try {
+      await relocateSource(source.id, selected);
+      setLocatingId(null);
+    } catch (e) {
+      setLocateError(String(e));
+    }
   }
 
   async function confirmRemove() {
@@ -241,31 +174,33 @@ export function SourcesView() {
   }
 
   function startRemove(sourceId: string) {
-    if (selectionMode()) exitSelectionMode();
+    if (selection.active()) selection.exit();
     setRenamingId(null);
     setLocatingId(null);
     setRemovingId(sourceId);
   }
 
   function startLocate(source: Source) {
-    if (selectionMode()) exitSelectionMode();
+    if (selection.active()) selection.exit();
     setRenamingId(null);
     setRemovingId(null);
     setLocateError(null);
     setLocatingId(source.id);
   }
 
+  // ── Bulk actions ──────────────────────────────────────────────────────────────
+
   function handleBulkRescan() {
-    const selected = selectedSources();
+    const selected = selection.selected();
     if (selected.length === 0) return;
     for (const source of selected) {
       scanSource(source.id);
     }
-    exitSelectionMode();
+    selection.exit();
   }
 
   async function handleBulkHideShow() {
-    const selected = selectedSources();
+    const selected = selection.selected();
     if (selected.length === 0) return;
 
     const shouldShow = selected.every((source) => source.hidden);
@@ -277,19 +212,19 @@ export function SourcesView() {
     } catch (e) {
       console.error("Failed to update source visibility:", e);
     } finally {
-      exitSelectionMode();
+      selection.exit();
     }
   }
 
   function handleBulkRemoveRequest() {
-    if (selectedCount() === 0) return;
-    setBulkRemoving(true);
+    if (selection.count() === 0) return;
+    selection.setBulkRemoving(true);
   }
 
   async function confirmBulkRemove() {
-    const ids = [...selectedIds()];
+    const ids = selection.selectedIds();
     if (ids.length === 0) {
-      setBulkRemoving(false);
+      selection.setBulkRemoving(false);
       return;
     }
 
@@ -300,36 +235,26 @@ export function SourcesView() {
     } catch (e) {
       console.error("Failed to bulk remove sources:", e);
     } finally {
-      exitSelectionMode();
+      selection.exit();
     }
   }
 
   function handleViewKeyDown(e: KeyboardEvent) {
-    if (e.key === "Escape" && selectionMode()) {
+    if (e.key === "Escape" && selection.active()) {
       e.preventDefault();
       e.stopPropagation();
-      exitSelectionMode();
+      selection.exit();
       return;
     }
 
     if (
-      selectionMode() &&
+      selection.active() &&
       (e.ctrlKey || e.metaKey) &&
       e.key.toLowerCase() === "a"
     ) {
       e.preventDefault();
       e.stopPropagation();
-      const selectable = selectableSources();
-      const allSelectableSelected =
-        selectable.length > 0 &&
-        selectable.every((source) => selectedIds().has(source.id));
-
-      if (allSelectableSelected) {
-        setSelectedIds(new Set<string>());
-      } else {
-        setSelectedIds(new Set(selectable.map((source) => source.id)));
-      }
-      setBulkRemoving(false);
+      selection.toggleAll();
     }
   }
 
@@ -415,9 +340,9 @@ export function SourcesView() {
       <SourceRow
         source={source}
         hidden={hidden}
-        selectionMode={selectionMode()}
-        selected={selectedIds().has(source.id)}
-        onToggleSelect={() => toggleSelected(source.id)}
+        selectionMode={selection.active()}
+        selected={selection.isSelected(source)}
+        onToggleSelect={() => selection.toggle(source)}
         onClick={() =>
           source.path_missing ? startLocate(source) : openSource(source)
         }
@@ -481,102 +406,26 @@ export function SourcesView() {
       class="flex flex-1 flex-col overflow-hidden"
       onKeyDown={handleViewKeyDown}
     >
-      <Toolbar>
-        <Show
-          when={selectionMode()}
-          fallback={
-            <>
-              <ToolbarTitle class="flex-1">Sources</ToolbarTitle>
-              <ToolbarActions>
-                <ToolbarInlineButton onClick={handleAddSource}>
-                  <Plus size={14} /> Add source
-                </ToolbarInlineButton>
-                <ToolbarInlineButton onClick={enterSelectionMode}>
-                  Select
-                </ToolbarInlineButton>
-                <ToolbarButton
-                  onClick={handleRescanAll}
-                  title="Re-scan all sources"
-                  disabled={isAnyScanning()}
-                >
-                  <RefreshCw
-                    size={16}
-                    class={isAnyScanning() ? "animate-spin" : ""}
-                  />
-                </ToolbarButton>
-                <ToolbarButton
-                  onClick={handleToggleHidden}
-                  title={
-                    showHidden() ? "Hide hidden sources" : "Show hidden sources"
-                  }
-                  class={showHidden() ? "text-jade-400" : ""}
-                >
-                  <Show when={showHidden()} fallback={<Eye size={16} />}>
-                    <EyeOff size={16} />
-                  </Show>
-                </ToolbarButton>
-              </ToolbarActions>
-            </>
-          }
-        >
-          <ToolbarTitle class="flex-1">{selectedCount()} selected</ToolbarTitle>
-          <ToolbarActions>
-            <ToolbarButton
-              onClick={selectAll}
-              title="Select all"
-              disabled={selectableSources().length === 0}
-            >
-              <SquareCheck size={16} />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={selectNone}
-              title="Select none"
-              disabled={selectedCount() === 0}
-            >
-              <Square size={16} />
-            </ToolbarButton>
-            <ToolbarButton
-              onClick={invertSelection}
-              title="Invert selection"
-              disabled={selectableSources().length === 0}
-            >
-              <SquaresIntersect size={16} />
-            </ToolbarButton>
-            <div class="mx-1 h-5 w-px shrink-0 bg-ink-800" />
-            <ToolbarInlineButton
-              onClick={handleBulkRescan}
-              disabled={selectedCount() === 0 || bulkRemoving()}
-            >
-              <RefreshCw size={14} /> Re-scan
-            </ToolbarInlineButton>
-            <ToolbarInlineButton
-              onClick={handleBulkHideShow}
-              disabled={selectedCount() === 0 || bulkRemoving()}
-            >
-              <Show
-                when={bulkHideLabel() === "Show"}
-                fallback={
-                  <>
-                    <EyeOff size={14} /> Hide
-                  </>
-                }
-              >
-                <Eye size={14} /> Show
-              </Show>
-            </ToolbarInlineButton>
-            <ToolbarInlineButton
-              onClick={handleBulkRemoveRequest}
-              disabled={selectedCount() === 0 || bulkRemoving()}
-              class="text-red-400 hover:bg-red-950/30 hover:text-red-300"
-            >
-              <Trash2 size={14} /> Remove
-            </ToolbarInlineButton>
-            <ToolbarInlineButton onClick={exitSelectionMode}>
-              Cancel
-            </ToolbarInlineButton>
-          </ToolbarActions>
-        </Show>
-      </Toolbar>
+      <SourcesToolbar
+        selectionMode={selection.active()}
+        selectedCount={selection.count()}
+        selectableCount={selectableSources().length}
+        bulkRemoving={selection.bulkRemoving()}
+        bulkHideLabel={bulkHideLabel()}
+        isAnyScanning={isAnyScanning()}
+        showHidden={showHidden()}
+        onAddSource={handleAddSource}
+        onEnterSelection={enterSelection}
+        onRescanAll={handleRescanAll}
+        onToggleHidden={handleToggleHidden}
+        onSelectAll={selection.selectAll}
+        onSelectNone={selection.selectNone}
+        onInvert={selection.invert}
+        onBulkRescan={handleBulkRescan}
+        onBulkHideShow={handleBulkHideShow}
+        onBulkRemoveRequest={handleBulkRemoveRequest}
+        onExitSelection={selection.exit}
+      />
 
       <ToolbarSearchRow
         value={searchQuery()}
@@ -585,21 +434,21 @@ export function SourcesView() {
         autofocus
       />
 
-      <Show when={selectionMode() && bulkRemoving()}>
+      <Show when={selection.active() && selection.bulkRemoving()}>
         <div class="border-b border-red-900/30 bg-red-950/20 px-4 py-2">
           <div class="mx-auto flex max-w-3xl items-start justify-between gap-3">
             <p class="text-xs leading-relaxed text-red-300/85">
-              Remove {selectedCount()}{" "}
-              {selectedCount() === 1 ? "source" : "sources"}? All manga from{" "}
-              {selectedCount() === 1 ? "this source" : "these sources"} will be
-              removed from your library and history. Reading progress will be
+              Remove {selection.count()}{" "}
+              {selection.count() === 1 ? "source" : "sources"}? All manga from{" "}
+              {selection.count() === 1 ? "this source" : "these sources"} will
+              be removed from your library and history. Reading progress will be
               lost and will not return even if you re-add{" "}
-              {selectedCount() === 1 ? "it" : "them"} later.
+              {selection.count() === 1 ? "it" : "them"} later.
             </p>
             <div class="flex shrink-0 items-center gap-2">
               <button
                 class="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium text-ink-300 transition-colors hover:bg-ink-800 hover:text-ink-100"
-                onClick={() => setBulkRemoving(false)}
+                onClick={() => selection.setBulkRemoving(false)}
               >
                 Cancel
               </button>

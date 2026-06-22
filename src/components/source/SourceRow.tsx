@@ -16,8 +16,7 @@ import {
 
 import type { Source } from "~/types";
 
-import type { ScanEntry } from "../context/SourcesContext";
-import { formatRelativeDay } from "../lib/date";
+import { formatRelativeDay } from "~/lib/date";
 
 import {
   DropdownMenu,
@@ -25,7 +24,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "~/components/ui/dropdown-menu";
+
+import type { ScanEntry } from "~/context/SourcesContext";
 
 interface RenameState {
   value: string;
