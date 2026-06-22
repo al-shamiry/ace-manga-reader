@@ -30,7 +30,8 @@ import {
 import * as api from "~/api";
 import type { Chapter, ChapterStatus, MangaDetailState } from "~/types";
 
-import { EmptyState } from "../components/EmptyState";
+import { EmptyState } from "~/components/common/EmptyState";
+
 import { Button } from "../components/ui/button";
 import {
   DropdownMenu,

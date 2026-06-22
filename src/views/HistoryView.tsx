@@ -7,7 +7,8 @@ import { Trash2 } from "lucide-solid";
 import * as api from "~/api";
 import type { HistoryEntry, Manga } from "~/types";
 
-import { EmptyState } from "../components/EmptyState";
+import { EmptyState } from "~/components/common/EmptyState";
+
 import {
   Toolbar,
   ToolbarActions,

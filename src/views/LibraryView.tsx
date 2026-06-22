@@ -20,8 +20,9 @@ import type {
   SortPreference,
 } from "~/types";
 
+import { EmptyState } from "~/components/common/EmptyState";
+
 import { DisplayOptionsPopover } from "../components/DisplayOptionsPopover";
-import { EmptyState } from "../components/EmptyState";
 import { FilterDropdown, type FilterState } from "../components/FilterDropdown";
 import { MangaGrid } from "../components/MangaGrid";
 import { SelectionToolbar } from "../components/SelectionToolbar";

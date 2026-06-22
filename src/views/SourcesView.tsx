@@ -23,8 +23,9 @@ import {
 import * as api from "~/api";
 import type { Source } from "~/types";
 
-import { EmptyState } from "../components/EmptyState";
-import { SourceListSkeleton } from "../components/Skeleton";
+import { EmptyState } from "~/components/common/EmptyState";
+import { SourceListSkeleton } from "~/components/common/Skeleton";
+
 import { SourceRow } from "../components/SourceRow";
 import {
   Toolbar,

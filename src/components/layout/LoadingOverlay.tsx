@@ -2,7 +2,7 @@ import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 
 import { Loader2 } from "lucide-solid";
 
-import { useViewLoading } from "../context/ViewLoadingContext";
+import { useViewLoading } from "~/context/ViewLoadingContext";
 
 /**
  * Page-level loader overlay for views with multi-source async data.
