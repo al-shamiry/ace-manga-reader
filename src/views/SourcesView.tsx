@@ -15,6 +15,7 @@ import type { Source } from "~/types";
 
 import { createSourceSelection } from "~/hooks/createSourceSelection";
 
+import { ConfirmBanner } from "~/components/common/ConfirmBanner";
 import { EmptyState } from "~/components/common/EmptyState";
 import { SourceListSkeleton } from "~/components/common/Skeleton";
 import { SourceRow } from "~/components/source/SourceRow";
@@ -438,32 +439,17 @@ export function SourcesView() {
       />
 
       <Show when={selection.active() && selection.bulkRemoving()}>
-        <div class="border-b border-red-900/30 bg-red-950/20 px-4 py-2">
-          <div class="mx-auto flex max-w-3xl items-start justify-between gap-3">
-            <p class="text-xs leading-relaxed text-red-300/85">
-              Remove {selection.count()}{" "}
-              {selection.count() === 1 ? "source" : "sources"}? All manga from{" "}
-              {selection.count() === 1 ? "this source" : "these sources"} will
-              be removed from your library and history. Reading progress will be
-              lost and will not return even if you re-add{" "}
-              {selection.count() === 1 ? "it" : "them"} later.
-            </p>
-            <div class="flex shrink-0 items-center gap-2">
-              <button
-                class="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium text-ink-300 transition-colors hover:bg-ink-800 hover:text-ink-100"
-                onClick={() => selection.setBulkRemoving(false)}
-              >
-                Cancel
-              </button>
-              <button
-                class="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-950/40 hover:text-red-200"
-                onClick={confirmBulkRemove}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmBanner
+          onCancel={() => selection.setBulkRemoving(false)}
+          onConfirm={confirmBulkRemove}
+        >
+          Remove {selection.count()}{" "}
+          {selection.count() === 1 ? "source" : "sources"}? All manga from{" "}
+          {selection.count() === 1 ? "this source" : "these sources"} will be
+          removed from your library and history. Reading progress will be lost
+          and will not return even if you re-add{" "}
+          {selection.count() === 1 ? "it" : "them"} later.
+        </ConfirmBanner>
       </Show>
 
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
