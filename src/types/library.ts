@@ -1,8 +1,3 @@
-export interface LibraryFilters {
-  sources: string[];
-  reading_status: string[];
-}
-
 export type ReadingStatus = "unread" | "started" | "completed";
 
 export type SortField =
@@ -25,4 +20,20 @@ export interface LibraryDisplay {
   show_unread_badge: boolean;
   show_continue_button: boolean;
   show_item_count: boolean;
+}
+
+export interface LibraryFilters {
+  sources: string[];
+  reading_status: string[];
+}
+
+export interface SourceDisplay {
+  display_mode: DisplayMode;
+  card_size: number;
+  show_unread_badge: boolean;
+  show_continue_button: boolean;
+}
+
+export interface SourceFilters {
+  reading_status: string[];
 }

@@ -74,7 +74,7 @@ export function SourceView() {
       .then((d) =>
         setDisplayOpts((prev) => ({
           ...prev,
-          display_mode: d.display_mode as LibraryDisplay["display_mode"],
+          display_mode: d.display_mode,
           card_size: d.card_size,
           show_unread_badge: d.show_unread_badge,
           show_continue_button: d.show_continue_button,

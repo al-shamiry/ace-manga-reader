@@ -4,20 +4,9 @@ import type {
   LibraryFilters,
   Settings,
   SortPreference,
+  SourceDisplay,
+  SourceFilters,
 } from "~/types";
-
-/** Source-grid display options — the library `LibraryDisplay` minus the
- * library-only `show_item_count` (sources have no category tabs). */
-export interface SourceDisplay {
-  display_mode: string;
-  card_size: number;
-  show_unread_badge: boolean;
-  show_continue_button: boolean;
-}
-
-export interface SourceFilters {
-  reading_status: string[];
-}
 
 // ── Root directory ──
 
