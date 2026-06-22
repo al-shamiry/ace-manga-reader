@@ -84,7 +84,7 @@ export function SourceView() {
   );
 
   // ── Bulk selection ──
-  const selection = createMangaSelection(mangasForDisplay);
+  const selection = createMangaSelection(() => mangasForDisplay());
 
   // Reload from the cached DB projection so updated read counts / library
   // membership surface, then refresh the library context for card badges.

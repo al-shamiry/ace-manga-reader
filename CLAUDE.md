@@ -62,13 +62,34 @@ Strict layers with downward-only dependencies (`commands → services → store 
 
 Use the `app.db()` extension trait (`store::db::DbExt`) instead of `app.state::<Mutex<MangaDbCache>>()`, then go through `store::db::{lock, mutate, save_db}` — never read/write `manga_db.json` directly.
 
+### Frontend layout (layer-based, grouped by technical role)
+
+```
+src/
+  app/         composition root — App (providers), providers, routes
+  api/         the ONLY place invoke() lives; client.call<T>() + one typed fn per command,
+               consumed as `import * as api from "~/api"` (api.<domain>.<fn>)
+  types/       per-domain serde types behind a barrel; snake_case fields kept verbatim
+  context/     SolidJS contexts (see below)
+  hooks/       reactive primitives — createX/useX (selection, reader, browse controls, …)
+  lib/         pure side-effect-free utils — cn, filter, sort, *-status, history-groups, reader-modes
+  components/
+    ui/        design-system primitives (button, dropdown-menu, segmented-control, …)
+    common/    app-level presentational (EmptyState, Skeleton, TabBar, FirstRunWelcome)
+    layout/    AppShell, TitleBar, SideNav, MainArea, LoadingOverlay
+    manga/ library/ source/ manga-detail/ reader/ history/ settings/  — per-view component sets
+  views/       thin orchestrators (one per route)
+```
+
+Conventions: `~/` alias for cross-folder imports (`./` only for same-folder siblings); barrels only in `api/` and `types/`; file order = imports → types/`XProps` → constants → helpers → component (hooks → signals → memos → effects → handlers → JSX). **Never** rename Rust command strings or snake_case payload fields — front-end symbols only.
+
 ### Frontend contexts (`src/context/`)
 
 - `SourcesContext` — source list, CRUD, scan status, `initialLoad`, mutation counter
 - `LibraryContext` — categories/library-entry signals, refresh helpers, `initialLoad`
 - `ViewLoadingContext` — sequence-token busy/ready API used by `LoadingOverlay`
 
-Router state is the primary cross-view payload mechanism (no global "current chapter" store). Routes in `src/index.tsx`. `ReaderView` receives `{ chapter, manga, prevChapter?, nextChapter?, initialPage? }`; `MangaDetailView` receives `Manga`.
+Router state is the primary cross-view payload mechanism (no global "current chapter" store). Routes in `src/app/routes.tsx` (mounted from `src/index.tsx`). `ReaderView` receives `{ chapter, manga, prevChapter?, nextChapter?, initialPage? }`; `MangaDetailView` receives `Manga`.
 
 ### Asset protocol
 
@@ -113,11 +134,11 @@ Legacy files (`library.json`, `progress.json`) may exist on older installs but a
 - IDs = first 8 bytes of SHA-256(path), hex-encoded (`path_id`)
 - Rust normalizes paths to forward slashes before sending to frontend
 - Tailwind v4 CSS-first (`@import "tailwindcss"` in `global.css`; no `tailwind.config.js`)
-- `src/types.ts` must stay aligned with Rust command payloads
+- `src/types/` must stay aligned with Rust command payloads
 
 ### Cross-agent guardrails
 
-- Keep frontend/backend contracts in sync: if a Rust command payload changes, update `src/types.ts` and all frontend consumers
+- Keep frontend/backend contracts in sync: if a Rust command payload changes, update the matching `src/types/` module + `src/api/` fn and all frontend consumers
 - Preserve config compatibility: prefer additive changes to persisted keys (`config.json`, per-manga settings) and avoid breaking existing installs
 - Keep TypeScript strictness intact; avoid `any` unless unavoidable
 - Do not introduce unnecessary dependencies when existing stack/utilities can solve the problem

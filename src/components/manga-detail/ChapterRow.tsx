@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 
 import { Check } from "lucide-solid";
 
@@ -12,33 +12,27 @@ type ChapterRowProps = {
 };
 
 function StatusBadge(props: { status: ChapterStatus }) {
-  switch (props.status.type) {
-    case "read":
-      return (
-        <span class="rounded bg-ink-800 px-1.5 py-0.5 text-[0.65rem] font-semibold text-ink-500">
-          Done
-        </span>
-      );
-    case "ongoing":
-      if (props.status.page === 0) {
-        return (
-          <span class="rounded bg-ink-800 px-1.5 py-0.5 text-[0.65rem] font-semibold text-ink-100">
-            New
-          </span>
-        );
-      }
-      return (
-        <span class="rounded bg-jade-900/50 px-1.5 py-0.5 text-[0.65rem] font-semibold text-jade-400">
-          Page {props.status.page + 1}
-        </span>
-      );
-    default:
-      return (
-        <span class="rounded bg-ink-800 px-1.5 py-0.5 text-[0.65rem] font-semibold text-ink-100">
-          New
-        </span>
-      );
-  }
+  const badge = createMemo(() => {
+    const status = props.status;
+    if (status.type === "read") {
+      return { label: "Done", class: "bg-ink-800 text-ink-500" };
+    }
+    if (status.type === "ongoing" && status.page > 0) {
+      return {
+        label: `Page ${status.page + 1}`,
+        class: "bg-jade-900/50 text-jade-400",
+      };
+    }
+    return { label: "New", class: "bg-ink-800 text-ink-100" };
+  });
+
+  return (
+    <span
+      class={`rounded px-1.5 py-0.5 text-[0.65rem] font-semibold ${badge().class}`}
+    >
+      {badge().label}
+    </span>
+  );
 }
 
 export function ChapterRow(props: ChapterRowProps) {

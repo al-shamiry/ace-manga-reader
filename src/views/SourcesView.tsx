@@ -76,7 +76,10 @@ export function SourcesView() {
     Object.values(scanStatus()).some((s) => s.status === "scanning"),
   );
 
-  const selection = createSourceSelection(sortedSources, selectableSources);
+  const selection = createSourceSelection(
+    () => sortedSources(),
+    () => selectableSources(),
+  );
 
   const bulkHideLabel = createMemo<"Hide" | "Show">(() => {
     const selected = selection.selected();

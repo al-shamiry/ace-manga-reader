@@ -65,7 +65,7 @@ const DropdownMenuHeader: Component<DropdownMenuHeaderProps> = (props) => {
         <button
           type="button"
           class="cursor-pointer rounded px-1 py-0.5 text-2xs font-medium tracking-[0.14em] text-ink-500 uppercase transition-colors hover:text-jade-400 focus-visible:ring-1 focus-visible:ring-jade-500/60 focus-visible:outline-none"
-          onClick={props.onReset}
+          onClick={() => props.onReset?.()}
         >
           Reset
         </button>

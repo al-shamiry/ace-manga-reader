@@ -175,7 +175,7 @@ export function LibraryView() {
   );
 
   // ── Bulk selection ──
-  const selection = createMangaSelection(mangasForGrid);
+  const selection = createMangaSelection(() => mangasForGrid());
 
   async function bulkMarkRead(read: boolean) {
     const mangaIds = selection.selectedIds();
