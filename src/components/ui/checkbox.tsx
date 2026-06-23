@@ -1,13 +1,14 @@
 import { Show } from "solid-js";
 
 import * as CheckboxPrimitive from "@kobalte/core/checkbox";
-import { Check } from "lucide-solid";
+import { Check, Minus } from "lucide-solid";
 
 import { cn } from "~/lib/cn";
 
 interface CheckboxProps {
   checked: boolean;
   onChange: () => void;
+  indeterminate?: boolean;
   label?: string;
   class?: string;
 }
@@ -16,6 +17,7 @@ const Checkbox = (props: CheckboxProps) => {
   return (
     <CheckboxPrimitive.Root
       checked={props.checked}
+      indeterminate={props.indeterminate}
       onChange={() => props.onChange()}
       class={cn(
         "group flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-300 hover:text-foreground",
@@ -28,11 +30,17 @@ const Checkbox = (props: CheckboxProps) => {
           "flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors duration-150",
           "border-ink-600 bg-ink-900 group-hover:border-ink-500",
           "data-[checked]:border-jade-500 data-[checked]:bg-jade-500 data-[checked]:group-hover:border-jade-400",
+          "data-[indeterminate]:border-jade-500 data-[indeterminate]:bg-jade-500 data-[indeterminate]:group-hover:border-jade-400",
           "peer-focus-visible:ring-2 peer-focus-visible:ring-jade-500/60 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-background",
         )}
       >
         <CheckboxPrimitive.Indicator>
-          <Check size={12} stroke-width={3} class="text-ink-950" />
+          <Show
+            when={props.indeterminate}
+            fallback={<Check size={12} stroke-width={3} class="text-ink-950" />}
+          >
+            <Minus size={12} stroke-width={3} class="text-ink-950" />
+          </Show>
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Control>
       <Show when={props.label}>
