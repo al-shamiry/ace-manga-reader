@@ -33,8 +33,8 @@ pub enum ReadingMode {
     PagedRtl,
 }
 
+// No container-level `#[serde(default)]`for partial updates.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default)]
 pub struct ReaderSettings {
     pub fit_mode: Option<FitMode>,
     pub reading_mode: Option<ReadingMode>,
