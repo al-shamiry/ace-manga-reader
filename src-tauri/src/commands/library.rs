@@ -176,6 +176,42 @@ pub fn add_mangas_to_categories(
     })
 }
 
+/// Apply a category diff to a set of mangas in one DB write: add every id in
+/// `add_category_ids` to each manga (if missing), then drop every id in
+/// `remove_category_ids`. A manga left with no categories falls out of the
+/// library; a manga that gains its first category enters it. Backs the
+/// multi-select "adjust categories" picker, where checking a box adds the
+/// whole selection to a category and unchecking removes it.
+#[tauri::command]
+pub fn set_mangas_categories(
+    app: tauri::AppHandle,
+    manga_ids: Vec<String>,
+    add_category_ids: Vec<String>,
+    remove_category_ids: Vec<String>,
+) -> AppResult<()> {
+    let cache = app.db();
+    let now = now_epoch();
+    db::mutate(&cache, &app, |db| {
+        for id in &manga_ids {
+            if let Some(entry) = db.mangas.get_mut(id) {
+                for cat in &add_category_ids {
+                    if !entry.category_ids.contains(cat) {
+                        entry.category_ids.push(cat.clone());
+                    }
+                }
+                entry
+                    .category_ids
+                    .retain(|c| !remove_category_ids.contains(c));
+                if entry.category_ids.is_empty() {
+                    entry.added_at = None;
+                } else if entry.added_at.is_none() {
+                    entry.added_at = Some(now);
+                }
+            }
+        }
+    })
+}
+
 /// Remove a set of mangas from the library in one DB write.
 #[tauri::command]
 pub fn remove_mangas_from_library(app: tauri::AppHandle, manga_ids: Vec<String>) -> AppResult<()> {

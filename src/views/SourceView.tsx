@@ -106,11 +106,18 @@ export function SourceView() {
     selection.exit();
   }
 
-  async function bulkApplyCategories(categoryIds: string[]) {
+  const selectedCategoryIds = createMemo(() => {
+    const ids = new Set(selection.selectedIds());
+    return mangas()
+      .filter((m) => ids.has(m.id))
+      .map((m) => m.category_ids ?? []);
+  });
+
+  async function bulkAssignCategories(addIds: string[], removeIds: string[]) {
     const mangaIds = selection.selectedIds();
     if (mangaIds.length === 0) return;
     try {
-      await api.library.addMangasToCategories(mangaIds, categoryIds);
+      await api.library.setMangasCategories(mangaIds, addIds, removeIds);
       await reloadAfterBulk();
     } catch (e) {
       console.error("Failed to assign categories:", e);
@@ -193,7 +200,8 @@ export function SourceView() {
             onSelectAll={selection.selectAll}
             onSelectNone={selection.selectNone}
             onInvert={selection.invert}
-            onApplyCategories={bulkApplyCategories}
+            selectedCategoryIds={selectedCategoryIds()}
+            onAssignCategories={bulkAssignCategories}
             onMarkRead={() => bulkMarkRead(true)}
             onMarkUnread={() => bulkMarkRead(false)}
             onCancel={selection.exit}

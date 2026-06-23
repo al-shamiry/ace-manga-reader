@@ -53,6 +53,18 @@ export function addMangasToCategories(
   return call("add_mangas_to_categories", { mangaIds, categoryIds });
 }
 
+export function setMangasCategories(
+  mangaIds: string[],
+  addCategoryIds: string[],
+  removeCategoryIds: string[],
+): Promise<void> {
+  return call("set_mangas_categories", {
+    mangaIds,
+    addCategoryIds,
+    removeCategoryIds,
+  });
+}
+
 export function removeMangasFromLibrary(mangaIds: string[]): Promise<void> {
   return call("remove_mangas_from_library", { mangaIds });
 }

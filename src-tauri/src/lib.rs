@@ -31,6 +31,7 @@ pub fn run() {
             commands::library::add_to_library,
             commands::library::remove_from_library,
             commands::library::add_mangas_to_categories,
+            commands::library::set_mangas_categories,
             commands::library::remove_mangas_from_library,
             commands::library::remove_mangas_from_category,
             commands::reader::list_chapters,

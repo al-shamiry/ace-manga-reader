@@ -19,6 +19,9 @@ interface LibraryContextValue {
   isInLibrary: (mangaId: string) => boolean;
   refreshCategories: () => Promise<void>;
   refreshLibrary: () => Promise<void>;
+  createCategory: (name: string) => Promise<void>;
+  renameCategory: (categoryId: string, name: string) => Promise<void>;
+  deleteCategory: (categoryId: string) => Promise<void>;
   /** Resolves once sources + categories + library entries are loaded. */
   initialLoad: () => Promise<void>;
 }
@@ -77,6 +80,22 @@ export function LibraryProvider(props: { children: JSX.Element }) {
     }
   }
 
+  async function createCategory(name: string) {
+    await api.library.createCategory(name);
+    await refreshCategories();
+  }
+
+  async function renameCategory(categoryId: string, name: string) {
+    await api.library.renameCategory(categoryId, name);
+    await refreshCategories();
+  }
+
+  async function deleteCategory(categoryId: string) {
+    await api.library.deleteCategory(categoryId);
+    await refreshCategories();
+    await refreshLibrary();
+  }
+
   return (
     <LibraryContext.Provider
       value={{
@@ -85,6 +104,9 @@ export function LibraryProvider(props: { children: JSX.Element }) {
         isInLibrary,
         refreshCategories,
         refreshLibrary,
+        createCategory,
+        renameCategory,
+        deleteCategory,
         initialLoad: () => initialLoadPromise,
       }}
     >

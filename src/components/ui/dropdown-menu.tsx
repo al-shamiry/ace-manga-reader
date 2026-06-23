@@ -216,21 +216,31 @@ const DropdownMenuCheckboxItem = <T extends ValidComponent = "div">(
       )}
       {...rest}
     >
-      <span class="absolute left-1.5 flex size-4 items-center justify-center rounded-[3px] border border-ink-600 bg-ink-900 transition-colors group-data-checked:border-jade-500 group-data-checked:bg-jade-500">
-        <DropdownMenuPrimitive.ItemIndicator>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="size-3 text-ink-950"
-          >
-            <path d="M5 12l5 5l10 -10" />
-          </svg>
-        </DropdownMenuPrimitive.ItemIndicator>
+      <span class="absolute left-1.5 flex size-4 items-center justify-center rounded-[3px] border border-ink-600 bg-ink-900 transition-colors group-data-checked:border-jade-500 group-data-checked:bg-jade-500 group-data-indeterminate:border-jade-500 group-data-indeterminate:bg-jade-500">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="size-3 text-ink-950 opacity-0 group-data-checked:opacity-100"
+        >
+          <path d="M5 12l5 5l10 -10" />
+        </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="absolute size-3 text-ink-950 opacity-0 group-data-indeterminate:opacity-100"
+        >
+          <path d="M5 12h14" />
+        </svg>
       </span>
       {props.children}
     </DropdownMenuPrimitive.CheckboxItem>
