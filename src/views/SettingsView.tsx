@@ -6,6 +6,7 @@ import { Folder } from "lucide-solid";
 import * as api from "~/api";
 import type {
   DisplayMode,
+  DisplayScope,
   FitMode,
   LibraryDisplay,
   ReadingMode,
@@ -16,6 +17,7 @@ import { DEFAULT_DISPLAY } from "~/lib/display-defaults";
 
 import { SettingsField } from "~/components/settings/SettingsField";
 import { SettingsSection } from "~/components/settings/SettingsSection";
+import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import {
@@ -56,6 +58,9 @@ export function SettingsView() {
   const [fitMode, setFitMode] = createSignal<FitMode>("fit-screen");
   const [readingMode, setReadingMode] = createSignal<ReadingMode>("paged-rtl");
   const [display, setDisplay] = createSignal<LibraryDisplay>(DEFAULT_DISPLAY);
+  const [overridden, setOverridden] = createSignal<
+    Record<DisplayScope, boolean>
+  >({ library: false, source: false });
 
   onMount(async () => {
     try {
@@ -76,6 +81,18 @@ export function SettingsView() {
       setDisplay(d);
     } catch (e) {
       console.error("Failed to load display options:", e);
+    }
+    try {
+      const [library, source] = await Promise.all([
+        api.settings.getViewDisplay("library"),
+        api.settings.getViewDisplay("source"),
+      ]);
+      setOverridden({
+        library: library.overridden,
+        source: source.overridden,
+      });
+    } catch (e) {
+      console.error("Failed to load view display overrides:", e);
     }
   });
 
@@ -118,6 +135,15 @@ export function SettingsView() {
     const current = display();
     if (typeof current[key] !== "boolean") return;
     updateDisplay({ ...current, [key]: !current[key] });
+  }
+
+  async function resetView(scope: DisplayScope) {
+    try {
+      const res = await api.settings.resetViewDisplay(scope);
+      setOverridden((prev) => ({ ...prev, [scope]: res.overridden }));
+    } catch (e) {
+      console.error(`Failed to reset ${scope} display:`, e);
+    }
   }
 
   return (
@@ -177,8 +203,8 @@ export function SettingsView() {
           </SettingsSection>
 
           <SettingsSection
-            title="Library Display"
-            description="How the library grid looks across all categories."
+            title="Display"
+            description="Defaults for the Library and Source pages. Changes made inside a page override these for that page only."
           >
             <SettingsField label="Display mode">
               <SegmentedControl
@@ -224,13 +250,29 @@ export function SettingsView() {
                 />
               </div>
             </SettingsField>
-            <SettingsField label="Category tabs">
+            <SettingsField label="Category tabs (Library only)">
               <div class="flex flex-col">
                 <Checkbox
                   label="Show number of items"
                   checked={display().show_item_count}
                   onChange={() => toggleDisplay("show_item_count")}
                 />
+              </div>
+            </SettingsField>
+            <SettingsField label="Page overrides">
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  disabled={!overridden().library}
+                  onClick={() => resetView("library")}
+                >
+                  Reset library display
+                </Button>
+                <Button
+                  disabled={!overridden().source}
+                  onClick={() => resetView("source")}
+                >
+                  Reset source page display
+                </Button>
               </div>
             </SettingsField>
           </SettingsSection>
