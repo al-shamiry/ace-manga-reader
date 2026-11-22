@@ -6,6 +6,8 @@ import {
   onCleanup,
 } from "solid-js";
 
+import * as api from "~/api";
+
 type ReaderChromeOptions = {
   isFullscreen: Accessor<boolean>;
   /** While true, a peek never times out (e.g. the jump input is open). */
@@ -23,6 +25,9 @@ const BAR_SELECTOR = "[data-reader-bar]";
  * Visibility of the reader's overlay bars (toolbar + bottom bar + title bar).
  * `hidden` is the user's explicit choice; `visible` is the derived state the
  * view renders from (`!hidden || peek`).
+ *
+ * `hidden` loads from the persisted global preference on mount (bars stay
+ * visible until then). Only manual changes outside fullscreen are saved.
  *
  * Fullscreen is transient: entering snapshots `hidden` and forces it on,
  * exiting restores the snapshot. `toggle` still works inside fullscreen.
@@ -45,6 +50,17 @@ export function createReaderChrome(opts: ReaderChromeOptions) {
   let armed = true;
 
   const visible = () => !hidden() || peek();
+
+  let touched = false;
+  void api.settings
+    .getReaderUiHidden()
+    .then((h) => {
+      // Already in fullscreen: the loaded value is what exiting restores.
+      if (hiddenBeforeFullscreen !== undefined) hiddenBeforeFullscreen = h;
+      // Otherwise a manual change made before the load wins.
+      else if (!touched) setHidden(h);
+    })
+    .catch(() => {});
 
   createEffect(
     on(
@@ -123,14 +139,22 @@ export function createReaderChrome(opts: ReaderChromeOptions) {
     clearTimeout(cursorTimer);
   });
 
+  /** Manual change: persisted unless in fullscreen (fullscreen is transient). */
+  function setManual(next: boolean) {
+    touched = true;
+    setHidden(next);
+    if (!opts.isFullscreen())
+      void api.settings.setReaderUiHidden(next).catch(() => {});
+  }
+
   function toggle() {
-    setHidden((h) => !h);
+    setManual(!hidden());
   }
   function show() {
-    setHidden(false);
+    setManual(false);
   }
   function hide() {
-    setHidden(true);
+    setManual(true);
   }
 
   return { hidden, visible, cursorIdle, toggle, show, hide };

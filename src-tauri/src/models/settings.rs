@@ -270,6 +270,7 @@ pub struct Config {
     pub source_display: DisplayOverride,
     pub source_filters: SourceFilters,
     pub categories: Vec<Category>,
+    pub reader_ui_hidden: bool,
 }
 
 impl Config {

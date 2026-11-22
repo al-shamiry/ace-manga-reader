@@ -30,6 +30,14 @@ export function setDefaultReaderSettings(settings: Settings): Promise<void> {
   return call("set_default_reader_settings", { settings });
 }
 
+export function getReaderUiHidden(): Promise<boolean> {
+  return call<boolean>("get_reader_ui_hidden");
+}
+
+export function setReaderUiHidden(hidden: boolean): Promise<void> {
+  return call("set_reader_ui_hidden", { hidden });
+}
+
 export function getDefaultDisplay(): Promise<LibraryDisplay> {
   return call<LibraryDisplay>("get_default_display");
 }

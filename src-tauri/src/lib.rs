@@ -44,6 +44,8 @@ pub fn run() {
             commands::reader::set_manga_reader_settings,
             commands::settings::get_default_reader_settings,
             commands::settings::set_default_reader_settings,
+            commands::settings::get_reader_ui_hidden,
+            commands::settings::set_reader_ui_hidden,
             commands::settings::get_root_directory,
             commands::settings::set_root_directory,
             commands::settings::get_library_filters,

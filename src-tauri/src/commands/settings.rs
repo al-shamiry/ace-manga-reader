@@ -36,6 +36,18 @@ pub fn set_default_reader_settings(
     update_config(&app, |c| c.reader_settings = settings.clamped())
 }
 
+// ── Reader UI visibility ─────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_reader_ui_hidden(app: tauri::AppHandle) -> AppResult<bool> {
+    Ok(load_config(&app)?.reader_ui_hidden)
+}
+
+#[tauri::command]
+pub fn set_reader_ui_hidden(app: tauri::AppHandle, hidden: bool) -> AppResult<()> {
+    update_config(&app, |c| c.reader_ui_hidden = hidden)
+}
+
 // ── Active category tab ──────────────────────────────────────────────────────
 
 #[tauri::command]

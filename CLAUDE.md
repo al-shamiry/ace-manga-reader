@@ -119,9 +119,10 @@ Legacy files (`library.json`, `progress.json`) may exist on older installs but a
 
 - **4 reading modes**: `paged-ltr`, `paged-rtl`, `paged-vertical`, `webtoon` (cycle: `m`)
 - **5 fit modes** (paged only): `fit-screen`, `fit-width`, `fit-height`, `original`, `stretch` (cycle: `f`)
-- **Webtoon side padding**: 0–25%, persisted in settings; adjustable via UI slider and `Ctrl+Wheel`
+- **Webtoon side padding**: 0–40%, persisted in settings; adjustable via UI slider and `Ctrl+Wheel`
 - **Tap zones**: thirds (paged: left/center/right or top/center/bottom in vertical; webtoon: sticky top/center/bottom)
-- **Keyboard**: arrows navigate/scroll; webtoon uses rAF continuous scrolling with >2s speed boost; `Backspace`/`Escape` back; `F11` fullscreen
+- **Keyboard**: arrows navigate/scroll; webtoon uses rAF continuous scrolling with >2s speed boost; `Backspace`/`Escape` back; `F11` fullscreen; `H` hide/show UI
+- **UI overlay** (`createReaderChrome`): toolbar, bottom bar and window title bar hide together (`H` or toolbar toggle). Shown bars sit in the layout; hidden bars become an overlay that peeks in when the cursor nears the top/bottom 10% of the window and re-hides after 2s. Fullscreen auto-hides and restores on exit (transient). The cursor hides after 2s idle. The hidden choice persists globally as `reader_ui_hidden` in `config.json`
 - **Page flip animations**: direction-aware `slide-in-*` / `slide-out-*` classes (~200ms)
 - **Chapter edge behavior**: extra input at boundary advances to prev/next chapter
 - **Settings**: `get_manga_reader_settings` merges per-manga values with global defaults (`get_default_reader_settings`)
