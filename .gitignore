@@ -4,3 +4,4 @@ notes/
 .dual-graph/
 .claude/settings.local.json
 .pi
+.claude/commands/
