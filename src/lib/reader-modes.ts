@@ -30,7 +30,7 @@ export const FIT_LABELS: Record<FitMode, string> = {
 };
 
 export const FIT_CLASSES: Record<FitMode, string> = {
-  "fit-screen": "max-h-full max-w-full object-contain",
+  "fit-screen": "h-full w-full object-contain",
   "fit-width": "w-full h-auto object-contain",
   "fit-height": "h-full w-auto max-w-none object-contain",
   original: "max-w-none",
