@@ -31,7 +31,7 @@ export function ReaderView() {
 
   const settings = createReaderSettings({ mangaId: () => state()?.manga.id });
   const fullscreen = createFullscreen();
-  const chrome = createReaderChrome();
+  const chrome = createReaderChrome({ isFullscreen: fullscreen.isFullscreen });
   // Let the app shell hide the window title bar along with the reader bars.
   onCleanup(useReaderChrome().register(chrome));
   const nav = createReaderNavigation({
