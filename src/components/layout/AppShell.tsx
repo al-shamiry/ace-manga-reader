@@ -29,6 +29,7 @@ export function AppShell(props: AppShellProps) {
   return (
     <div class="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <div
+        data-reader-bar
         class={cn(
           "z-30 shrink-0 transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none",
           titleBarHidden() ? "absolute inset-x-0 top-0" : "relative",

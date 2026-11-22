@@ -31,7 +31,11 @@ export function ReaderView() {
 
   const settings = createReaderSettings({ mangaId: () => state()?.manga.id });
   const fullscreen = createFullscreen();
-  const chrome = createReaderChrome({ isFullscreen: fullscreen.isFullscreen });
+  const chrome = createReaderChrome({
+    isFullscreen: fullscreen.isFullscreen,
+    // Lazy: `nav` is created below and needs `chrome` itself.
+    keepOpen: () => nav.jumping(),
+  });
   // Let the app shell hide the window title bar along with the reader bars.
   onCleanup(useReaderChrome().register(chrome));
   const nav = createReaderNavigation({
@@ -62,11 +66,18 @@ export function ReaderView() {
       }
     >
       {(s) => (
-        <div class="relative flex flex-1 flex-col overflow-hidden bg-ink-950">
+        <div
+          class={cn(
+            "relative flex flex-1 flex-col overflow-hidden bg-ink-950",
+            chrome.cursorIdle() && "cursor-none",
+          )}
+        >
+          {/* Hidden: overlay below the peeking title bar (h-8) so they stack. */}
           <div
+            data-reader-bar
             class={cn(
               BAR_WRAPPER,
-              chrome.hidden() ? "absolute inset-x-0 top-0" : "relative",
+              chrome.hidden() ? "absolute inset-x-0 top-8" : "relative",
               !chrome.visible() &&
                 "pointer-events-none -translate-y-full opacity-0",
             )}
@@ -82,7 +93,8 @@ export function ReaderView() {
               onSetPadding={nav.setWebtoonPaddingPreserving}
               isFullscreen={fullscreen.isFullscreen()}
               onToggleFullscreen={fullscreen.toggle}
-              onHideUi={chrome.hide}
+              uiHidden={chrome.hidden()}
+              onToggleUi={chrome.toggle}
               onBack={goBack}
             />
           </div>
@@ -131,6 +143,7 @@ export function ReaderView() {
           </Show>
 
           <div
+            data-reader-bar
             class={cn(
               BAR_WRAPPER,
               chrome.hidden() ? "absolute inset-x-0 bottom-0" : "relative",

@@ -3,6 +3,7 @@ import { Show } from "solid-js";
 import {
   AlignCenter,
   ArrowLeft,
+  Eye,
   EyeOff,
   Maximize2,
   Minimize2,
@@ -41,7 +42,8 @@ type ReaderToolbarProps = {
   onSetPadding: (next: number) => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
-  onHideUi: () => void;
+  uiHidden: boolean;
+  onToggleUi: () => void;
   onBack: () => void;
 };
 
@@ -120,10 +122,10 @@ export function ReaderToolbar(props: ReaderToolbarProps) {
       <Button
         variant="ghost"
         iconOnly
-        onClick={() => props.onHideUi()}
-        title="Hide UI (H)"
+        onClick={() => props.onToggleUi()}
+        title={props.uiHidden ? "Show UI (H)" : "Hide UI (H)"}
       >
-        <EyeOff size={14} />
+        {props.uiHidden ? <Eye size={14} /> : <EyeOff size={14} />}
       </Button>
       <Button
         variant="ghost"
