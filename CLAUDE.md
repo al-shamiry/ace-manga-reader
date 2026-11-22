@@ -102,14 +102,14 @@ Pages/covers served via Tauri asset protocol. Use `convertFileSrc(path)` from `@
 
 ### Persistent storage (`app_data_dir`, typically `%APPDATA%\ace-manga-reader\` on Windows)
 
-| Path                        | Contents                                                                                                  |
-| --------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `config.json`               | Global config: root directory, reading defaults, filters, sort/display prefs, categories, active category |
-| `manga_db.json`             | Central DB: sources + manga state (progress, categories per manga, metadata)                              |
-| `history.json`              | Recently-read entries (1000 cap, deduped by manga)                                                        |
-| `cache/covers/`             | Extracted CBZ cover cache                                                                                 |
-| `cache/pages/{chapter_id}/` | Extracted CBZ page cache                                                                                  |
-| `settings/{manga_id}.json`  | Per-manga reader overrides (`fit_mode`, `reading_mode`, `webtoon_padding`)                                |
+| Path                        | Contents                                                                                           |
+| --------------------------- | -------------------------------------------------------------------------------------------------- |
+| `config.json`               | Global config: root directory, reading defaults, filters, sort prefs, display settings, categories |
+| `manga_db.json`             | Central DB: sources + manga state (progress, categories per manga, metadata)                       |
+| `history.json`              | Recently-read entries (1000 cap, deduped by manga)                                                 |
+| `cache/covers/`             | Extracted CBZ cover cache                                                                          |
+| `cache/pages/{chapter_id}/` | Extracted CBZ page cache                                                                           |
+| `settings/{manga_id}.json`  | Per-manga reader overrides (`fit_mode`, `reading_mode`, `webtoon_padding`)                         |
 
 Legacy files (`library.json`, `progress.json`) may exist on older installs but are not part of the active persistence model.
 
