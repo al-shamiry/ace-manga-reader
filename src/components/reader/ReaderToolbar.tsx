@@ -1,6 +1,12 @@
 import { Show } from "solid-js";
 
-import { AlignCenter, ArrowLeft, Maximize2, Minimize2 } from "lucide-solid";
+import {
+  AlignCenter,
+  ArrowLeft,
+  EyeOff,
+  Maximize2,
+  Minimize2,
+} from "lucide-solid";
 
 import type { FitMode, ReadingMode } from "~/types";
 
@@ -35,6 +41,7 @@ type ReaderToolbarProps = {
   onSetPadding: (next: number) => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  onHideUi: () => void;
   onBack: () => void;
 };
 
@@ -110,6 +117,14 @@ export function ReaderToolbar(props: ReaderToolbarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </Show>
+      <Button
+        variant="ghost"
+        iconOnly
+        onClick={() => props.onHideUi()}
+        title="Hide UI (H)"
+      >
+        <EyeOff size={14} />
+      </Button>
       <Button
         variant="ghost"
         iconOnly

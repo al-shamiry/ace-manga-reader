@@ -8,6 +8,7 @@ import * as api from "~/api";
 import type { Chapter, ReaderState } from "~/types";
 
 import type { createFullscreen } from "~/hooks/createFullscreen";
+import type { createReaderChrome } from "~/hooks/createReaderChrome";
 import type { createReaderSettings } from "~/hooks/createReaderSettings";
 import { type SlideDir, slideDir } from "~/lib/reader-modes";
 
@@ -28,8 +29,9 @@ export function createReaderNavigation(opts: {
   navigate: ReturnType<typeof useNavigate>;
   settings: ReturnType<typeof createReaderSettings>;
   fullscreen: ReturnType<typeof createFullscreen>;
+  chrome: ReturnType<typeof createReaderChrome>;
 }) {
-  const { settings, fullscreen, navigate } = opts;
+  const { settings, fullscreen, chrome, navigate } = opts;
   const state = opts.getState;
 
   const [pages, setPages] = createSignal<string[]>([]);
@@ -208,6 +210,11 @@ export function createReaderNavigation(opts: {
         case "F11":
           e.preventDefault();
           fullscreen.toggle();
+          return;
+        case "h":
+        case "H":
+          if (e.ctrlKey || e.metaKey || e.altKey) break;
+          chrome.toggle();
           return;
         case "Backspace":
         case "Escape":

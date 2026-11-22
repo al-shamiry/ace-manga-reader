@@ -1,6 +1,7 @@
 import { JSX } from "solid-js";
 
 import { LibraryProvider } from "~/context/LibraryContext";
+import { ReaderChromeProvider } from "~/context/ReaderChromeContext";
 import { SourcesProvider } from "~/context/SourcesContext";
 import { ViewLoadingProvider } from "~/context/ViewLoadingContext";
 
@@ -13,7 +14,9 @@ export function Providers(props: ProvidersProps) {
   return (
     <SourcesProvider>
       <LibraryProvider>
-        <ViewLoadingProvider>{props.children}</ViewLoadingProvider>
+        <ViewLoadingProvider>
+          <ReaderChromeProvider>{props.children}</ReaderChromeProvider>
+        </ViewLoadingProvider>
       </LibraryProvider>
     </SourcesProvider>
   );
