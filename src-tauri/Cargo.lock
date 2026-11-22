@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "ace-manga-reader"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "hex",
  "rayon",
