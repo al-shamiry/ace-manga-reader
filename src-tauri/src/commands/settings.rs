@@ -4,8 +4,8 @@
 
 use crate::error::AppResult;
 use crate::models::{
-    LibraryDisplay, LibraryFilters, LibrarySortPreference, ReaderSettings, SourceDisplay,
-    SourceFilters, SourceSortPreference,
+    DisplayOverride, DisplayScope, LibraryDisplay, LibraryFilters, LibrarySortPreference,
+    ReaderSettings, SourceFilters, SourceSortPreference, ViewDisplay,
 };
 use crate::store::config::{load_config, update_config};
 
@@ -63,16 +63,46 @@ pub fn set_library_sort_preference(
     update_config(&app, |c| c.library_sort_preference = preference)
 }
 
-// ── Library display ──────────────────────────────────────────────────────────
+// ── Display (global default + per-view overrides) ────────────────────────────
 
 #[tauri::command]
-pub fn get_library_display(app: tauri::AppHandle) -> AppResult<LibraryDisplay> {
-    Ok(load_config(&app)?.library_display)
+pub fn get_default_display(app: tauri::AppHandle) -> AppResult<LibraryDisplay> {
+    Ok(load_config(&app)?.default_display)
 }
 
 #[tauri::command]
-pub fn set_library_display(app: tauri::AppHandle, display: LibraryDisplay) -> AppResult<()> {
-    update_config(&app, |c| c.library_display = display.clamped())
+pub fn set_default_display(app: tauri::AppHandle, display: LibraryDisplay) -> AppResult<()> {
+    update_config(&app, |c| c.default_display = display.clamped())
+}
+
+#[tauri::command]
+pub fn get_view_display(app: tauri::AppHandle, scope: DisplayScope) -> AppResult<ViewDisplay> {
+    Ok(load_config(&app)?.resolved_display(scope))
+}
+
+#[tauri::command]
+pub fn patch_view_display(
+    app: tauri::AppHandle,
+    scope: DisplayScope,
+    patch: DisplayOverride,
+) -> AppResult<ViewDisplay> {
+    let mut resolved = None;
+    update_config(&app, |c| {
+        let over = c.display_override_mut(scope);
+        *over = std::mem::take(over).merge(patch.clamped());
+        resolved = Some(c.resolved_display(scope));
+    })?;
+    Ok(resolved.expect("update_config runs the closure"))
+}
+
+#[tauri::command]
+pub fn reset_view_display(app: tauri::AppHandle, scope: DisplayScope) -> AppResult<ViewDisplay> {
+    let mut resolved = None;
+    update_config(&app, |c| {
+        *c.display_override_mut(scope) = DisplayOverride::default();
+        resolved = Some(c.resolved_display(scope));
+    })?;
+    Ok(resolved.expect("update_config runs the closure"))
 }
 
 // ── Library filters ──────────────────────────────────────────────────────────
@@ -100,18 +130,6 @@ pub fn set_source_sort_preference(
     preference: SourceSortPreference,
 ) -> AppResult<()> {
     update_config(&app, |c| c.source_sort_preference = preference)
-}
-
-// ── Source display ───────────────────────────────────────────────────────────
-
-#[tauri::command]
-pub fn get_source_display(app: tauri::AppHandle) -> AppResult<SourceDisplay> {
-    Ok(load_config(&app)?.source_display)
-}
-
-#[tauri::command]
-pub fn set_source_display(app: tauri::AppHandle, display: SourceDisplay) -> AppResult<()> {
-    update_config(&app, |c| c.source_display = display.clamped())
 }
 
 // ── Source filters ───────────────────────────────────────────────────────────

@@ -162,34 +162,80 @@ impl LibraryDisplay {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Per-field display override for one browse view. `None` = follow the
+/// global `default_display`. `Default` must stay derived (all `None`) so
+/// partial patches and `#[serde(default)]` never inject values.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
-pub struct SourceDisplay {
-    pub display_mode: DisplayMode,
-    pub card_size: u8,
-    pub show_unread_badge: bool,
-    pub show_continue_button: bool,
+pub struct DisplayOverride {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_mode: Option<DisplayMode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_size: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub show_unread_badge: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub show_continue_button: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub show_item_count: Option<bool>,
 }
 
-impl Default for SourceDisplay {
-    fn default() -> Self {
+impl DisplayOverride {
+    /// Layer `patch` over `self`: fields set in the patch win.
+    pub fn merge(self, patch: DisplayOverride) -> Self {
         Self {
-            display_mode: DisplayMode::Comfortable,
-            card_size: 8u8,
-            show_unread_badge: false,
-            show_continue_button: false,
+            display_mode: patch.display_mode.or(self.display_mode),
+            card_size: patch.card_size.or(self.card_size),
+            show_unread_badge: patch.show_unread_badge.or(self.show_unread_badge),
+            show_continue_button: patch.show_continue_button.or(self.show_continue_button),
+            show_item_count: patch.show_item_count.or(self.show_item_count),
         }
     }
-}
 
-impl SourceDisplay {
-    /// Clamp the card size into the slider's allowed range.
+    /// Resolve against `base`: overridden fields replace the base values.
+    pub fn apply(&self, base: &LibraryDisplay) -> LibraryDisplay {
+        LibraryDisplay {
+            display_mode: self.display_mode.unwrap_or(base.display_mode),
+            card_size: self.card_size.unwrap_or(base.card_size),
+            show_unread_badge: self.show_unread_badge.unwrap_or(base.show_unread_badge),
+            show_continue_button: self
+                .show_continue_button
+                .unwrap_or(base.show_continue_button),
+            show_item_count: self.show_item_count.unwrap_or(base.show_item_count),
+        }
+        .clamped()
+    }
+
+    /// Clamp the card size (if set) into the slider's allowed range.
     pub fn clamped(mut self) -> Self {
         self.card_size = self
             .card_size
-            .clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end());
+            .map(|s| s.clamp(*CARD_SIZE_RANGE.start(), *CARD_SIZE_RANGE.end()));
         self
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.display_mode.is_none()
+            && self.card_size.is_none()
+            && self.show_unread_badge.is_none()
+            && self.show_continue_button.is_none()
+            && self.show_item_count.is_none()
+    }
+}
+
+/// Which browse view a display override belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DisplayScope {
+    Library,
+    Source,
+}
+
+/// Resolved display for a view, plus whether it carries any override.
+#[derive(Debug, Clone, Serialize)]
+pub struct ViewDisplay {
+    pub display: LibraryDisplay,
+    pub overridden: bool,
 }
 
 // ── Filters ──────────────────────────────────────────────────────────────────
@@ -215,11 +261,13 @@ pub struct Config {
     pub root_directory: Option<String>,
     pub reader_settings: ReaderSettings,
     pub active_category: Option<String>,
+    /// Global display default for Library + Source pages.
+    pub default_display: LibraryDisplay,
     pub library_sort_preference: LibrarySortPreference,
-    pub library_display: LibraryDisplay,
+    pub library_display: DisplayOverride,
     pub library_filters: LibraryFilters,
     pub source_sort_preference: SourceSortPreference,
-    pub source_display: SourceDisplay,
+    pub source_display: DisplayOverride,
     pub source_filters: SourceFilters,
     pub categories: Vec<Category>,
 }
@@ -231,5 +279,23 @@ impl Config {
             self.categories.insert(0, Category::default());
         }
         self
+    }
+
+    pub fn display_override_mut(&mut self, scope: DisplayScope) -> &mut DisplayOverride {
+        match scope {
+            DisplayScope::Library => &mut self.library_display,
+            DisplayScope::Source => &mut self.source_display,
+        }
+    }
+
+    pub fn resolved_display(&self, scope: DisplayScope) -> ViewDisplay {
+        let over = match scope {
+            DisplayScope::Library => &self.library_display,
+            DisplayScope::Source => &self.source_display,
+        };
+        ViewDisplay {
+            display: over.apply(&self.default_display),
+            overridden: !over.is_empty(),
+        }
     }
 }

@@ -15,7 +15,7 @@ pub use db::MangaDb;
 pub use history::{HistoryData, HistoryEntry};
 pub use manga::{MangaDto, MangaRecord};
 pub use settings::{
-    Config, LibraryDisplay, LibraryFilters, LibrarySortPreference, ReaderSettings, SourceDisplay,
-    SourceFilters, SourceSortPreference,
+    Config, DisplayOverride, DisplayScope, LibraryDisplay, LibraryFilters, LibrarySortPreference,
+    ReaderSettings, SourceFilters, SourceSortPreference, ViewDisplay,
 };
 pub use source::{SourceDto, SourceRecord};
