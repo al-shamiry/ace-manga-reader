@@ -12,6 +12,8 @@ import type {
   Settings,
 } from "~/types";
 
+import { DEFAULT_DISPLAY } from "~/lib/display-defaults";
+
 import { SettingsField } from "~/components/settings/SettingsField";
 import { SettingsSection } from "~/components/settings/SettingsSection";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -53,13 +55,7 @@ export function SettingsView() {
   const [rootDir, setRootDir] = createSignal<string | null>(null);
   const [fitMode, setFitMode] = createSignal<FitMode>("fit-screen");
   const [readingMode, setReadingMode] = createSignal<ReadingMode>("paged-rtl");
-  const [display, setDisplay] = createSignal<LibraryDisplay>({
-    display_mode: "comfortable",
-    card_size: 8,
-    show_unread_badge: false,
-    show_continue_button: false,
-    show_item_count: true,
-  });
+  const [display, setDisplay] = createSignal<LibraryDisplay>(DEFAULT_DISPLAY);
 
   onMount(async () => {
     try {
@@ -76,7 +72,7 @@ export function SettingsView() {
       console.error("Failed to load reading defaults:", e);
     }
     try {
-      const d = await api.settings.getLibraryDisplay();
+      const d = await api.settings.getDefaultDisplay();
       setDisplay(d);
     } catch (e) {
       console.error("Failed to load display options:", e);
@@ -114,7 +110,7 @@ export function SettingsView() {
   function updateDisplay(next: LibraryDisplay) {
     setDisplay(next);
     api.settings
-      .setLibraryDisplay(next)
+      .setDefaultDisplay(next)
       .catch((e) => console.error("Failed to save display options:", e));
   }
 

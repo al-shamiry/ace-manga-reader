@@ -26,12 +26,13 @@ export interface LibraryFilters {
   sources: string[];
   reading_status: string[];
 }
+export type DisplayScope = "library" | "source";
 
-export interface SourceDisplay {
-  display_mode: DisplayMode;
-  card_size: number;
-  show_unread_badge: boolean;
-  show_continue_button: boolean;
+export type DisplayOverride = Partial<LibraryDisplay>;
+
+export interface ViewDisplay {
+  display: LibraryDisplay;
+  overridden: boolean;
 }
 
 export interface SourceFilters {

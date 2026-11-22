@@ -2,49 +2,43 @@ import { createSignal, onCleanup, onMount } from "solid-js";
 
 import * as api from "~/api";
 import type {
+  DisplayOverride,
+  DisplayScope,
   LibraryDisplay,
   LibraryFilters,
   ReadingStatus,
   SortPreference,
-  SourceDisplay,
   SourceFilters,
 } from "~/types";
+
+import { DEFAULT_DISPLAY } from "~/lib/display-defaults";
 
 import type { FilterState } from "~/components/library/FilterDropdown";
 
 /**
  * Which persisted browse-prefs the controls read/write. The library and source
  * grids share the same UI + resize behaviour but store their prefs under
- * separate config keys with different defaults (source has no item-count or
- * per-source filter chips, and defaults to alphabetical A→Z).
+ * separate config keys (source has no per-source filter chips and defaults to
+ * alphabetical A→Z). Display resolves from the global default plus a per-view
+ * override.
  */
-export type BrowseScope = "library" | "source";
+export type BrowseScope = DisplayScope;
 
-const DEFAULTS: Record<
-  BrowseScope,
-  { sort: SortPreference; display: LibraryDisplay }
-> = {
-  library: {
-    sort: { field: "last-read", direction: "desc" },
-    display: {
-      display_mode: "comfortable",
-      card_size: 8,
-      show_unread_badge: false,
-      show_continue_button: false,
-      show_item_count: true,
-    },
-  },
-  source: {
-    sort: { field: "alphabetical", direction: "asc" },
-    display: {
-      display_mode: "comfortable",
-      card_size: 8,
-      show_unread_badge: false,
-      show_continue_button: false,
-      show_item_count: false,
-    },
-  },
+const DEFAULT_SORT: Record<BrowseScope, SortPreference> = {
+  library: { field: "last-read", direction: "desc" },
+  source: { field: "alphabetical", direction: "asc" },
 };
+
+function diffDisplay(
+  prev: LibraryDisplay,
+  next: LibraryDisplay,
+): DisplayOverride {
+  const patch: Record<string, unknown> = {};
+  for (const key of Object.keys(next) as (keyof LibraryDisplay)[]) {
+    if (next[key] !== prev[key]) patch[key] = next[key];
+  }
+  return patch as DisplayOverride;
+}
 
 /**
  * Browse-control state for a manga grid: filter chips, sort preference, and
@@ -53,7 +47,8 @@ const DEFAULTS: Record<
  * listeners mounted/cleaned for the caller's lifetime).
  *
  * `scope` selects which config keys back the controls ("library" by default,
- * "source" for the per-source grid) and their defaults.
+ * "source" for the per-source grid), including which display override is
+ * written.
  *
  * `loadPersisted()` hydrates all three from saved config and returns a single
  * promise so the caller can await it alongside its other startup work; each
@@ -65,11 +60,11 @@ export function createLibraryControls(scope: BrowseScope = "library") {
     readingStatus: [],
   });
   const [sortPref, setSortPref] = createSignal<SortPreference>(
-    DEFAULTS[scope].sort,
+    DEFAULT_SORT[scope],
   );
-  const [displayOpts, setDisplayOpts] = createSignal<LibraryDisplay>(
-    DEFAULTS[scope].display,
-  );
+  const [displayOpts, setDisplayOpts] =
+    createSignal<LibraryDisplay>(DEFAULT_DISPLAY);
+  const [displayOverridden, setDisplayOverridden] = createSignal(false);
 
   function handleFilterChange(next: FilterState) {
     setFilters(next);
@@ -96,20 +91,28 @@ export function createLibraryControls(scope: BrowseScope = "library") {
     persist.catch(() => {});
   }
 
+  // Optimistic: apply locally, then persist only the changed fields as this
+  // view's override. Only `overridden` is read back from the response so a
+  // burst of Ctrl+wheel resizes can't be clobbered by a stale reply.
   function handleDisplayChange(next: LibraryDisplay) {
+    const patch = diffDisplay(displayOpts(), next);
+    if (Object.keys(patch).length === 0) return;
     setDisplayOpts(next);
-    if (scope === "source") {
-      api.settings
-        .setSourceDisplay({
-          display_mode: next.display_mode,
-          card_size: next.card_size,
-          show_unread_badge: next.show_unread_badge,
-          show_continue_button: next.show_continue_button,
-        })
-        .catch(() => {});
-    } else {
-      api.settings.setLibraryDisplay(next).catch(() => {});
-    }
+    setDisplayOverridden(true);
+    api.settings
+      .patchViewDisplay(scope, patch)
+      .then((res) => setDisplayOverridden(res.overridden))
+      .catch(() => {});
+  }
+
+  function handleDisplayReset() {
+    api.settings
+      .resetViewDisplay(scope)
+      .then((res) => {
+        setDisplayOpts(res.display);
+        setDisplayOverridden(res.overridden);
+      })
+      .catch(() => {});
   }
 
   function nudgeCardSize(delta: number) {
@@ -176,14 +179,14 @@ export function createLibraryControls(scope: BrowseScope = "library") {
         /* no saved sort */
       });
 
-    const savedDisplay: Promise<LibraryDisplay | SourceDisplay> =
-      scope === "source"
-        ? api.settings.getSourceDisplay()
-        : api.settings.getLibraryDisplay();
-    const persistedDisplay = savedDisplay
-      .then((disp) => setDisplayOpts((prev) => ({ ...prev, ...disp })))
+    const persistedDisplay = api.settings
+      .getViewDisplay(scope)
+      .then((res) => {
+        setDisplayOpts(res.display);
+        setDisplayOverridden(res.overridden);
+      })
       .catch(() => {
-        /* no saved display */
+        /* keep placeholder display */
       });
 
     return Promise.all([persistedFilters, persistedSort, persistedDisplay]);
@@ -193,9 +196,11 @@ export function createLibraryControls(scope: BrowseScope = "library") {
     filters,
     sortPref,
     displayOpts,
+    displayOverridden,
     handleFilterChange,
     handleSortChange,
     handleDisplayChange,
+    handleDisplayReset,
     loadPersisted,
   };
 }

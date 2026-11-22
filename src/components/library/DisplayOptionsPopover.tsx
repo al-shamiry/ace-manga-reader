@@ -25,8 +25,9 @@ import { toolbarIconButtonClass } from "~/components/ui/toolbar";
 interface Props {
   display: LibraryDisplay;
   onChange: (display: LibraryDisplay) => void;
+  overridden: boolean;
+  onReset: () => void;
   showTabsSection?: boolean;
-  defaults?: LibraryDisplay;
 }
 
 const DISPLAY_MODES: { value: DisplayMode; label: string }[] = [
@@ -36,37 +37,7 @@ const DISPLAY_MODES: { value: DisplayMode; label: string }[] = [
   { value: "list", label: "List" },
 ];
 
-export const DEFAULT_LIBRARY_DISPLAY: LibraryDisplay = {
-  display_mode: "comfortable",
-  card_size: 8,
-  show_unread_badge: false,
-  show_continue_button: false,
-  show_item_count: true,
-};
-
-export const DEFAULT_SOURCE_DISPLAY: LibraryDisplay = {
-  ...DEFAULT_LIBRARY_DISPLAY,
-  show_item_count: false,
-};
-
-function sameDisplay(a: LibraryDisplay, b: LibraryDisplay): boolean {
-  return (
-    a.display_mode === b.display_mode &&
-    a.card_size === b.card_size &&
-    a.show_unread_badge === b.show_unread_badge &&
-    a.show_continue_button === b.show_continue_button &&
-    a.show_item_count === b.show_item_count
-  );
-}
-
 export function DisplayOptionsPopover(props: Props) {
-  const defaults = () =>
-    props.defaults ??
-    ((props.showTabsSection ?? true)
-      ? DEFAULT_LIBRARY_DISPLAY
-      : DEFAULT_SOURCE_DISPLAY);
-  const canReset = () => !sameDisplay(props.display, defaults());
-
   function setMode(mode: DisplayMode) {
     props.onChange({ ...props.display, display_mode: mode });
   }
@@ -79,10 +50,6 @@ export function DisplayOptionsPopover(props: Props) {
     props.onChange({ ...props.display, [key]: !props.display[key] });
   }
 
-  function resetDisplay() {
-    props.onChange(defaults());
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -93,7 +60,10 @@ export function DisplayOptionsPopover(props: Props) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent class="w-72">
-        <DropdownMenuHeader onReset={resetDisplay} canReset={canReset()}>
+        <DropdownMenuHeader
+          onReset={() => props.onReset()}
+          canReset={props.overridden}
+        >
           Display
         </DropdownMenuHeader>
         <DropdownMenuSeparator />

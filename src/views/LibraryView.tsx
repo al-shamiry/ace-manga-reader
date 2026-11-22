@@ -406,6 +406,8 @@ export function LibraryView() {
                 <DisplayOptionsPopover
                   display={controls.displayOpts()}
                   onChange={controls.handleDisplayChange}
+                  overridden={controls.displayOverridden()}
+                  onReset={controls.handleDisplayReset}
                 />
                 <FilterDropdown
                   state={controls.filters()}

@@ -1,11 +1,13 @@
 import { call } from "~/api/client";
 import type {
+  DisplayOverride,
+  DisplayScope,
   LibraryDisplay,
   LibraryFilters,
   Settings,
   SortPreference,
-  SourceDisplay,
   SourceFilters,
+  ViewDisplay,
 } from "~/types";
 
 // ── Root directory ──
@@ -26,6 +28,29 @@ export function getDefaultReaderSettings(): Promise<Settings> {
 
 export function setDefaultReaderSettings(settings: Settings): Promise<void> {
   return call("set_default_reader_settings", { settings });
+}
+
+export function getDefaultDisplay(): Promise<LibraryDisplay> {
+  return call<LibraryDisplay>("get_default_display");
+}
+
+export function setDefaultDisplay(display: LibraryDisplay): Promise<void> {
+  return call("set_default_display", { display });
+}
+
+export function getViewDisplay(scope: DisplayScope): Promise<ViewDisplay> {
+  return call<ViewDisplay>("get_view_display", { scope });
+}
+
+export function patchViewDisplay(
+  scope: DisplayScope,
+  patch: DisplayOverride,
+): Promise<ViewDisplay> {
+  return call<ViewDisplay>("patch_view_display", { scope, patch });
+}
+
+export function resetViewDisplay(scope: DisplayScope): Promise<ViewDisplay> {
+  return call<ViewDisplay>("reset_view_display", { scope });
 }
 
 // ── Library browse prefs ──
@@ -56,14 +81,6 @@ export function setLibrarySortPreference(
   return call("set_library_sort_preference", { preference });
 }
 
-export function getLibraryDisplay(): Promise<LibraryDisplay> {
-  return call<LibraryDisplay>("get_library_display");
-}
-
-export function setLibraryDisplay(display: LibraryDisplay): Promise<void> {
-  return call("set_library_display", { display });
-}
-
 // ── Source browse prefs ──
 
 export function getSourceSortPreference(): Promise<SortPreference> {
@@ -74,14 +91,6 @@ export function setSourceSortPreference(
   preference: SortPreference,
 ): Promise<void> {
   return call("set_source_sort_preference", { preference });
-}
-
-export function getSourceDisplay(): Promise<SourceDisplay> {
-  return call<SourceDisplay>("get_source_display");
-}
-
-export function setSourceDisplay(display: SourceDisplay): Promise<void> {
-  return call("set_source_display", { display });
 }
 
 export function getSourceFilters(): Promise<SourceFilters> {

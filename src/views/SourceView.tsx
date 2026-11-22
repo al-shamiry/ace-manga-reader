@@ -173,6 +173,8 @@ export function SourceView() {
                 <DisplayOptionsPopover
                   display={controls.displayOpts()}
                   onChange={controls.handleDisplayChange}
+                  overridden={controls.displayOverridden()}
+                  onReset={controls.handleDisplayReset}
                   showTabsSection={false}
                 />
                 <FilterDropdown
